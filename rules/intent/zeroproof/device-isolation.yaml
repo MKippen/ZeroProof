@@ -1,0 +1,225 @@
+# Device Isolation Intent Evaluations
+# Evaluates IoT, camera, and other device isolation settings
+
+evaluations:
+  - id: "intent-iot-isolation"
+    name: "IoT Device Isolation"
+    description: |
+      Evaluates if IoT devices are properly isolated from trusted network segments
+      to prevent compromised smart devices from accessing sensitive resources.
+    category: device_isolation
+    priority: 1
+    intent_setting: iotIsolation
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [iot, isolation, segmentation]
+
+    applicable_when:
+      intent_field: hasIoT
+      op: equals
+      value: true
+
+    evaluation:
+      checks:
+        - name: "IoT network exists"
+          description: "A dedicated network for IoT devices"
+          target: networks
+          condition:
+            operator: OR
+            checks:
+              - field: name
+                op: matches_i
+                value: "(iot|smart|device)"
+              - field: purpose
+                op: equals
+                value: "iot"
+          required: true
+          weight: 40
+
+        - name: "IoT network has isolation enabled"
+          description: "Network isolation prevents IoT from reaching other VLANs"
+          target: networks
+          filter:
+            network_type: iot
+          condition:
+            field: network_isolation
+            op: equals
+            value: true
+          required: true
+          weight: 40
+
+        - name: "IoT network uses separate VLAN"
+          description: "IoT on a dedicated VLAN for layer 2 separation"
+          target: networks
+          filter:
+            network_type: iot
+          condition:
+            operator: AND
+            checks:
+              - field: vlan_enabled
+                op: equals
+                value: true
+              - field: vlan
+                op: gt
+                value: 1
+          required: false
+          weight: 20
+
+    output:
+      configured:
+        summary: "IoT devices are properly isolated"
+        details: "IoT network exists with isolation enabled on VLAN {{vlan}}"
+
+      not_configured:
+        summary: "IoT isolation not configured"
+        remediation: |
+          1. Create a dedicated IoT network (Settings > Networks > Create New)
+          2. Enable "Network Isolation" on the IoT network
+          3. Assign IoT devices to this network via WiFi or switch port profiles
+
+      partial:
+        summary: "IoT isolation partially configured"
+        details: "{{missing_checks}}"
+
+  - id: "intent-iot-internet"
+    name: "IoT Internet Access Control"
+    description: |
+      Evaluates if IoT device internet access is properly controlled
+      based on the user's intent (full, limited, or none).
+    category: device_isolation
+    priority: 2
+    intent_setting: iotInternetAccess
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [iot, internet-access, firewall]
+
+    applicable_when:
+      operator: AND
+      checks:
+        - intent_field: hasIoT
+          op: equals
+          value: true
+        - intent_field: iotInternetAccess
+          op: not_equals
+          value: "full"
+
+    evaluation:
+      checks:
+        - name: "IoT internet restricted"
+          description: "Firewall or network settings restrict IoT internet access"
+          target: networks
+          filter:
+            network_type: iot
+          condition:
+            operator: OR
+            checks:
+              - field: internet_access_enabled
+                op: equals
+                value: false
+              # OR check for firewall rules blocking IoT WAN access
+              - cross_ref:
+                  target: firewallRules
+                  condition:
+                    operator: AND
+                    checks:
+                      - field: action
+                        op: equals
+                        value: "drop"
+                      - field: dst_network_id
+                        op: equals
+                        value: "wan"
+          required: true
+          weight: 100
+
+    output:
+      configured:
+        summary: "IoT internet access is restricted as intended"
+        details: "IoT network has {{iotInternetAccess}} internet access"
+
+      not_configured:
+        summary: "IoT has unrestricted internet access"
+        remediation: |
+          For limited access:
+          1. Create firewall rules allowing only specific destinations
+          2. Block IoT from accessing all other internet destinations
+
+          For no access:
+          1. Disable "Internet Access" on the IoT network
+          2. Or create a firewall rule blocking IoT → WAN
+
+  - id: "intent-camera-isolation"
+    name: "Security Camera Isolation"
+    description: |
+      Evaluates if security cameras are isolated and prevented from
+      accessing the internet (to prevent phone-home behavior).
+    category: device_isolation
+    priority: 1
+    intent_setting: cameraIsolation
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [cameras, nvr, isolation, security]
+
+    # Applicable if user has indicated security cameras
+    applicable_when:
+      operator: OR
+      checks:
+        - networks_exist:
+            name_pattern: "(camera|security|nvr|surveillance)"
+        - intent_field: hasSecurityCameras
+          op: equals
+          value: true
+
+    evaluation:
+      checks:
+        - name: "Camera network exists"
+          target: networks
+          condition:
+            field: name
+            op: matches_i
+            value: "(camera|security|nvr|surveillance)"
+          required: true
+          weight: 30
+
+        - name: "Camera network is isolated"
+          target: networks
+          filter:
+            network_type: security
+          condition:
+            field: network_isolation
+            op: equals
+            value: true
+          required: true
+          weight: 35
+
+        - name: "Camera network has no internet"
+          target: networks
+          filter:
+            network_type: security
+          condition:
+            field: internet_access_enabled
+            op: equals
+            value: false
+          required: true
+          weight: 35
+
+    output:
+      configured:
+        summary: "Security cameras properly isolated"
+        details: "Camera network is isolated with no internet access"
+
+      not_configured:
+        summary: "Security cameras not properly isolated"
+        remediation: |
+          1. Create a dedicated Camera/Security network
+          2. Enable "Network Isolation" to prevent access to other VLANs
+          3. Disable "Internet Access" to prevent cameras from phoning home
+          4. If NVR needs updates, create specific firewall rules for NVR only

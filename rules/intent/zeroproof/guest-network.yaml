@@ -1,0 +1,221 @@
+# Guest Network Intent Evaluations
+# Evaluates guest network isolation and security settings
+
+evaluations:
+  - id: "intent-guest-network"
+    name: "Guest Network Configuration"
+    description: |
+      Evaluates if a proper guest network exists with appropriate
+      isolation from internal network resources.
+    category: guest_network
+    priority: 1
+    intent_setting: guestNetwork
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [guest, isolation, wifi]
+
+    applicable_when:
+      intent_field: guestNetwork
+      op: equals
+      value: true
+
+    evaluation:
+      checks:
+        - name: "Guest network exists"
+          description: "A dedicated network or WiFi for guests"
+          target: networks
+          condition:
+            operator: OR
+            checks:
+              - field: name
+                op: matches_i
+                value: "guest"
+              - field: purpose
+                op: equals
+                value: "guest"
+          required: true
+          weight: 50
+
+        - name: "Guest WiFi exists"
+          description: "WiFi SSID configured for guests"
+          target: wlans
+          condition:
+            operator: OR
+            checks:
+              - field: is_guest
+                op: equals
+                value: true
+              - field: name
+                op: matches_i
+                value: "guest"
+          required: true
+          weight: 50
+
+    output:
+      configured:
+        summary: "Guest network is configured"
+        details: "Guest network and WiFi are available for visitors"
+
+      not_configured:
+        summary: "No guest network configured"
+        remediation: |
+          1. Create a Guest network (Settings > Networks > Create New)
+          2. Create a Guest WiFi SSID (Settings > WiFi > Create New)
+          3. Associate the WiFi with the Guest network
+
+  - id: "intent-guest-isolation"
+    name: "Guest Network Isolation"
+    description: |
+      Evaluates if guest network is properly isolated from internal
+      network resources to protect against malicious guests.
+    category: guest_network
+    priority: 2
+    intent_setting: guestIsolation
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [guest, isolation, security]
+
+    applicable_when:
+      operator: AND
+      checks:
+        - intent_field: guestNetwork
+          op: equals
+          value: true
+        - intent_field: guestIsolation
+          op: equals
+          value: true
+
+    evaluation:
+      checks:
+        - name: "Guest network has isolation enabled"
+          target: networks
+          filter:
+            network_type: guest
+          condition:
+            field: network_isolation
+            op: equals
+            value: true
+          required: true
+          weight: 40
+
+        - name: "Guest WiFi has client isolation"
+          description: "Prevents guests from seeing each other"
+          target: wlans
+          filter:
+            is_guest: true
+          condition:
+            operator: OR
+            checks:
+              - field: ap_isolation
+                op: equals
+                value: true
+              - field: l2_isolation
+                op: equals
+                value: true
+          required: true
+          weight: 30
+
+        - name: "Guest uses separate VLAN"
+          target: networks
+          filter:
+            network_type: guest
+          condition:
+            operator: AND
+            checks:
+              - field: vlan_enabled
+                op: equals
+                value: true
+              - field: vlan
+                op: gt
+                value: 1
+          required: false
+          weight: 30
+
+    output:
+      configured:
+        summary: "Guest network is properly isolated"
+        details: "Guests cannot access internal resources or see each other"
+
+      not_configured:
+        summary: "Guest network not properly isolated"
+        remediation: |
+          1. Enable "Network Isolation" on the guest network
+          2. Enable "Client Isolation" on the guest WiFi
+          3. Use a separate VLAN for the guest network
+
+      partial:
+        summary: "Guest isolation partially configured"
+        details: "{{missing_checks}}"
+
+  - id: "intent-guest-bandwidth"
+    name: "Guest Bandwidth Limiting"
+    description: |
+      Evaluates if guest bandwidth is limited to prevent guests
+      from consuming excessive network resources.
+    category: guest_network
+    priority: 3
+    intent_setting: guestBandwidthLimit
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [guest, bandwidth, qos]
+
+    applicable_when:
+      operator: AND
+      checks:
+        - intent_field: guestNetwork
+          op: equals
+          value: true
+        - intent_field: guestBandwidthLimit
+          op: equals
+          value: true
+
+    evaluation:
+      checks:
+        - name: "Guest bandwidth limit configured"
+          target: wlans
+          filter:
+            is_guest: true
+          condition:
+            operator: OR
+            checks:
+              # Check for rate limiting on WLAN
+              - operator: AND
+                checks:
+                  - field: minrate_ng_enabled
+                    op: equals
+                    value: true
+              # Or traffic rules limiting guest bandwidth
+              - cross_ref:
+                  target: trafficRules
+                  condition:
+                    operator: AND
+                    checks:
+                      - field: enabled
+                        op: equals
+                        value: true
+                      - field: network_type
+                        op: equals
+                        value: "guest"
+          required: true
+          weight: 100
+
+    output:
+      configured:
+        summary: "Guest bandwidth is limited"
+        details: "Guests have bandwidth restrictions in place"
+
+      not_configured:
+        summary: "Guest bandwidth not limited"
+        remediation: |
+          1. Navigate to Settings > WiFi > Guest Network > Advanced
+          2. Enable bandwidth limiting
+          3. Or create Traffic Rules to limit guest network speeds

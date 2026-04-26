@@ -1,0 +1,23 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy package files
+COPY package.json pnpm-lock.yaml* ./
+COPY prisma ./prisma/
+
+# Install dependencies
+RUN pnpm install
+
+# Generate Prisma client
+RUN pnpm prisma generate
+
+# Copy source
+COPY . .
+
+EXPOSE 3000
+
+CMD ["pnpm", "dev"]

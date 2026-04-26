@@ -1,0 +1,317 @@
+# Wireless Security Rules
+# Based on WiFi security best practices
+# Original implementations based on IEEE 802.11 and industry guidelines
+
+rules:
+  - id: "IS-WIFI-001"
+    name: "Open WiFi Network"
+    description: |
+      Checks for WiFi networks without encryption.
+      Guest networks with captive portals are excluded as they intentionally use open auth.
+    category: wireless
+    severity: CRITICAL
+    impact: |
+      Network traffic can be intercepted by anyone in range.
+      Credentials, personal data, and sensitive information are exposed.
+    remediation: |
+      Enable WPA2 or WPA3 encryption on all WiFi networks.
+      Navigate to Settings > WiFi > [Network] > Security.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [wireless, encryption, open-network]
+
+    detection:
+      target: wlans
+      filter:
+        enabled: true
+        is_guest: false
+
+      condition:
+        operator: OR
+        checks:
+          - field: security
+            op: equals
+            value: "open"
+          - field: security
+            op: empty
+
+      output:
+        affected_resource: "WiFi: {{name}}"
+        details: "WiFi network \"{{name}}\" has no encryption"
+        current_value: "Security: Open"
+        expected_value: "Security: WPA2/WPA3"
+
+  - id: "IS-WIFI-002"
+    name: "Weak WiFi Security"
+    description: |
+      Checks for WiFi networks using outdated encryption methods
+      like WEP or WPA1 that can be easily cracked.
+    category: wireless
+    severity: HIGH
+    impact: |
+      WEP and WPA1 can be cracked relatively easily with modern tools.
+      Network traffic can be decrypted and credentials captured.
+    remediation: |
+      Upgrade to WPA2 or WPA3 encryption.
+      Navigate to Settings > WiFi > [Network] > Security.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [wireless, encryption, weak-security, wep, wpa1]
+
+    detection:
+      target: wlans
+      filter:
+        enabled: true
+        is_guest: false
+
+      condition:
+        operator: OR
+        checks:
+          - field: security
+            op: in
+            value: ["wep", "wpa"]
+          - field: wpa_mode
+            op: equals
+            value: "wpa1"
+
+      output:
+        affected_resource: "WiFi: {{name}}"
+        details: "WiFi network \"{{name}}\" uses weak encryption"
+        current_value: "Security: {{security}} {{wpa_mode}}"
+        expected_value: "Security: WPA2 or WPA3"
+
+  - id: "IS-WIFI-003"
+    name: "PMF Not Enabled"
+    description: |
+      Checks if Protected Management Frames (802.11w) is enabled
+      to protect against deauthentication attacks.
+    category: wireless
+    severity: MEDIUM
+    impact: |
+      Network vulnerable to deauthentication attacks.
+      Attackers can force clients to disconnect and capture handshakes.
+    remediation: |
+      Enable PMF (Protected Management Frames) on WiFi networks.
+      Navigate to Settings > WiFi > [Network] > Advanced > PMF.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [wireless, pmf, 802.11w, deauth-attack]
+
+    detection:
+      target: wlans
+      filter:
+        enabled: true
+        is_guest: false
+        security:
+          op: not_equals
+          value: "open"
+
+      condition:
+        operator: OR
+        checks:
+          - field: pmf_mode
+            op: empty
+          - field: pmf_mode
+            op: equals
+            value: "disabled"
+
+      output:
+        affected_resource: "WiFi: {{name}}"
+        details: "WiFi network \"{{name}}\" does not have PMF enabled"
+        current_value: "PMF: Disabled"
+        expected_value: "PMF: Optional or Required"
+
+  - id: "IS-WIFI-004"
+    name: "Hidden SSID"
+    description: |
+      Checks for WiFi networks with hidden SSIDs, which provides
+      no real security benefit and causes client connection issues.
+    category: wireless
+    severity: LOW
+    impact: |
+      Hidden SSIDs provide no real security and can cause client connection issues.
+      SSIDs are easily discovered through probe requests.
+    remediation: |
+      Unhide the SSID - hiding it does not improve security and causes usability issues.
+      Navigate to Settings > WiFi > [Network] > Advanced > Hide SSID.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [wireless, hidden-ssid, security-theater]
+
+    detection:
+      target: wlans
+      filter:
+        enabled: true
+
+      condition:
+        field: hide_ssid
+        op: equals
+        value: true
+
+      output:
+        affected_resource: "WiFi: {{name}}"
+        details: "WiFi network \"{{name}}\" has hidden SSID enabled"
+        current_value: "SSID: Hidden"
+        expected_value: "SSID: Visible (hiding provides no security benefit)"
+
+  - id: "IS-WIFI-005"
+    name: "Guest/IoT Network Missing Client Isolation"
+    description: |
+      Checks if guest or IoT WiFi networks have client isolation enabled
+      to prevent devices from communicating with each other.
+    category: wireless
+    severity: MEDIUM
+    impact: |
+      Clients on the same network can communicate with each other, enabling lateral movement.
+      Guests could probe or attack IoT devices if sharing the same network.
+    remediation: |
+      Guest networks should be on a dedicated VLAN separate from IoT, with client isolation enabled.
+      Navigate to Settings > WiFi > [Network] > Advanced > Client Isolation.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [wireless, client-isolation, guest, iot]
+
+    detection:
+      target: wlans
+      filter:
+        enabled: true
+
+      # Custom filter for guest/IoT networks
+      name_pattern: "(guest|iot)"
+
+      condition:
+        operator: AND
+        checks:
+          - operator: OR
+            checks:
+              - field: is_guest
+                op: equals
+                value: true
+              - field: name
+                op: matches_i
+                value: "(iot|guest)"
+          - operator: AND
+            checks:
+              - field: ap_isolation
+                op: not_equals
+                value: true
+              - field: l2_isolation
+                op: not_equals
+                value: true
+
+      output:
+        affected_resource: "WiFi: {{name}}"
+        details: "Network \"{{name}}\" does not have client isolation enabled"
+        current_value: "Client Isolation: Disabled"
+        expected_value: "Client Isolation: Enabled (or separate Guest VLAN)"
+
+  - id: "IS-WIFI-006"
+    name: "Fast Roaming Without PMF"
+    description: |
+      Checks for 802.11r fast roaming enabled without PMF protection,
+      which can leak the PMK-R1 key.
+    category: wireless
+    severity: MEDIUM
+    impact: |
+      802.11r without PMF can leak the PMK-R1 key, enabling authentication bypass.
+      Attackers can capture and replay authentication to gain access.
+    remediation: |
+      Enable PMF (Protected Management Frames) when using Fast Roaming (802.11r).
+      Navigate to Settings > WiFi > [Network] > Advanced.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [wireless, 802.11r, fast-roaming, pmf]
+
+    detection:
+      target: wlans
+      filter:
+        enabled: true
+        security:
+          op: not_equals
+          value: "open"
+
+      condition:
+        operator: AND
+        checks:
+          - field: fast_roaming_enabled
+            op: equals
+            value: true
+          - operator: OR
+            checks:
+              - field: pmf_mode
+                op: empty
+              - field: pmf_mode
+                op: equals
+                value: "disabled"
+
+      output:
+        affected_resource: "WiFi: {{name}}"
+        details: "Network \"{{name}}\" has Fast Roaming enabled without PMF"
+        current_value: "Fast Roaming: Enabled, PMF: Disabled"
+        expected_value: "PMF: Optional or Required when using Fast Roaming"
+
+  - id: "IS-WIFI-007"
+    name: "WPA3 Not Enabled on Sensitive Network"
+    description: |
+      Recommends WPA3 for networks that could support it for
+      stronger encryption and protection against offline attacks.
+    category: wireless
+    severity: INFO
+    impact: |
+      WPA3 provides stronger encryption and protection against offline dictionary attacks.
+      SAE (Simultaneous Authentication of Equals) prevents password cracking.
+    remediation: |
+      Consider enabling WPA3 or WPA2/WPA3 transition mode for enhanced security.
+      Navigate to Settings > WiFi > [Network] > Security.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [wireless, wpa3, encryption, recommendation]
+
+    detection:
+      target: wlans
+      filter:
+        enabled: true
+        is_guest: false
+        security:
+          op: not_equals
+          value: "open"
+
+      condition:
+        operator: AND
+        checks:
+          - field: wpa_mode
+            op: equals
+            value: "wpa2"
+          - field: wpa3_support
+            op: not_equals
+            value: true
+          - field: wpa3_transition
+            op: not_equals
+            value: true
+
+      output:
+        affected_resource: "WiFi: {{name}}"
+        details: "Network \"{{name}}\" uses WPA2 only without WPA3"
+        current_value: "Security: WPA2"
+        expected_value: "Security: WPA3 or WPA2/WPA3 transition mode"

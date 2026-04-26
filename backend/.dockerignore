@@ -1,0 +1,17 @@
+node_modules
+dist
+.git
+.env
+.env.*
+*.log
+npm-debug.log*
+.DS_Store
+coverage
+.nyc_output
+prisma/*.db
+prisma/*.db-journal
+firmware/*.bin
+firmware/*.elf
+firmware/*.map
+*.md
+!README.md

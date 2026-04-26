@@ -1,0 +1,225 @@
+# VLAN Isolation Security Rules
+# Based on network segmentation best practices
+# Original implementations based on NIST and CIS guidelines
+
+rules:
+  - id: "IS-VLAN-001"
+    name: "IoT Network Not Isolated"
+    description: |
+      Checks if IoT networks have network isolation enabled to prevent
+      compromised smart devices from accessing other network resources.
+    category: vlan
+    severity: HIGH
+    impact: |
+      Compromised IoT devices could access other network resources.
+      Many IoT devices have poor security and are frequently targeted.
+    remediation: |
+      Enable network isolation on IoT networks to contain potentially insecure devices.
+      Navigate to Settings > Networks > [IoT Network] > Enable "Network Isolation".
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [vlan, isolation, iot]
+      references:
+        - "https://www.cisecurity.org/insights/white-papers/cis-controls-iot-companion-guide"
+
+    detection:
+      target: networks
+      filter:
+        network_type: iot
+
+      condition:
+        field: network_isolation
+        op: not_equals
+        value: true
+
+      output:
+        affected_resource: "Network: {{name}}"
+        details: "IoT network \"{{name}}\" does not have network isolation enabled"
+        current_value: "Isolation: Disabled"
+        expected_value: "Isolation: Enabled"
+
+  - id: "IS-VLAN-002"
+    name: "Security/Camera Network Not Isolated"
+    description: |
+      Checks if security camera networks have isolation enabled to prevent
+      cameras from accessing other network segments or being accessed by other devices.
+    category: vlan
+    severity: CRITICAL
+    impact: |
+      Cameras could be accessed by other devices or phone home to external servers.
+      Video feeds could be intercepted or cameras used as pivot points.
+    remediation: |
+      Enable network isolation to prevent cameras from accessing other network segments.
+      Navigate to Settings > Networks > [Camera Network] > Enable "Network Isolation".
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [vlan, isolation, security-cameras, nvr]
+
+    detection:
+      target: networks
+      filter:
+        network_type: security
+
+      condition:
+        field: network_isolation
+        op: not_equals
+        value: true
+
+      output:
+        affected_resource: "Network: {{name}}"
+        details: "Security network \"{{name}}\" does not have network isolation enabled"
+        current_value: "Isolation: Disabled"
+        expected_value: "Isolation: Enabled"
+
+  - id: "IS-VLAN-003"
+    name: "Guest Network Not Isolated"
+    description: |
+      Checks if guest networks have proper isolation to prevent
+      guest devices from accessing internal network resources.
+    category: vlan
+    severity: HIGH
+    impact: |
+      Guest devices could access internal network resources.
+      Untrusted guests could probe or attack internal systems.
+    remediation: |
+      Enable network isolation and client isolation on guest networks.
+      Navigate to Settings > Networks > [Guest Network] > Enable "Network Isolation".
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [vlan, isolation, guest]
+
+    detection:
+      target: networks
+      filter:
+        network_type: guest
+
+      condition:
+        field: network_isolation
+        op: not_equals
+        value: true
+
+      output:
+        affected_resource: "Network: {{name}}"
+        details: "Guest network \"{{name}}\" does not have network isolation enabled"
+        current_value: "Isolation: Disabled"
+        expected_value: "Isolation: Enabled"
+
+  - id: "IS-VLAN-004"
+    name: "Security Network Has Internet Access"
+    description: |
+      Checks if security/camera networks have internet access disabled
+      to prevent cameras from phoning home or being remotely exploited.
+    category: vlan
+    severity: CRITICAL
+    impact: |
+      Cameras could phone home, be remotely exploited, or exfiltrate video.
+      Many IP cameras have known vulnerabilities and connect to cloud services.
+    remediation: |
+      Disable internet access for security networks to prevent cameras from phoning home.
+      Navigate to Settings > Networks > [Camera Network] > Disable "Internet Access".
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [vlan, isolation, security-cameras, internet-access]
+
+    detection:
+      target: networks
+      filter:
+        network_type: security
+
+      condition:
+        field: internet_access_enabled
+        op: not_equals
+        value: false
+
+      output:
+        affected_resource: "Network: {{name}}"
+        details: "Security network \"{{name}}\" has internet access enabled"
+        current_value: "Internet Access: Enabled"
+        expected_value: "Internet Access: Disabled"
+
+  - id: "IS-VLAN-005"
+    name: "Work Network Not Isolated"
+    description: |
+      Checks if work/corporate networks have network isolation enabled
+      to add defense-in-depth against compromised devices on other VLANs.
+    category: vlan
+    severity: MEDIUM
+    impact: |
+      Without isolation, compromised IoT or guest devices could potentially access work resources.
+      Network isolation adds defense-in-depth by blocking inter-VLAN traffic at the network level.
+    remediation: |
+      Enable "Isolate Network" in Network Settings for the Work network.
+      This prevents devices on other VLANs from initiating connections to work devices.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [vlan, isolation, work, corporate]
+
+    detection:
+      target: networks
+      filter:
+        network_type: work
+
+      condition:
+        field: network_isolation
+        op: not_equals
+        value: true
+
+      output:
+        affected_resource: "Network: {{name}}"
+        details: "Work network \"{{name}}\" does not have network isolation enabled"
+        current_value: "Isolation: Disabled"
+        expected_value: "Isolation: Enabled"
+
+  - id: "IS-VLAN-006"
+    name: "No VLAN Segmentation"
+    description: |
+      Checks if the network uses VLANs for segmentation to separate
+      different device types and reduce attack surface.
+    category: vlan
+    severity: MEDIUM
+    impact: |
+      All devices share the same network segment, increasing attack surface.
+      A compromised device can easily reach all other devices.
+    remediation: |
+      Create separate VLANs for different device types (IoT, Guest, Work, etc.).
+      Navigate to Settings > Networks > Create New Network with VLAN tagging.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [vlan, segmentation, network-design]
+
+    detection:
+      target: networks
+      aggregate: count_where
+      aggregate_filter:
+        vlan_enabled: true
+        vlan:
+          op: gt
+          value: 1
+
+      condition:
+        op: lt
+        value: 2
+
+      output:
+        affected_resource: "Network Configuration"
+        details: "Network does not use VLAN segmentation for different device types"
+        current_value: "{{aggregate_result}} VLANs configured"
+        expected_value: "Multiple VLANs for network segmentation"

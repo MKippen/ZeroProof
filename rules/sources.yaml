@@ -1,0 +1,29 @@
+# Rule Sources - Attribution metadata for all rule sources
+# This file defines the sources that rules can reference for proper attribution
+
+sources:
+  zeroproof:
+    name: "ZeroProof"
+    description: "Built-in security checks developed by ZeroProof"
+    url: "https://github.com/MKippen/ZeroProof"
+    license: "MIT"
+
+  industry-standards:
+    name: "Industry Standards"
+    description: |
+      Security checks based on publicly available industry best practices including:
+      - NIST Cybersecurity Framework (https://www.nist.gov/cyberframework)
+      - CIS Benchmarks (https://www.cisecurity.org/benchmark)
+      - UniFi Community Best Practices
+      - General network security hardening guidelines
+    url: "https://www.cisecurity.org/benchmark"
+    license: "Original implementations based on public security guidelines"
+    references:
+      - "https://www.nist.gov/cyberframework"
+      - "https://www.cisecurity.org/cis-benchmarks"
+
+  community:
+    name: "Community"
+    description: "Community-contributed rules from ZeroProof users"
+    url: "https://github.com/MKippen/ZeroProof"
+    license: "MIT"

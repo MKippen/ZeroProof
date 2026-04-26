@@ -1,0 +1,157 @@
+# DNS and UPnP Security Rules
+# Based on network security best practices
+
+rules:
+  # DNS Rules
+  - id: "IS-DNS-001"
+    name: "Using Default ISP DNS"
+    description: |
+      Checks if networks are using custom DNS servers instead of
+      default ISP DNS for better privacy and security features.
+    category: dns
+    severity: LOW
+    impact: |
+      ISP DNS may not provide filtering, privacy, or security features.
+      DNS queries are visible to ISP and may be logged.
+    remediation: |
+      Configure custom DNS servers (e.g., Cloudflare 1.1.1.1, Quad9 9.9.9.9, or local filtering like Pi-hole).
+      Navigate to Settings > Networks > [Network] > DHCP > DNS Server.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [dns, privacy, isp]
+
+    detection:
+      target: networks
+      filter:
+        dhcpd_enabled: true
+        purpose:
+          op: not_equals
+          value: "guest"
+
+      condition:
+        field: dhcpd_dns_1
+        op: empty
+
+      output:
+        affected_resource: "Network: {{name}}"
+        details: "Network \"{{name}}\" uses default ISP DNS"
+        current_value: "DNS: Default/ISP"
+        expected_value: "DNS: Custom configured"
+
+  - id: "IS-DNS-002"
+    name: "Isolated Networks Share DNS"
+    description: |
+      Checks if isolated networks (IoT, Guest) share DNS with corporate,
+      which could reveal device activity across segments.
+    category: dns
+    severity: LOW
+    impact: |
+      DNS queries from isolated networks could reveal device activity.
+      Shared DNS server creates a data aggregation point.
+    remediation: |
+      Configure separate DNS servers for isolated networks.
+      Consider using different DNS providers for different network segments.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [dns, isolation, privacy]
+
+    detection:
+      target: networks
+      filter:
+        dhcpd_enabled: true
+        network_type:
+          op: not_in
+          value: ["corporate", "work", "trusted"]
+
+      cross_reference:
+        type: find_corporate_network
+
+      condition:
+        operator: AND
+        checks:
+          - field: dhcpd_dns_1
+            op: not_empty
+          - field: dhcpd_dns_1
+            op: equals_ref
+            ref_field: corporate_dns
+
+      output:
+        affected_resource: "Network: {{name}}"
+        details: "Isolated network \"{{name}}\" shares DNS server with corporate network"
+        current_value: "DNS: {{dhcpd_dns_1}}"
+        expected_value: "Separate DNS for isolated networks"
+
+  # UPnP Rules
+  - id: "IS-UPNP-001"
+    name: "UPnP Enabled"
+    description: |
+      Checks if UPnP is enabled on the network, which allows devices
+      to automatically open firewall ports without user approval.
+    category: upnp
+    severity: HIGH
+    impact: |
+      Devices can automatically open firewall ports without user approval.
+      Malware can use UPnP to punch holes in the firewall for C2 communication.
+    remediation: |
+      Disable UPnP and manually configure required port forwards.
+      Navigate to Settings > Firewall & Security > UPnP.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [upnp, port-forwarding, automatic]
+      references:
+        - "https://www.kb.cert.org/vuls/id/361684"
+
+    detection:
+      target: settings
+      condition:
+        field: upnp_enabled
+        op: equals
+        value: true
+
+      output:
+        affected_resource: "Network Settings"
+        details: "UPnP is enabled, allowing devices to automatically open firewall ports"
+        current_value: "UPnP: Enabled"
+        expected_value: "UPnP: Disabled"
+
+  - id: "IS-UPNP-002"
+    name: "NAT-PMP Enabled"
+    description: |
+      Checks if NAT-PMP (Apple port mapping protocol) is enabled,
+      which has similar risks to UPnP.
+    category: upnp
+    severity: MEDIUM
+    impact: |
+      Similar to UPnP, allows automatic port forwarding without user approval.
+      Can be exploited by malware to establish external connections.
+    remediation: |
+      Disable NAT-PMP unless specifically required for Apple devices.
+      Navigate to Settings > Firewall & Security > NAT-PMP.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [upnp, nat-pmp, apple, port-forwarding]
+
+    detection:
+      target: settings
+      condition:
+        field: upnp_nat_pmp_enabled
+        op: equals
+        value: true
+
+      output:
+        affected_resource: "Network Settings"
+        details: "NAT-PMP is enabled, allowing automatic port mapping"
+        current_value: "NAT-PMP: Enabled"
+        expected_value: "NAT-PMP: Disabled"

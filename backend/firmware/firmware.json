@@ -1,0 +1,9 @@
+{
+  "version": "source-build",
+  "filename": "zeroproof-esp32.bin",
+  "size": 0,
+  "checksum": "",
+  "releaseDate": "2026-04-26",
+  "minHardwareVersion": "1.0",
+  "notes": "No prebuilt firmware binary is committed to the open-source repository. Build the ESP32 firmware locally and update this metadata before publishing a firmware release."
+}

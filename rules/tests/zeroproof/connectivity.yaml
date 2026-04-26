@@ -1,0 +1,54 @@
+# Connectivity Test Definitions
+# Basic network connectivity tests
+
+tests:
+  - id: "connectivity"
+    name: "Connectivity Test"
+    description: |
+      Quick verification of device communication and network connectivity.
+      Tests basic internet access and DNS resolution.
+    category: connectivity
+    target: esp32
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [connectivity, quick, basic]
+      estimated_duration: "10s"
+
+    commands:
+      - op: get_network_info
+      - op: ping
+        host: "8.8.8.8"
+        timeout: 2000
+      - op: dns_lookup
+        hostname: "google.com"
+
+  - id: "quick_scan"
+    name: "Quick Scan"
+    description: |
+      Fast scan of common targets including multiple DNS providers
+      and basic connectivity checks.
+    category: connectivity
+    target: esp32
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [connectivity, quick, dns]
+      estimated_duration: "15s"
+
+    commands:
+      - op: get_network_info
+      - op: ping
+        host: "8.8.8.8"
+        timeout: 1000
+      - op: ping
+        host: "1.1.1.1"
+        timeout: 1000
+      - op: dns_lookup
+        hostname: "google.com"
+      - op: dns_lookup
+        hostname: "cloudflare.com"
