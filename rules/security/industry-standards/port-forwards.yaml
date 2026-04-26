@@ -1,0 +1,91 @@
+# Port Forward Security Rules
+# Based on network exposure best practices
+
+rules:
+  - id: "IS-PORT-001"
+    name: "Sensitive Port Exposed"
+    description: |
+      Checks for port forwards exposing sensitive services like SSH, RDP,
+      databases, and other high-value targets to the internet.
+    category: port
+    severity: CRITICAL
+    impact: |
+      Sensitive services exposed to the internet are frequently attacked.
+      Automated scanners constantly probe for exposed services.
+    remediation: |
+      Remove port forward or use VPN for remote access instead.
+      Navigate to Settings > Firewall & Security > Port Forwarding.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [port-forward, exposed-service, ssh, rdp, database]
+      references:
+        - "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"
+
+    # Sensitive ports mapping for reference
+    sensitive_ports:
+      22: "SSH"
+      23: "Telnet"
+      3389: "RDP"
+      5900: "VNC"
+      445: "SMB"
+      139: "NetBIOS"
+      3306: "MySQL"
+      5432: "PostgreSQL"
+      1433: "MSSQL"
+      27017: "MongoDB"
+      6379: "Redis"
+
+    detection:
+      target: portForwards
+      filter:
+        enabled: true
+
+      condition:
+        field: dst_port
+        op: in_port_list
+        value: [22, 23, 3389, 5900, 445, 139, 3306, 5432, 1433, 27017, 6379]
+
+      output:
+        affected_resource: "Port Forward: {{name}}"
+        details: "Port forward \"{{name}}\" exposes {{port_service}} (port {{dst_port}}) to the internet"
+        current_value: "Port {{dst_port}} -> {{fwd}}:{{fwd_port}}"
+        expected_value: "Use VPN for remote access"
+
+  - id: "IS-PORT-002"
+    name: "Wide Port Range Forward"
+    description: |
+      Checks for port forwards with large port ranges that expose
+      more attack surface than necessary.
+    category: port
+    severity: HIGH
+    impact: |
+      Large port ranges expose more attack surface than necessary.
+      Unintended services may become accessible.
+    remediation: |
+      Narrow port forwards to only the specific ports required.
+      Navigate to Settings > Firewall & Security > Port Forwarding.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [port-forward, port-range, exposure]
+
+    detection:
+      target: portForwards
+      filter:
+        enabled: true
+
+      condition:
+        field: dst_port
+        op: port_range_exceeds
+        value: 10
+
+      output:
+        affected_resource: "Port Forward: {{name}}"
+        details: "Port forward \"{{name}}\" exposes {{port_range_size}} ports"
+        current_value: "Ports {{dst_port}}"
+        expected_value: "Single port or narrow range"

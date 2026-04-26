@@ -1,0 +1,158 @@
+# Firewall Security Rules
+# Based on NIST Cybersecurity Framework and CIS Benchmarks
+# Original implementations based on public security guidelines
+
+rules:
+  - id: "IS-FW-001"
+    name: "Any-to-Any Firewall Rule"
+    description: |
+      Detects overly permissive firewall rules that allow all traffic
+      from any source to any destination with no protocol restrictions.
+    category: firewall
+    severity: CRITICAL
+    impact: |
+      Allows unrestricted network access, bypassing all security controls.
+      Attackers or compromised devices can freely communicate across network segments.
+    remediation: |
+      Restrict source, destination, or protocol to minimum required access.
+      Navigate to Settings > Firewall & Security > Firewall Rules.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      modified: "2024-06-20"
+      version: "1.0"
+      tags: [firewall, permissive, critical, any-any]
+      references:
+        - "https://www.cisecurity.org/benchmark/network"
+        - "https://www.nist.gov/cyberframework"
+      cwe: ["CWE-284"]
+
+    detection:
+      target: firewallRules
+      filter:
+        enabled: true
+        action: accept
+
+      condition:
+        operator: AND
+        checks:
+          - field: src_address
+            op: empty
+          - field: src_network_id
+            op: empty
+          - field: src_firewallgroup_ids
+            op: empty_array
+          - field: dst_address
+            op: empty
+          - field: dst_network_id
+            op: empty
+          - field: dst_firewallgroup_ids
+            op: empty_array
+          - field: protocol
+            op: in
+            value: ["all", null, ""]
+
+      output:
+        affected_resource: "Firewall Rule: {{name}}"
+        details: "Rule \"{{name}}\" allows all traffic from any source to any destination"
+        current_value: "Any -> Any (All protocols)"
+        expected_value: "Specific source/destination/protocol restrictions"
+
+  - id: "IS-FW-002"
+    name: "Broad Allow Rule"
+    description: |
+      Identifies allow rules that lack sufficient restrictions on source,
+      destination, or port, potentially allowing more access than intended.
+    category: firewall
+    severity: HIGH
+    impact: |
+      Overly permissive rules may allow unintended network access.
+      Attackers could exploit broad rules to move laterally.
+    remediation: |
+      Add specific port, IP, or protocol restrictions to narrow the rule scope.
+      Review each broad rule and determine minimum required access.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [firewall, permissive, broad-rule]
+
+    detection:
+      target: firewallRules
+      filter:
+        enabled: true
+        action: accept
+        predefined: false
+
+      condition:
+        operator: AND
+        checks:
+          # No specific source
+          - operator: AND
+            checks:
+              - field: src_address
+                op: empty
+              - field: src_network_id
+                op: empty
+              - field: src_firewallgroup_ids
+                op: empty_array
+          # AND missing destination OR port
+          - operator: OR
+            checks:
+              - operator: AND
+                checks:
+                  - field: dst_address
+                    op: empty
+                  - field: dst_network_id
+                    op: empty
+                  - field: dst_firewallgroup_ids
+                    op: empty_array
+              - field: dst_port
+                op: empty
+
+      output:
+        affected_resource: "Firewall Rule: {{name}}"
+        details: "Rule \"{{name}}\" lacks specific source and destination/port restrictions"
+        current_value: "Broad allow rule"
+        expected_value: "Specific source, destination, and port restrictions"
+
+  - id: "IS-POSTURE-001"
+    name: "Default Security Posture Set to Allow All"
+    description: |
+      Checks if the network default security posture is set to block all
+      traffic by default, following zero-trust principles.
+    category: firewall
+    severity: HIGH
+    impact: |
+      With "Allow All" posture, all inter-VLAN traffic is permitted by default.
+      Attackers or compromised devices can freely communicate across network segments.
+    remediation: |
+      Change Default Security Posture to "Block All" in Settings > Networks > Global Network Settings.
+      Then create explicit allow rules for required traffic flows.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [firewall, posture, zero-trust]
+      references:
+        - "https://www.nist.gov/publications/zero-trust-architecture"
+
+    detection:
+      target: settings
+      condition:
+        operator: OR
+        checks:
+          - field: default_security_posture
+            op: equals
+            value: "ALLOW_ALL"
+          - field: default_security_posture
+            op: empty
+
+      output:
+        affected_resource: "Global Network Settings"
+        details: "Default Security Posture is set to \"Allow All\", permitting all inter-VLAN traffic by default"
+        current_value: "Default Security Posture: Allow All"
+        expected_value: "Default Security Posture: Block All"

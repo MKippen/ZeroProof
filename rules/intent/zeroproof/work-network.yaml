@@ -1,0 +1,189 @@
+# Work Network Intent Evaluations
+# Evaluates work-from-home and corporate network settings
+
+evaluations:
+  - id: "intent-work-network"
+    name: "Work Network Configuration"
+    description: |
+      Evaluates if a dedicated work network exists for work-from-home
+      users to separate work devices from personal devices.
+    category: work_network
+    priority: 1
+    intent_setting: workFromHome
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [work, wfh, corporate, vlan]
+
+    applicable_when:
+      intent_field: workFromHome
+      op: equals
+      value: true
+
+    evaluation:
+      checks:
+        - name: "Work network exists"
+          description: "A dedicated network for work devices"
+          target: networks
+          condition:
+            field: name
+            op: matches_i
+            value: "(work|corporate|office|business)"
+          required: true
+          weight: 60
+
+        - name: "Work network uses VLAN"
+          target: networks
+          filter:
+            network_type: work
+          condition:
+            operator: AND
+            checks:
+              - field: vlan_enabled
+                op: equals
+                value: true
+              - field: vlan
+                op: gt
+                value: 1
+          required: false
+          weight: 40
+
+    output:
+      configured:
+        summary: "Work network is configured"
+        details: "Dedicated work network on VLAN {{vlan}}"
+
+      not_configured:
+        summary: "No dedicated work network"
+        remediation: |
+          1. Create a Work network (Settings > Networks > Create New)
+          2. Assign a VLAN ID for the work network
+          3. Create WiFi SSID or switch port profile for work devices
+
+  - id: "intent-work-isolation"
+    name: "Work Network Isolation"
+    description: |
+      Evaluates if work devices are isolated from IoT and other
+      potentially compromised devices on the network.
+    category: work_network
+    priority: 2
+    intent_setting: workDeviceIsolation
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [work, isolation, security]
+
+    applicable_when:
+      operator: AND
+      checks:
+        - intent_field: workFromHome
+          op: equals
+          value: true
+        - intent_field: workDeviceIsolation
+          op: equals
+          value: true
+
+    evaluation:
+      checks:
+        - name: "Work network has isolation"
+          target: networks
+          filter:
+            network_type: work
+          condition:
+            field: network_isolation
+            op: equals
+            value: true
+          required: true
+          weight: 50
+
+        - name: "Firewall blocks IoT to Work"
+          description: "Firewall rules prevent IoT from reaching work network"
+          target: firewallRules
+          condition:
+            operator: exists
+            checks:
+              - field: action
+                op: in
+                value: ["drop", "reject"]
+              - field: src_network_type
+                op: equals
+                value: "iot"
+              - field: dst_network_type
+                op: equals
+                value: "work"
+          required: false
+          weight: 50
+
+    output:
+      configured:
+        summary: "Work devices are isolated"
+        details: "Work network is protected from IoT and other segments"
+
+      not_configured:
+        summary: "Work devices not isolated"
+        remediation: |
+          1. Enable "Network Isolation" on the work network
+          2. Create firewall rules blocking IoT → Work
+          3. Consider blocking Guest → Work as well
+
+  - id: "intent-work-vpn"
+    name: "Work VPN Configuration"
+    description: |
+      Evaluates if the network is configured to support work VPN
+      connections without interference.
+    category: work_network
+    priority: 3
+    intent_setting: workVpn
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [work, vpn, remote-access]
+
+    applicable_when:
+      operator: AND
+      checks:
+        - intent_field: workFromHome
+          op: equals
+          value: true
+        - intent_field: workVpn
+          op: equals
+          value: true
+
+    evaluation:
+      checks:
+        - name: "VPN traffic not blocked"
+          description: "Common VPN ports are not blocked by firewall"
+          target: firewallRules
+          condition:
+            operator: NOT
+            check:
+              operator: exists
+              checks:
+                - field: action
+                  op: equals
+                  value: "drop"
+                - field: dst_port
+                  op: in
+                  value: ["500", "4500", "1194", "1723", "443"]
+          required: true
+          weight: 100
+
+    output:
+      configured:
+        summary: "VPN traffic is allowed"
+        details: "No firewall rules blocking common VPN protocols"
+
+      not_configured:
+        summary: "VPN traffic may be blocked"
+        remediation: |
+          Check firewall rules for blocks on:
+          - UDP 500, 4500 (IPsec/IKE)
+          - UDP 1194 (OpenVPN)
+          - TCP 1723 (PPTP)
+          - TCP 443 (SSL VPN)

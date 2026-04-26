@@ -1,0 +1,139 @@
+services:
+  # Infrastructure services
+  postgres:
+    image: postgres:15-alpine
+    container_name: zeroproof-postgres-dev
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_password}
+      POSTGRES_DB: zeroproof_dev
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "app=zeroproof"
+      - "env=development"
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: zeroproof-mqtt-dev
+    ports:
+      - "127.0.0.1:1883:1883"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config:ro
+      - mosquitto_dev_data:/mosquitto/data
+    restart: unless-stopped
+    labels:
+      - "app=zeroproof"
+      - "env=development"
+
+  redis:
+    image: redis:7-alpine
+    container_name: zeroproof-redis-dev
+    ports:
+      - "127.0.0.1:6379:6379"
+    restart: unless-stopped
+    labels:
+      - "app=zeroproof"
+      - "env=development"
+
+  # Application services
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: zeroproof-backend-dev
+    volumes:
+      - ./rules:/rules:ro
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-dev_password}@postgres:5432/zeroproof_dev
+      - MQTT_BROKER=mosquitto
+      - MQTT_PORT=1883
+      - MQTT_USERNAME=${MQTT_USERNAME:-auditor}
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-mqtt_password}
+      - NODE_ENV=development
+      - SESSION_SECRET=${SESSION_SECRET:-dev-session-secret-change-me}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-dev-encryption-key-32-bytes-min}
+      - DEFAULT_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD:-admin123!}
+      - PORT=3000
+      - HOST_IP=${HOST_IP:-}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "app=zeroproof"
+      - "env=development"
+      - "component=backend"
+
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: zeroproof-scheduler-dev
+    volumes:
+      - ./rules:/rules:ro
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-dev_password}@postgres:5432/zeroproof_dev
+      - MQTT_BROKER=mosquitto
+      - MQTT_PORT=1883
+      - MQTT_USERNAME=${MQTT_USERNAME:-auditor}
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-mqtt_password}
+      - NODE_ENV=development
+      - SESSION_SECRET=${SESSION_SECRET:-dev-session-secret-change-me}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-dev-encryption-key-32-bytes-min}
+      - HOST_IP=${HOST_IP:-}
+    command: ["node", "dist/scheduler.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    restart: unless-stopped
+    labels:
+      - "app=zeroproof"
+      - "env=development"
+      - "component=scheduler"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: zeroproof-frontend-dev
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "app=zeroproof"
+      - "env=development"
+      - "component=frontend"
+
+volumes:
+  postgres_dev_data:
+  mosquitto_dev_data:

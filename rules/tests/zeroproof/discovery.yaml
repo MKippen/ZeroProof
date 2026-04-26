@@ -1,0 +1,134 @@
+# Network Discovery Test Definitions
+# Tests for discovering hosts, services, and network topology
+
+tests:
+  - id: "port_scan"
+    name: "Port Scan"
+    description: |
+      Discover hosts on the local subnet and scan common ports to identify
+      services and potential security issues.
+    category: discovery
+    target: esp32
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [discovery, port-scan, hosts]
+      estimated_duration: "120s"
+
+    # Post-processing adds tcp_connect commands for discovered hosts
+    post_process:
+      after_arp_scan:
+        action: add_port_scans
+        ports: [22, 23, 80, 443, 445, 3389, 8080, 8443]
+
+    commands:
+      - op: get_network_info
+      - op: arp_scan
+        timeout: 100
+        startHost: 1
+        endHost: 254
+      # Additional tcp_connect commands added dynamically based on arp_scan results
+
+  - id: "service_discovery"
+    name: "Service Discovery"
+    description: |
+      Discover and identify network services by scanning hosts and
+      grabbing service banners to determine versions.
+    category: discovery
+    target: esp32
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [discovery, services, banner-grab]
+      estimated_duration: "180s"
+
+    post_process:
+      after_arp_scan:
+        action: add_banner_grabs
+        ports: [22, 23, 80, 443, 21, 25, 110, 143]
+
+    commands:
+      - op: get_network_info
+      - op: arp_scan
+        timeout: 100
+        startHost: 1
+        endHost: 254
+      # Banner grabbing commands added dynamically
+
+  - id: "gateway_audit"
+    name: "Gateway Audit"
+    description: |
+      Scan common router/gateway IPs for open ports to identify
+      exposed management interfaces.
+    category: audit
+    target: esp32
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [audit, gateway, router, management]
+      estimated_duration: "30s"
+
+    commands:
+      - op: get_network_info
+      # Common gateway IPs - 192.168.1.1
+      - op: tcp_connect
+        host: "192.168.1.1"
+        port: 80
+        timeout: 1000
+      - op: tcp_connect
+        host: "192.168.1.1"
+        port: 443
+        timeout: 1000
+      - op: tcp_connect
+        host: "192.168.1.1"
+        port: 22
+        timeout: 1000
+      # Common gateway IPs - 192.168.0.1
+      - op: tcp_connect
+        host: "192.168.0.1"
+        port: 80
+        timeout: 1000
+      - op: tcp_connect
+        host: "192.168.0.1"
+        port: 443
+        timeout: 1000
+      # Common gateway IPs - 10.0.0.1
+      - op: tcp_connect
+        host: "10.0.0.1"
+        port: 80
+        timeout: 1000
+      - op: tcp_connect
+        host: "10.0.0.1"
+        port: 443
+        timeout: 1000
+
+  - id: "honeypot_validation"
+    name: "Honeypot Validation"
+    description: |
+      Test that configured honeypots are responding correctly and
+      logging connection attempts.
+    category: validation
+    target: esp32
+    is_dynamic: true
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [validation, honeypot, deception]
+      estimated_duration: "60s"
+
+    dynamic:
+      source: honeypot_config
+      generator: honeypot_test
+      options:
+        test_all_ports: true
+        verify_logging: true
+
+    commands: []

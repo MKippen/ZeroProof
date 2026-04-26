@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+package-lock.json
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Build outputs
+dist/
+build/
+.next/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.claude/launch.json
+
+# Docker
+docker-compose.override.yml
+
+# Certificates
+*.pem
+*.key
+*.crt
+nginx/ssl/*.pem
+nginx/ssl/*.key
+nginx/ssl/*.crt
+
+# Database
+*.db
+*.db-journal
+
+# MQTT credentials
+mosquitto/config/passwd
+
+# Prisma
+prisma/migrations/*_init/
+
+# ESP32
+esp32-firmware/.pio/
+esp32-firmware/.vscode/
+backend/firmware/*.bin
+backend/firmware/*.elf
+backend/firmware/*.map
+
+# Test coverage
+coverage/

@@ -1,0 +1,166 @@
+# Switch and General Security Rules
+# Based on network infrastructure best practices
+
+rules:
+  # Switch Security Rules
+  - id: "IS-SWITCH-001"
+    name: "DHCP Guarding Not Enabled"
+    description: |
+      Checks if DHCP guarding/snooping is enabled to prevent
+      rogue DHCP servers from hijacking network traffic.
+    category: switch
+    severity: MEDIUM
+    impact: |
+      Rogue DHCP servers can redirect traffic through attacker-controlled gateways.
+      Man-in-the-middle attacks become possible.
+    remediation: |
+      Enable DHCP guarding on switch ports to block unauthorized DHCP servers.
+      Navigate to Settings > Networks > Advanced.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [switch, dhcp-snooping, dhcp-guard, rogue-dhcp]
+
+    detection:
+      target: settings
+      condition:
+        field: dhcp_guarding_enabled
+        op: equals
+        value: false
+
+      output:
+        affected_resource: "Switch Settings"
+        details: "DHCP guarding is disabled, allowing rogue DHCP servers"
+        current_value: "DHCP Guarding: Disabled"
+        expected_value: "DHCP Guarding: Enabled"
+
+  - id: "IS-SWITCH-002"
+    name: "Storm Control Not Enabled"
+    description: |
+      Checks if broadcast/multicast storm control is enabled to
+      protect against network floods and DoS.
+    category: switch
+    severity: LOW
+    impact: |
+      Network storms can cause denial of service and degrade network performance.
+      Broadcast loops can bring down the entire network.
+    remediation: |
+      Enable storm control to protect against broadcast/multicast floods.
+      Navigate to Settings > Networks > Advanced.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [switch, storm-control, broadcast, dos]
+
+    detection:
+      target: settings
+      condition:
+        field: storm_control_enabled
+        op: equals
+        value: false
+
+      output:
+        affected_resource: "Switch Settings"
+        details: "Storm control is disabled"
+        current_value: "Storm Control: Disabled"
+        expected_value: "Storm Control: Enabled"
+
+  # General Security Rules
+  - id: "IS-GEN-001"
+    name: "No Dedicated Management Network"
+    description: |
+      Checks if network infrastructure (switches, APs, controller) is on a
+      separate VLAN from user devices. This is an advanced hardening step.
+    category: general
+    severity: LOW
+    impact: |
+      When infrastructure devices share a network with users, those users could
+      potentially access switch/AP management interfaces. In most home and small
+      office setups with a UDM/UDR, this is low risk since the controller is
+      built into the gateway.
+    remediation: |
+      Advanced: Create a dedicated management VLAN, move infrastructure devices to it,
+      and add firewall rules blocking user access. Note: This requires careful planning
+      to avoid lockout. For UDM/UDR setups, this mainly applies to separating switches
+      and APs. Safe to dismiss for home/small office networks.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [general, management-network, infrastructure, advanced]
+      false_positives:
+        - "Home/small office networks with UDM/UDR"
+        - "Networks where management is handled via cloud"
+
+    detection:
+      target: networks
+      aggregate: exists_where
+      aggregate_filter:
+        operator: OR
+        checks:
+          - field: purpose
+            op: equals
+            value: "management"
+          - field: name
+            op: matches_i
+            value: "(management|mgmt)"
+
+      # Only trigger if no management network AND more than 1 network
+      additional_condition:
+        target: networks
+        aggregate: count
+        op: gt
+        value: 1
+
+      condition:
+        op: equals
+        value: false
+
+      output:
+        affected_resource: "Network Configuration"
+        details: "No dedicated management VLAN detected. This is an advanced hardening step - safe to dismiss for most home/small office setups."
+        current_value: "Infrastructure on default network"
+        expected_value: "Dedicated management VLAN (advanced)"
+
+  - id: "IS-GEN-002"
+    name: "mDNS Enabled Across VLANs"
+    description: |
+      Checks if mDNS is configured to forward across all VLANs,
+      potentially leaking device information across network segments.
+    category: general
+    severity: LOW
+    impact: |
+      mDNS forwarding can leak device information across network segments.
+      Device names, services, and types become visible across VLANs.
+    remediation: |
+      Limit mDNS forwarding to only necessary VLANs or disable if not needed.
+      Navigate to Settings > Networks > Global Network Settings > mDNS.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [general, mdns, discovery, privacy]
+
+    detection:
+      target: settings
+      condition:
+        operator: AND
+        checks:
+          - field: mdns_enabled
+            op: equals
+            value: true
+          - field: mdns_mode
+            op: equals
+            value: "all"
+
+      output:
+        affected_resource: "Network Settings"
+        details: "mDNS is configured to forward all traffic across VLANs"
+        current_value: "mDNS Mode: All (unrestricted forwarding)"
+        expected_value: "mDNS Mode: Auto or Custom (limited forwarding)"

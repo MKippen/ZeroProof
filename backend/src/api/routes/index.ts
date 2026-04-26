@@ -1,0 +1,34 @@
+import { Router } from 'express';
+import authRoutes from './auth';
+import configRoutes from './config';
+import deviceRoutes from './devices';
+import testRoutes from './tests';
+import vulnerabilityRoutes from './vulnerabilities';
+import dashboardRoutes from './dashboard';
+import unifiRoutes from './unifi';
+import esp32Routes from './esp32';
+import intentRoutes from './intent';
+import securityRoutes from './security';
+import dismissalRoutes from './dismissals';
+import rulesRoutes from './rules';
+import notificationRoutes from './notifications';
+import timelineRoutes from './timeline';
+
+const router = Router();
+
+router.use('/auth', authRoutes);
+router.use('/config', configRoutes);
+router.use('/devices', deviceRoutes);
+router.use('/tests', testRoutes);
+router.use('/vulnerabilities', vulnerabilityRoutes);
+router.use('/dashboard', dashboardRoutes);
+router.use('/unifi', unifiRoutes);
+router.use('/esp32', esp32Routes);
+router.use('/intent', intentRoutes);
+router.use('/security', securityRoutes);
+router.use('/dismissals', dismissalRoutes);
+router.use('/rules', rulesRoutes);
+router.use('/notifications', notificationRoutes);
+router.use('/timeline', timelineRoutes);
+
+export default router;

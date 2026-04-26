@@ -1,0 +1,130 @@
+# Network Isolation Test Definitions
+# Tests for VLAN isolation and network segmentation
+
+tests:
+  - id: "vlan_isolation"
+    name: "VLAN Isolation Test"
+    description: |
+      Test network segmentation between VLANs by attempting to connect
+      to common gateway addresses across different subnets.
+    category: isolation
+    target: esp32
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [isolation, vlan, segmentation]
+      estimated_duration: "30s"
+
+    commands:
+      - op: get_network_info
+      # Test common private network gateways
+      - op: tcp_connect
+        host: "192.168.1.1"
+        port: 80
+        timeout: 1000
+      - op: tcp_connect
+        host: "192.168.1.1"
+        port: 443
+        timeout: 1000
+      - op: tcp_connect
+        host: "192.168.0.1"
+        port: 80
+        timeout: 1000
+      - op: tcp_connect
+        host: "192.168.0.1"
+        port: 443
+        timeout: 1000
+      - op: tcp_connect
+        host: "10.0.0.1"
+        port: 80
+        timeout: 1000
+      - op: tcp_connect
+        host: "10.0.0.1"
+        port: 443
+        timeout: 1000
+      - op: tcp_connect
+        host: "172.16.0.1"
+        port: 80
+        timeout: 1000
+      - op: tcp_connect
+        host: "172.16.0.1"
+        port: 443
+        timeout: 1000
+
+  - id: "topology_validation"
+    name: "Topology Validation"
+    description: |
+      Validate network isolation matches intent profile. Tests if device
+      can reach networks it should be blocked from based on your security intent.
+    category: isolation
+    target: esp32
+    is_dynamic: true
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [isolation, topology, intent, dynamic]
+      estimated_duration: "60s"
+
+    dynamic:
+      source: intent_profile
+      generator: topology_test
+      options:
+        test_blocked_paths: true
+        test_allowed_paths: true
+        include_gateways: true
+
+    # Commands generated at runtime based on intent profile
+    commands: []
+
+  - id: "device_to_device"
+    name: "Device-to-Device Test"
+    description: |
+      Test connectivity from one ESP32 device to other registered devices
+      across VLANs to verify isolation is working as expected.
+    category: isolation
+    target: esp32
+    is_dynamic: true
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [isolation, cross-vlan, device-test, dynamic]
+      estimated_duration: "45s"
+
+    dynamic:
+      source: device_list
+      generator: device_connectivity
+      options:
+        test_ports: [80, 443, 22, 23]
+        include_ping: true
+
+    commands: []
+
+  - id: "device_mesh"
+    name: "Device Mesh Test"
+    description: |
+      Test all ESP32 devices against each other to build a complete
+      connectivity matrix showing which devices can reach which.
+    category: isolation
+    target: esp32
+    is_dynamic: true
+    is_mesh_test: true
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [isolation, mesh, matrix, multi-device]
+      estimated_duration: "120s"
+
+    mesh:
+      mode: all_to_all
+      parallel: true
+      collect_matrix: true
+
+    commands: []

@@ -1,0 +1,139 @@
+# ACL (Access Control List) Security Rules
+# Based on UniFi 10.x+ ACL features and best practices
+
+rules:
+  - id: "IS-ACL-001"
+    name: "L3 ACL Network Isolation"
+    description: |
+      Informational rule that reports configured L3 ACL isolation rules.
+      L3 ACL blocks traffic at the switch level before it reaches the gateway.
+    category: access_control
+    severity: INFO
+    impact: |
+      L3 ACL isolation blocks traffic at the switch level before it reaches the gateway,
+      providing efficient network segmentation with lower latency.
+    remediation: |
+      Configure L3 Network Isolation in Settings > Security > ACL for critical network segments.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [acl, l3-isolation, switch-level]
+
+    detection:
+      target: l3AclIsolation
+      # This is an informational rule - reports what IS configured
+      report_mode: exists
+
+      output:
+        affected_resource: "Network: {{source_network_name}}"
+        details: "L3 ACL blocks traffic from \"{{source_network_name}}\" to: {{destination_networks_names}}"
+        current_value: "L3 ACL Isolation: Configured"
+        expected_value: "N/A - Informational"
+
+  - id: "IS-ACL-002"
+    name: "Device Isolation (ACL) Enabled"
+    description: |
+      Informational rule that reports networks with device isolation enabled.
+      Device isolation prevents client-to-client communication within a VLAN.
+    category: access_control
+    severity: INFO
+    impact: |
+      Device isolation prevents client-to-client communication within a VLAN
+      at the switch level, blocking lateral movement.
+    remediation: |
+      Enable Device Isolation in Settings > Security > ACL for guest or untrusted networks.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [acl, device-isolation, client-isolation]
+
+    detection:
+      target: deviceIsolationNetworks
+      # Report mode - just shows what's configured
+      report_mode: exists
+
+      output:
+        affected_resource: "Network: {{network_name}}"
+        details: "Device isolation is enabled for \"{{network_name}}\""
+        current_value: "Device Isolation: Enabled"
+        expected_value: "N/A - Informational"
+
+  - id: "IS-ACL-003"
+    name: "IoT/Guest Network Without L3 ACL Isolation"
+    description: |
+      Recommends L3 ACL isolation for IoT and Guest networks to block
+      access to trusted networks at the switch level.
+    category: access_control
+    severity: MEDIUM
+    impact: |
+      Without L3 ACL isolation, traffic from IoT/Guest networks reaches the gateway
+      before being filtered. L3 ACL blocks at the switch for better security and performance.
+    remediation: |
+      Configure L3 Network Isolation in Settings > Security > ACL to block IoT/Guest
+      networks from accessing Default and other trusted networks.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [acl, l3-isolation, iot, guest]
+
+    detection:
+      target: networks
+      filter:
+        name_pattern: "(iot|guest|untrust)"
+
+      # Check if this network has L3 ACL rules blocking trusted networks
+      cross_reference:
+        type: l3_acl_coverage
+        check_blocks_to:
+          name_pattern: "(default|main|trusted|home|corporate)"
+
+      condition:
+        field: has_l3_acl_blocks
+        op: equals
+        value: false
+
+      output:
+        affected_resource: "Network: {{name}}"
+        details: "\"{{name}}\" is not L3 ACL isolated from trusted networks"
+        current_value: "L3 ACL Isolation: Not configured"
+        expected_value: "L3 ACL blocking access to trusted networks"
+
+  - id: "IS-ACL-004"
+    name: "Custom ACL Rules Present"
+    description: |
+      Informational rule that reports custom ACL rules for review.
+      Custom ACL rules provide granular switch-level access control.
+    category: access_control
+    severity: INFO
+    impact: |
+      Custom ACL rules provide granular switch-level access control for
+      specific IPs, subnets, or networks. These should be reviewed periodically.
+    remediation: |
+      Review custom ACL rules periodically to ensure they are still needed
+      and correctly configured.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [acl, custom-rules, audit]
+
+    detection:
+      target: aclRules
+      filter:
+        enabled: true
+
+      # Report mode - shows each configured rule
+      report_mode: each
+
+      output:
+        affected_resource: "ACL Rule: {{name}}"
+        details: "{{action}} {{type}} traffic from {{source_desc}} to {{dest_desc}}"
+        current_value: "Action: {{action}}, Index: {{acl_index}}"
+        expected_value: "N/A - Review for correctness"

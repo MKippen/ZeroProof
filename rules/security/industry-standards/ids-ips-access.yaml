@@ -1,0 +1,194 @@
+# IDS/IPS and Access Control Security Rules
+# Based on network security best practices
+
+rules:
+  # IDS/IPS Rules
+  - id: "IS-IPS-001"
+    name: "IDS/IPS Not Enabled"
+    description: |
+      Checks if Intrusion Detection/Prevention System is enabled
+      to monitor network traffic for known attack patterns.
+    category: ids_ips
+    severity: HIGH
+    impact: |
+      Network traffic is not monitored for known attack patterns and malware.
+      Attacks may go undetected until damage is done.
+    remediation: |
+      Enable IDS/IPS (Threat Management) in UniFi Network settings.
+      Navigate to Settings > Firewall & Security > Threat Management.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [ids, ips, threat-management, detection]
+
+    detection:
+      target: settings
+      condition:
+        operator: AND
+        checks:
+          - field: ips_enabled
+            op: not_equals
+            value: true
+          - field: ips_mode
+            op: not_in
+            value: ["ids", "ips"]
+
+      output:
+        affected_resource: "Security Settings"
+        details: "Intrusion Detection/Prevention System is not enabled"
+        current_value: "IDS/IPS: Disabled"
+        expected_value: "IDS/IPS: Enabled (IDS or IPS mode)"
+
+  - id: "IS-IPS-002"
+    name: "IPS Sensitivity Too Low"
+    description: |
+      Checks if IPS sensitivity is set appropriately to catch threats
+      without excessive false positives.
+    category: ids_ips
+    severity: LOW
+    impact: |
+      Low sensitivity may miss some threats while reducing false positives.
+      Some attack patterns may go undetected.
+    remediation: |
+      Consider increasing IPS sensitivity to medium or higher for better protection.
+      Navigate to Settings > Firewall & Security > Threat Management.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [ids, ips, sensitivity, tuning]
+
+    detection:
+      target: settings
+      condition:
+        operator: AND
+        checks:
+          - field: ips_enabled
+            op: equals
+            value: true
+          - field: ips_sensitivity
+            op: equals
+            value: "low"
+
+      output:
+        affected_resource: "Security Settings"
+        details: "IPS sensitivity is set to low, which may miss some threats"
+        current_value: "IPS Sensitivity: Low"
+        expected_value: "IPS Sensitivity: Medium or higher"
+
+  # Access Control Rules
+  - id: "IS-ACCESS-001"
+    name: "SSH Enabled Globally"
+    description: |
+      Checks if SSH access is enabled on network devices,
+      providing a potential attack vector.
+    category: access_control
+    severity: MEDIUM
+    impact: |
+      SSH access provides a potential attack vector if credentials are compromised.
+      Brute force attacks against SSH are common.
+    remediation: |
+      Disable SSH unless needed for troubleshooting, or restrict to management VLAN.
+      Navigate to Settings > System > Advanced.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [access-control, ssh, remote-access]
+
+    detection:
+      target: settings
+      condition:
+        field: ssh_enabled
+        op: equals
+        value: true
+
+      output:
+        affected_resource: "Device Settings"
+        details: "SSH access is enabled on network devices"
+        current_value: "SSH: Enabled"
+        expected_value: "SSH: Disabled (enable only when needed)"
+
+  - id: "IS-ACCESS-002"
+    name: "Remote Access Enabled"
+    description: |
+      Checks if cloud/remote access is enabled for controller management,
+      exposing the management interface to the internet.
+    category: access_control
+    severity: INFO
+    impact: |
+      Remote access exposes management interface to the internet.
+      Controller could be targeted for attacks.
+    remediation: |
+      Consider disabling remote access if not needed, or use VPN for remote management.
+      Navigate to Settings > System > Remote Access.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [access-control, remote-access, cloud]
+
+    detection:
+      target: settings
+      condition:
+        field: remote_access_enabled
+        op: equals
+        value: true
+
+      output:
+        affected_resource: "Controller Settings"
+        details: "Remote/cloud access is enabled for controller management"
+        current_value: "Remote Access: Enabled"
+        expected_value: "Remote Access: Disabled (use VPN if remote access needed)"
+
+  - id: "IS-ACCESS-003"
+    name: "Enterprise Network Without RADIUS"
+    description: |
+      Checks if corporate/enterprise WLANs use RADIUS authentication
+      for better credential management and revocation.
+    category: access_control
+    severity: MEDIUM
+    impact: |
+      Pre-shared keys can be shared and are harder to revoke than individual credentials.
+      Former employees may retain network access.
+    remediation: |
+      Consider using WPA Enterprise with RADIUS for corporate networks.
+      Navigate to Settings > WiFi > [Network] > Security > WPA Enterprise.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [access-control, radius, 802.1x, enterprise]
+
+    detection:
+      target: wlans
+      filter:
+        enabled: true
+        is_guest: false
+
+      # Check if it looks like a corporate network
+      name_pattern: "(corporate|work|office|employee)"
+
+      condition:
+        operator: AND
+        checks:
+          - field: name
+            op: matches_i
+            value: "(corporate|work|office|employee)"
+          - field: security
+            op: in
+            value: ["wpapsk", "wpa2psk"]
+          - field: radius_profile_id
+            op: empty
+
+      output:
+        affected_resource: "WiFi: {{name}}"
+        details: "Corporate network \"{{name}}\" uses pre-shared key instead of RADIUS"
+        current_value: "Authentication: Pre-shared Key"
+        expected_value: "Authentication: WPA Enterprise with RADIUS"

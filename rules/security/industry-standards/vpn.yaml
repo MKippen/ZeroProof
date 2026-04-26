@@ -1,0 +1,114 @@
+# VPN Security Rules
+# Based on network security best practices for VPN configurations
+
+rules:
+  - id: "IS-VPN-001"
+    name: "L2TP VPN in Use"
+    description: |
+      Detects VPN servers using the L2TP protocol, which is considered deprecated
+      and lacks modern security features compared to WireGuard or OpenVPN.
+    category: access_control
+    severity: HIGH
+    impact: |
+      L2TP has known security weaknesses and relies on IPSec for encryption.
+      Modern alternatives like WireGuard offer better performance and security.
+    remediation: |
+      Migrate VPN users to WireGuard or OpenVPN. Disable L2TP VPN servers
+      in Settings > VPN > VPN Server.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2025-01-15"
+      version: "1.0"
+      tags: [vpn, l2tp, deprecated, protocol]
+      references:
+        - "https://www.nist.gov/cyberframework"
+
+    detection:
+      target: vpnServers
+      filter:
+        enabled: true
+
+      condition:
+        field: protocol
+        op: matches_i
+        value: "l2tp"
+
+      output:
+        affected_resource: "VPN Server: {{name}}"
+        details: "VPN server \"{{name}}\" uses deprecated L2TP protocol"
+        current_value: "Protocol: {{protocol}}"
+        expected_value: "WireGuard or OpenVPN"
+
+  - id: "IS-VPN-002"
+    name: "VPN Server Without Logging"
+    description: |
+      Detects VPN servers that do not have logging enabled, creating a gap
+      in the audit trail for remote access connections.
+    category: access_control
+    severity: MEDIUM
+    impact: |
+      Without VPN logging, there is no audit trail for remote access connections.
+      Security incidents involving VPN access cannot be investigated effectively.
+    remediation: |
+      Enable logging for all VPN servers in Settings > VPN > VPN Server
+      to maintain an audit trail of remote connections.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2025-01-15"
+      version: "1.0"
+      tags: [vpn, logging, audit]
+
+    detection:
+      target: vpnServers
+      filter:
+        enabled: true
+
+      condition:
+        operator: OR
+        checks:
+          - field: logging_enabled
+            op: equals
+            value: false
+          - field: logging_enabled
+            op: empty
+
+      output:
+        affected_resource: "VPN Server: {{name}}"
+        details: "VPN server \"{{name}}\" does not have logging enabled"
+        current_value: "Logging: Disabled"
+        expected_value: "Logging: Enabled"
+
+  - id: "IS-VPN-003"
+    name: "VPN Server Active"
+    description: |
+      Informational rule that reports active VPN servers for inventory
+      and periodic security review.
+    category: access_control
+    severity: INFO
+    impact: |
+      Active VPN servers provide remote access to the network and should be
+      reviewed periodically to ensure they are still needed and properly configured.
+    remediation: |
+      Review VPN server configuration periodically. Disable servers that are
+      no longer needed. Verify user access lists are current.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2025-01-15"
+      version: "1.0"
+      tags: [vpn, inventory, audit]
+
+    detection:
+      target: vpnServers
+      filter:
+        enabled: true
+
+      report_mode: each
+
+      output:
+        affected_resource: "VPN Server: {{name}}"
+        details: "Active VPN server \"{{name}}\" ({{protocol}} on port {{port}})"
+        current_value: "Protocol: {{protocol}}, Port: {{port}}"
+        expected_value: "N/A - Review for correctness"

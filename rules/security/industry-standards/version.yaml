@@ -1,0 +1,37 @@
+# Controller Version Validation Rules
+# Ensures the UniFi controller version can be verified
+
+rules:
+  - id: "IS-VER-001"
+    name: "Controller Version Not Verified"
+    description: |
+      Checks if the controller version was successfully retrieved during sync.
+      An empty or missing controller_version indicates ZeroProof could not
+      determine what version the UniFi controller is running.
+    category: version
+    severity: INFO
+    impact: |
+      Cannot verify if the controller is running a supported version.
+      Security rules that depend on version-specific features may produce
+      inaccurate results.
+    remediation: |
+      Ensure ZeroProof can reach the UniFi controller and sync is working.
+      Check the connection settings and verify the controller is online.
+
+    metadata:
+      author: "ZeroProof Team"
+      created: "2024-01-15"
+      version: "1.0"
+      tags: [version, controller, validation]
+
+    detection:
+      target: settings
+      condition:
+        field: controller_version
+        op: empty
+
+      output:
+        affected_resource: "Controller Settings"
+        details: "Controller version could not be verified"
+        current_value: "Version: Unknown"
+        expected_value: "Version: Detected via sync"
