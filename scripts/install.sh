@@ -135,7 +135,6 @@ if [ "${GENERATE_ENV:-false}" = true ]; then
     MQTT_PASSWORD=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 32)
     SESSION_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 48)
     ENCRYPTION_KEY=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 32)
-    DEFAULT_ADMIN_PASSWORD=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 16)
 
     cat > .env << EOF
 # Generated on $(date)
@@ -153,7 +152,13 @@ MQTT_PASSWORD=$MQTT_PASSWORD
 NODE_ENV=production
 SESSION_SECRET=$SESSION_SECRET
 ENCRYPTION_KEY=$ENCRYPTION_KEY
-DEFAULT_ADMIN_PASSWORD=$DEFAULT_ADMIN_PASSWORD
+
+# Admin bootstrap
+# By default ZeroProof has no shipped admin account. On first visit the
+# /setup page prompts you to create one. To seed an admin non-interactively
+# (CI/IaC) uncomment and set DEFAULT_ADMIN_PASSWORD; the seeded user will
+# be flagged with mustChangePassword=true.
+# DEFAULT_ADMIN_PASSWORD=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 16)
 EOF
 
     echo -e "${GREEN}Created .env file with secure credentials${NC}"
@@ -258,13 +263,16 @@ echo ""
 echo "Access the dashboard at:"
 echo -e "  ${GREEN}https://$LOCAL_IP${NC}"
 echo ""
-if [ "${GENERATE_ENV:-false}" = true ]; then
-    echo "Default credentials:"
+if [ -n "${DEFAULT_ADMIN_PASSWORD:-}" ]; then
+    echo "Seeded admin credentials (from DEFAULT_ADMIN_PASSWORD):"
     echo "  Username: admin"
     echo "  Password: $DEFAULT_ADMIN_PASSWORD"
     echo ""
+    echo -e "${YELLOW}You will be prompted to change this on first login.${NC}"
+else
+    echo -e "${GREEN}First-run setup:${NC} open the dashboard and choose your"
+    echo "administrator username and password on the /setup page."
 fi
-echo -e "${YELLOW}IMPORTANT: Change the default password after first login!${NC}"
 echo ""
 echo "Useful commands:"
 echo "  View logs:    $COMPOSE_CMD logs -f"

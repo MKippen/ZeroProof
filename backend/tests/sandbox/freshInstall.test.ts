@@ -186,6 +186,27 @@ describe('Fresh Install Experience', () => {
     expect(networks.body.data.networks.length).toBeGreaterThan(0);
   });
 
+  it('exposes firmware info that matches the on-disk binary', async () => {
+    const res = await agent.get('/api/v1/esp32/firmware/info');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.firmware).toMatchObject({
+      version: expect.any(String),
+      filename: expect.any(String),
+      releaseDate: expect.any(String),
+    });
+    // available reflects actual on-disk state — true when the binary is
+    // present and non-empty, false otherwise. Asserting both branches keeps
+    // this useful regardless of whether the dev box has run `pio run` yet.
+    expect(typeof res.body.data.available).toBe('boolean');
+    if (res.body.data.available) {
+      expect(res.body.data.firmware.size).toBeGreaterThan(0);
+      expect(res.body.data.firmware.checksum).toMatch(/^[a-f0-9]{64}$/);
+    } else {
+      expect(res.body.data.firmware.size).toBe(0);
+    }
+  });
+
   it('handles logout and session invalidation', async () => {
     const logoutRes = await agent.post('/api/v1/auth/logout');
     expect(logoutRes.status).toBe(200);

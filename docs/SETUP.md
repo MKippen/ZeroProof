@@ -238,7 +238,9 @@ NODE_ENV=development
 PORT=3000
 SESSION_SECRET=dev-session-secret-change-me-32chars
 ENCRYPTION_KEY=dev-encryption-key-32-bytes-minimum
-DEFAULT_ADMIN_PASSWORD=admin123!
+# DEFAULT_ADMIN_PASSWORD is optional. If unset, ZeroProof routes the user to
+# /setup on first load. Uncomment to seed an admin non-interactively.
+# DEFAULT_ADMIN_PASSWORD=
 # CORS_ORIGIN=http://localhost:5173
 
 # UniFi (optional - for live sync)

@@ -153,7 +153,10 @@ NODE_ENV=development
 PORT=3000
 SESSION_SECRET=your-32-char-secret-here
 ENCRYPTION_KEY=your-32-char-key-here
-DEFAULT_ADMIN_PASSWORD=admin123!
+# DEFAULT_ADMIN_PASSWORD is optional. If unset, ZeroProof routes the user to
+# /setup on first load to create their own admin account. Uncomment and set
+# this only when seeding non-interactively (CI / scripted demos).
+# DEFAULT_ADMIN_PASSWORD=
 # CORS_ORIGIN=http://localhost:5173
 
 # Frontend
