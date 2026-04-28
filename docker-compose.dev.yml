@@ -23,9 +23,12 @@ services:
   mosquitto:
     image: eclipse-mosquitto:2
     container_name: zeroproof-mqtt-dev
+    # Bound to all interfaces (not just loopback) so ESP32 sensors and other
+    # LAN devices can reach the broker. Mosquitto is configured with a
+    # password file (mosquitto/config/passwd) so it is not anonymous.
     ports:
-      - "127.0.0.1:1883:1883"
-      - "127.0.0.1:9001:9001"
+      - "1883:1883"
+      - "9001:9001"
     volumes:
       - ./mosquitto/config:/mosquitto/config:ro
       - mosquitto_dev_data:/mosquitto/data
@@ -52,6 +55,7 @@ services:
     container_name: zeroproof-backend-dev
     volumes:
       - ./rules:/rules:ro
+      - ./backend/firmware:/app/firmware:ro
     environment:
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-dev_password}@postgres:5432/zeroproof_dev
       - MQTT_BROKER=mosquitto

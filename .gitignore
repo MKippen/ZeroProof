@@ -17,6 +17,9 @@ build/
 *.log
 logs/
 
+# Local backups
+backups/
+
 # OS
 .DS_Store
 Thumbs.db

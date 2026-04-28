@@ -190,12 +190,23 @@ export function DashboardPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {dashboard?.securityScore == null ? (
+            <div className="flex flex-col items-start gap-3 py-2">
+              <div className="text-5xl sm:text-6xl font-bold text-muted-foreground/60">—</div>
+              <p className="text-sm text-muted-foreground">
+                Not analyzed yet. Connect your UniFi Controller and run a sync to generate a security score.
+              </p>
+              <Button asChild size="sm" className="bg-orange-600 hover:bg-orange-500">
+                <Link to="/config">Get Started</Link>
+              </Button>
+            </div>
+          ) : (
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
-            <div className={cn('text-5xl sm:text-6xl font-bold', getScoreColor(dashboard?.securityScore || 0))}>
-              {dashboard?.securityScore || 0}
+            <div className={cn('text-5xl sm:text-6xl font-bold', getScoreColor(dashboard.securityScore))}>
+              {dashboard.securityScore}
             </div>
             <div className="flex-1 space-y-3">
-              <Progress value={dashboard?.securityScore || 0} className="h-3" />
+              <Progress value={dashboard.securityScore} className="h-3" />
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                 {dashboard?.scoreBreakdown?.analysisPassRate !== null && (
                   <div className="flex items-center gap-2">
@@ -221,6 +232,7 @@ export function DashboardPage() {
               </div>
             </div>
           </div>
+          )}
         </CardContent>
       </Card>
 

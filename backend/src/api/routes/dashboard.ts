@@ -193,10 +193,13 @@ router.get('/', requireAuth, async (_req: Request, res: Response) => {
     // This gives diminishing returns - first issues hurt more, later ones less
     // k=0.02 means: 10 weighted points → ~82%, 50 → ~37%, 100 → ~14%
     const k = 0.015;
-    let securityScore = Math.round(100 * Math.exp(-k * totalWeight));
-
-    // Ensure minimum of 0 (though exp can't go negative, rounding edge cases)
-    securityScore = Math.max(0, Math.min(100, securityScore));
+    // Score is null until we have something to score against — a config has been
+    // imported (so security analysis can run) or vulnerabilities have been recorded.
+    // Without that, "100" would falsely advertise a clean network.
+    const hasScoreableData = !!config || totalVulnerabilities > 0;
+    const securityScore: number | null = hasScoreableData
+      ? Math.max(0, Math.min(100, Math.round(100 * Math.exp(-k * totalWeight))))
+      : null;
     logger.info(`Dashboard security score: ${securityScore} (vulns: ${JSON.stringify(vulnCounts)}, analysis: ${JSON.stringify(analysisCounts)}, intentGaps: ${JSON.stringify(intentGapCounts)})`);
 
     // Device stats

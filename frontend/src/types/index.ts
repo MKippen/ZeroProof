@@ -100,7 +100,7 @@ export interface DiscoveredService {
 }
 
 export interface DashboardData {
-  securityScore: number;
+  securityScore: number | null;
   scoreBreakdown: {
     vulnerabilities: Record<Severity, number>;
     securityAnalysis: Record<Severity, number>;

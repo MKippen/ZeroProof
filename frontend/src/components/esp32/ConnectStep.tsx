@@ -1,4 +1,4 @@
-import { Usb, AlertCircle, CheckCircle2, Loader2, Wifi, ArrowRight, Cpu } from 'lucide-react';
+import { Usb, AlertCircle, CheckCircle2, Loader2, Wifi, ArrowRight, Cpu, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -11,6 +11,8 @@ interface ConnectStepProps {
   error: string | null;
   deviceInfo: ESP32DeviceInfo | null;
   isSupported: boolean;
+  isSecureContext?: boolean;
+  isChromium?: boolean;
   latestFirmware: FirmwareInfo | null;
   onConnect: () => void;
   onNext: () => void;
@@ -23,6 +25,8 @@ export function ConnectStep({
   error,
   deviceInfo,
   isSupported,
+  isSecureContext = true,
+  isChromium = true,
   latestFirmware,
   onConnect,
   onNext,
@@ -37,6 +41,67 @@ export function ConnectStep({
   // Check if device already has WiFi configured
   const hasWifiConfigured = deviceInfo?.isWifiConnected === true;
   if (!isSupported) {
+    // Web Serial requires a secure context (HTTPS or localhost). When a
+    // Chromium-based browser is on an insecure origin like an HTTP LAN
+    // IP, navigator.serial is silently absent — surface the real cause
+    // so the fix is obvious instead of looking like a browser problem.
+    const insecureOrigin = isChromium && !isSecureContext;
+    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+    const localhostUrl = typeof window !== 'undefined'
+      ? `http://localhost:${window.location.port || '5173'}${window.location.pathname}${window.location.search}`
+      : 'http://localhost:5173/';
+
+    if (insecureOrigin) {
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5 text-yellow-500" />
+              Secure Context Required
+            </CardTitle>
+            <CardDescription>
+              Your browser supports Web Serial, but this page isn't loaded over a secure origin.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert className="border-yellow-500/50 bg-yellow-500/10">
+              <ShieldAlert className="h-4 w-4 text-yellow-500" />
+              <AlertTitle className="text-yellow-400">Web Serial blocked on insecure origin</AlertTitle>
+              <AlertDescription>
+                <p className="mt-2">
+                  Browsers only expose <code className="font-mono text-xs">navigator.serial</code>{' '}
+                  on <strong>HTTPS</strong> origins or <strong>localhost</strong>. You're currently on{' '}
+                  <code className="font-mono text-xs">{currentOrigin}</code>, which is plain HTTP on a LAN IP.
+                </p>
+              </AlertDescription>
+            </Alert>
+            <div className="rounded-lg border border-border/50 p-4 space-y-3">
+              <h4 className="font-medium">Pick one:</h4>
+              <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
+                <li>
+                  Open this page from the same machine over localhost:{' '}
+                  <a
+                    href={localhostUrl}
+                    className="font-mono text-xs text-primary underline"
+                  >
+                    {localhostUrl}
+                  </a>
+                </li>
+                <li>Serve the frontend over HTTPS (terminate TLS in nginx/Caddy in front of Vite).</li>
+                <li>
+                  Dev-only: launch Chrome with{' '}
+                  <code className="font-mono text-xs">
+                    --unsafely-treat-insecure-origin-as-secure={currentOrigin}
+                  </code>{' '}
+                  and a fresh <code className="font-mono text-xs">--user-data-dir</code>.
+                </li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
     return (
       <Card>
         <CardHeader>

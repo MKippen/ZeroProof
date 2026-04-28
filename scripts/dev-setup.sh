@@ -80,6 +80,21 @@ else
     echo "MQTT password file already exists."
 fi
 
+# Fetch released ESP32 firmware so the web flasher works without PlatformIO.
+echo ""
+if [ "${SKIP_FIRMWARE_DOWNLOAD:-false}" = true ]; then
+    echo "Skipping ESP32 firmware download because SKIP_FIRMWARE_DOWNLOAD=true"
+else
+    echo "Fetching ESP32 firmware release..."
+    if ./scripts/download-firmware.sh; then
+        echo "ESP32 firmware ready."
+    else
+        echo "Warning: ESP32 firmware download failed."
+        echo "The app will still start, but browser flashing stays disabled until firmware is installed."
+        echo "Retry after setup with: ./scripts/download-firmware.sh"
+    fi
+fi
+
 # Start development services
 echo ""
 echo "Starting development services (PostgreSQL, MQTT, Redis)..."

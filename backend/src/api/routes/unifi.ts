@@ -10,6 +10,7 @@ import {
   detectConfigChanges,
   normalizeClientForTimeline,
 } from '../../services/configChangeService';
+import { bootstrapHistoricalTimeline } from '../../services/historyBootstrapService';
 import logger from '../../utils/logger';
 
 const router = Router();
@@ -216,15 +217,17 @@ router.post('/test', requireAuth, async (req: Request, res: Response) => {
 
     const client = new UniFiClient(credentials);
     await client.login();
-    const sites = await client.getSites();
-    const settings = await client.getSettings();
+    const [sites, controllerVersion] = await Promise.all([
+      client.getSites(),
+      client.getControllerVersion(),
+    ]);
 
     const response: ApiResponse = {
       success: true,
       data: {
         connected: true,
         sites: sites || [],
-        controllerVersion: settings?.controller_version || 'Unknown',
+        controllerVersion: controllerVersion || 'Unknown',
       },
     };
     res.json(response);
@@ -470,11 +473,22 @@ router.post('/sync', requireAuth, async (req: Request, res: Response) => {
 
       // Run security analysis (this also saves vulnerabilities to DB)
       const vulnerabilities = await analyzeConfiguration(configForAnalysis as any, newConfig.id);
-      const changesDetected = await detectConfigChanges(
-        connection.id,
-        previousConfigJson,
-        configForAnalysis
-      );
+
+      // On first sync (no prior config), backfill the timeline with UniFi-native
+      // dates from event log, alarms, and config object ObjectIds. The bootstrap
+      // service self-gates on existing change rows, so this is a cheap no-op on
+      // subsequent syncs.
+      let changesDetected = 0;
+      if (!existingConfig) {
+        changesDetected = await bootstrapHistoricalTimeline(connection.id, fullConfig, client);
+      }
+      if (changesDetected === 0) {
+        changesDetected = await detectConfigChanges(
+          connection.id,
+          previousConfigJson,
+          configForAnalysis
+        );
+      }
       const newClients = await syncNetworkClients(
         fullConfig.clients || [],
         fullConfig.networks || [],
@@ -863,6 +877,14 @@ router.post('/connections/:id/sync', requireAuth, async (req: Request, res: Resp
             connection.id,
             previousConfig.configJson as any,
             configForAnalysis
+          );
+        } else {
+          // First sync — backfill timeline with UniFi-native dates from event log,
+          // alarms, and config object ObjectIds. Self-gates if already populated.
+          changesDetected = await bootstrapHistoricalTimeline(
+            connection.id,
+            fullConfig,
+            client
           );
         }
       }

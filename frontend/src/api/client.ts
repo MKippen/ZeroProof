@@ -4,6 +4,25 @@ import { useAuthStore } from '@/stores/authStore';
 const API_BASE = '/api/v1';
 
 class ApiClient {
+  private async parseResponse<T>(response: Response): Promise<Partial<ApiResponse<T>>> {
+    const body = await response.text();
+    if (!body) {
+      return {};
+    }
+
+    try {
+      return JSON.parse(body) as ApiResponse<T>;
+    } catch {
+      return {
+        success: false,
+        error: {
+          code: 'INVALID_JSON',
+          message: 'Server returned an invalid JSON response',
+        },
+      };
+    }
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -11,6 +30,7 @@ class ApiClient {
     const url = `${API_BASE}${endpoint}`;
 
     const config: RequestInit = {
+      cache: 'no-store',
       ...options,
       headers: {
         'Content-Type': 'application/json',
@@ -21,7 +41,7 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
-      const data = await response.json();
+      const data = await this.parseResponse<T>(response);
 
       // Handle session expiration - redirect to login
       if (response.status === 401 && !endpoint.includes('/auth/login')) {
@@ -40,7 +60,7 @@ class ApiClient {
         };
       }
 
-      return data;
+      return data as ApiResponse<T>;
     } catch (error) {
       console.error('API request failed:', endpoint, error);
       return {
@@ -98,8 +118,9 @@ class ApiClient {
         method: 'POST',
         body: formData,
         credentials: 'include',
+        cache: 'no-store',
       });
-      const data = await response.json();
+      const data = await this.parseResponse<T>(response);
 
       if (!response.ok) {
         return {
@@ -108,7 +129,7 @@ class ApiClient {
         };
       }
 
-      return data;
+      return data as ApiResponse<T>;
     } catch (error) {
       return {
         success: false,

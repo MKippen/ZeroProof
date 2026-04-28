@@ -130,6 +130,29 @@ else {
     Write-Host "MQTT password file already exists." -ForegroundColor Green
 }
 
+# Fetch released ESP32 firmware so the web flasher works without PlatformIO.
+Write-Host ""
+if ($env:SKIP_FIRMWARE_DOWNLOAD -eq "true") {
+    Write-Host "Skipping ESP32 firmware download because SKIP_FIRMWARE_DOWNLOAD=true" -ForegroundColor Yellow
+}
+elseif (Get-Command bash -ErrorAction SilentlyContinue) {
+    Write-Host "Fetching ESP32 firmware release..." -ForegroundColor Yellow
+    $downloadScript = Join-Path $projectRoot "scripts\download-firmware.sh"
+    & bash $downloadScript
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "ESP32 firmware ready." -ForegroundColor Green
+    }
+    else {
+        Write-Host "Warning: ESP32 firmware download failed." -ForegroundColor Yellow
+        Write-Host "The app will still start, but browser flashing stays disabled until firmware is installed." -ForegroundColor Yellow
+        Write-Host "Retry after setup with: bash scripts/download-firmware.sh" -ForegroundColor Yellow
+    }
+}
+else {
+    Write-Host "Warning: bash was not found, so ESP32 firmware was not downloaded." -ForegroundColor Yellow
+    Write-Host "Install Git Bash or WSL, then run: bash scripts/download-firmware.sh" -ForegroundColor Yellow
+}
+
 # Start development services
 Write-Host ""
 Write-Host "Starting development services (PostgreSQL, MQTT, Redis)..." -ForegroundColor Yellow
