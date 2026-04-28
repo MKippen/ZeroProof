@@ -51,14 +51,14 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
-    // Check if dismissal already exists (active or inactive)
-    const existing = await prisma.findingDismissal.findUnique({
+    // Check if dismissal already exists (active or inactive).
+    // Use findFirst because Prisma's findUnique on a compound key with a nullable
+    // column rejects `null` values — even though the @@unique constraint allows it.
+    const existing = await prisma.findingDismissal.findFirst({
       where: {
-        findingType_findingId_affectedResource: {
-          findingType: findingType as FindingType,
-          findingId,
-          affectedResource: affectedResource || null,
-        },
+        findingType: findingType as FindingType,
+        findingId,
+        affectedResource: affectedResource || null,
       },
     });
 

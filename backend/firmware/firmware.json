@@ -1,9 +1,9 @@
 {
-  "version": "source-build",
+  "version": "3.1.0",
   "filename": "zeroproof-esp32.bin",
-  "size": 0,
-  "checksum": "",
-  "releaseDate": "2026-04-26",
+  "size": 1200448,
+  "checksum": "1580f1a9137b1a4da26f7d48d749b13244abbd4047c2b32b4873af87263cd161",
+  "releaseDate": "2026-04-27",
   "minHardwareVersion": "1.0",
-  "notes": "No prebuilt firmware binary is committed to the open-source repository. Build the ESP32 firmware locally and update this metadata before publishing a firmware release."
+  "notes": "Local build (esp32dev). Merged image: bootloader@0x1000, partitions@0x8000, app@0x10000."
 }

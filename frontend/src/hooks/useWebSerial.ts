@@ -65,6 +65,8 @@ export interface WebSerialState {
   error: string | null;
   deviceInfo: ESP32DeviceInfo | null;
   isSupported: boolean;
+  isSecureContext: boolean;
+  isChromium: boolean;
   isBootloaderMode: boolean;
 }
 
@@ -97,6 +99,15 @@ export function useWebSerial(): UseWebSerialReturn {
   const writerRef = useRef<WritableStreamDefaultWriter<Uint8Array> | null>(null);
   const readBufferRef = useRef<string>('');
 
+  // Web Serial requires a secure context (HTTPS or localhost). Chrome
+  // silently omits navigator.serial on insecure LAN-IP origins, which
+  // makes the bare 'serial' in navigator check look like the browser
+  // isn't supported when the real cause is the origin. Track both
+  // conditions separately so the UI can explain what's actually wrong.
+  const isSecureContext = typeof window !== 'undefined' && window.isSecureContext === true;
+  const isChromium = typeof navigator !== 'undefined' &&
+    /Chrome|Edg|Edge/.test(navigator.userAgent) &&
+    !/Firefox|FxiOS/.test(navigator.userAgent);
   const isSupported = typeof navigator !== 'undefined' && 'serial' in navigator;
 
   const connect = useCallback(async (): Promise<boolean> => {
@@ -524,6 +535,8 @@ export function useWebSerial(): UseWebSerialReturn {
     error,
     deviceInfo,
     isSupported,
+    isSecureContext,
+    isChromium,
     isBootloaderMode,
     connect,
     reconnect,

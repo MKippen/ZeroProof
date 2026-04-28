@@ -25,7 +25,7 @@ cd ZeroProof
 ./scripts/install.sh
 ```
 
-`scripts/install.sh` creates the production `.env`, Mosquitto password file, and local certificate. These generated files are intentionally ignored by git and should be backed up securely.
+`scripts/install.sh` creates the production `.env`, Mosquitto password file, local certificate, and downloads the latest ESP32 firmware release into `backend/firmware/`. These generated files are intentionally ignored by git and should be backed up securely. Set `SKIP_FIRMWARE_DOWNLOAD=true` when running the installer offline; browser flashing stays disabled until `./scripts/download-firmware.sh` succeeds.
 
 ### 2. Configure SSL (Optional but Recommended)
 

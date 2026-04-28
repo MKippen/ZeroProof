@@ -86,6 +86,18 @@ The installer generates `.env`, the Mosquitto password file, and a local self-si
 ./scripts/smoke-test.sh
 ```
 
+### Get the ESP32 firmware
+
+ZeroProof serves prebuilt ESP32 firmware from `backend/firmware/`, but prebuilt binaries are not committed to the repo. `./scripts/install.sh` and `./scripts/dev-setup.sh` download the latest firmware release automatically. You can also rerun the firmware download manually:
+
+```bash
+./scripts/download-firmware.sh
+```
+
+The script downloads `zeroproof-esp32.bin` and `firmware.json` into `backend/firmware/`, verifies the SHA-256 checksum from the metadata, and skips work when the same verified firmware is already installed. Set `FIRMWARE_TAG=firmware-v...` or `FIRMWARE_REPO=owner/repo` to override the default latest firmware release from this repo. Set `SKIP_FIRMWARE_DOWNLOAD=true` when running setup offline.
+
+Contributors who want to modify firmware can still build locally with PlatformIO from `esp32-firmware/`, but PlatformIO is optional for a normal ZeroProof install.
+
 ### UniFi Live Sync Tips
 
 - Use your controller's real reachable address (for example `192.168.x.x` or `unifi.local`), not a stale local tunnel port.

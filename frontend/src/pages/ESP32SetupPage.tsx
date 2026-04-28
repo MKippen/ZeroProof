@@ -517,6 +517,8 @@ export function ESP32SetupPage() {
             error={webSerial.error}
             deviceInfo={webSerial.deviceInfo}
             isSupported={webSerial.isSupported}
+            isSecureContext={webSerial.isSecureContext}
+            isChromium={webSerial.isChromium}
             latestFirmware={firmwareData?.firmware || null}
             onConnect={handleConnect}
             onNext={() => goToStep(2)}
@@ -1035,6 +1037,8 @@ export function ESP32SetupContent() {
             error={webSerial.error}
             deviceInfo={webSerial.deviceInfo}
             isSupported={webSerial.isSupported}
+            isSecureContext={webSerial.isSecureContext}
+            isChromium={webSerial.isChromium}
             latestFirmware={firmwareData?.firmware || null}
             onConnect={handleConnect}
             onNext={() => goToStep(2)}

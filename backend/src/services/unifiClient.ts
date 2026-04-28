@@ -336,7 +336,12 @@ export class UniFiClient {
         if (error.code === 'ENOTFOUND') {
           throw new Error(`Cannot resolve hostname: ${hostLabel}`);
         }
-        if (error.code === 'ETIMEDOUT' || error.code === 'ECONNRESET') {
+        if (
+          error.code === 'ETIMEDOUT' ||
+          error.code === 'ECONNRESET' ||
+          error.code === 'ECONNABORTED' ||
+          error.message?.includes('timeout')
+        ) {
           throw new Error(`Connection timed out to ${hostLabel}`);
         }
         if (error.message?.includes('certificate')) {
@@ -633,6 +638,17 @@ export class UniFiClient {
 
   async getSettings(): Promise<any> {
     return this.apiGet('/rest/setting');
+  }
+
+  async getControllerVersion(): Promise<string | null> {
+    try {
+      const sysinfo = await this.apiGet('/stat/sysinfo');
+      const entry = Array.isArray(sysinfo) ? sysinfo[0] : sysinfo;
+      return entry?.version ?? null;
+    } catch (e) {
+      logger.debug('sysinfo endpoint not available');
+      return null;
+    }
   }
 
   async getClients(): Promise<any[]> {

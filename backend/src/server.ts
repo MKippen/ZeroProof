@@ -5,7 +5,7 @@ import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
 import expressWs from 'express-ws';
 import type { WebsocketRequestHandler } from 'express-ws';
-import config, { isDev, isProd } from './config';
+import config, { isDev } from './config';
 import routes from './api/routes';
 import { errorHandler, notFoundHandler } from './api/middleware/error';
 import { mqttClient } from './mqtt';
@@ -14,10 +14,10 @@ import logger from './utils/logger';
 export function createServer(): Express {
   const app = express();
   expressWs(app);
+  app.disable('etag');
 
-  if (isProd) {
-    app.set('trust proxy', 1);
-  }
+  // Docker deployments put the backend behind nginx/frontend proxies on private networks.
+  app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
 
   // Security middleware
   app.use(
@@ -81,7 +81,13 @@ export function createServer(): Express {
     });
   });
 
-  // API routes
+  // API routes are user/session scoped and should never be browser-cached.
+  app.use('/api/v1', (_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+  });
   app.use('/api/v1', routes);
 
   // WebSocket endpoint

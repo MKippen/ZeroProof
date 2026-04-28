@@ -42,6 +42,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: zeroproof-backend
+    volumes:
+      - ./backend/firmware:/app/firmware:ro
     environment:
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/zeroproof
       - MQTT_BROKER=mosquitto

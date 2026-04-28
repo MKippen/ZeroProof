@@ -192,6 +192,21 @@ else
     echo -e "${GREEN}MQTT configured${NC}"
 fi
 
+# ---- ESP32 firmware ----
+echo ""
+if [ "${SKIP_FIRMWARE_DOWNLOAD:-false}" = true ]; then
+    echo -e "${YELLOW}Skipping ESP32 firmware download because SKIP_FIRMWARE_DOWNLOAD=true${NC}"
+else
+    echo "Fetching ESP32 firmware release..."
+    if ./scripts/download-firmware.sh; then
+        echo -e "${GREEN}ESP32 firmware ready${NC}"
+    else
+        echo -e "${YELLOW}Warning: ESP32 firmware download failed.${NC}"
+        echo -e "${YELLOW}The app will still start, but browser flashing stays disabled until firmware is installed.${NC}"
+        echo "Retry after install with: ./scripts/download-firmware.sh"
+    fi
+fi
+
 # ---- Build and start services ----
 echo ""
 echo "Building and starting services..."

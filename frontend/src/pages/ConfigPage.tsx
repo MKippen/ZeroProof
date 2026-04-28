@@ -13,6 +13,7 @@ import {
   ChevronRight,
   History,
 } from 'lucide-react';
+import { ControllerConnectionForm } from '@/components/ControllerConnectionForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -309,7 +310,7 @@ export function ConfigContent() {
               <Server className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
               <p className="text-muted-foreground mb-2">No UniFi Controller connected</p>
               <p className="text-sm text-muted-foreground">
-                Configure your controller connection below to enable automatic sync
+                Add your controller details below to enable automatic sync.
               </p>
             </div>
           )}
@@ -352,6 +353,9 @@ export function ConfigContent() {
           </CardContent>
         </Card>
       )}
+
+      {/* Controller Connection Form */}
+      <ControllerConnectionForm />
 
       {/* Config History - Compact Summary */}
       <ConfigHistorySummary
