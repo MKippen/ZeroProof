@@ -5,7 +5,7 @@ import prisma from '../../services/database';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { LoginSchema, ChangePasswordSchema, ApiResponse, SessionUser } from '../../types';
-import config, { isProd } from '../../config';
+import { isProd } from '../../config';
 import logger from '../../utils/logger';
 
 const router = Router();
@@ -229,33 +229,151 @@ router.post(
   }
 );
 
-// Initialize default admin user if none exists
-export async function initializeDefaultUser(): Promise<void> {
-  const userCount = await prisma.user.count();
-  if (userCount === 0) {
-    const defaultPassword = config.DEFAULT_ADMIN_PASSWORD;
-    if (!defaultPassword) {
-      if (isProd) {
-        throw new Error('DEFAULT_ADMIN_PASSWORD must be set in production when bootstrapping the first admin user');
-      }
-      logger.warn('DEFAULT_ADMIN_PASSWORD not set; falling back to admin123! (development only)');
-    }
-    const hash = await bcrypt.hash(defaultPassword || 'admin123!', BCRYPT_ROUNDS);
+// GET /api/v1/auth/setup-status — public; the frontend uses this to redirect
+// users to /setup on a fresh install before showing the login screen.
+router.get('/setup-status', async (_req: Request, res: Response) => {
+  try {
+    const userCount = await prisma.user.count();
+    const response: ApiResponse<{ initialized: boolean }> = {
+      success: true,
+      data: { initialized: userCount > 0 },
+    };
+    res.json(response);
+  } catch (error) {
+    logger.error('setup-status error:', error);
+    const response: ApiResponse = {
+      success: false,
+      error: { code: 'SETUP_STATUS_ERROR', message: 'Unable to read setup status' },
+    };
+    res.status(500).json(response);
+  }
+});
 
-    await prisma.user.create({
+// POST /api/v1/auth/setup — public; creates the first admin account on a
+// fresh install. Returns 409 once any user exists so this endpoint cannot be
+// abused to overwrite or add admins after bootstrap.
+const setupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many setup attempts. Try again later.' } },
+});
+
+router.post('/setup', setupLimiter, async (req: Request, res: Response) => {
+  try {
+    const userCount = await prisma.user.count();
+    if (userCount > 0) {
+      const response: ApiResponse = {
+        success: false,
+        error: { code: 'ALREADY_INITIALIZED', message: 'Setup has already been completed' },
+      };
+      res.status(409).json(response);
+      return;
+    }
+
+    const username = String(req.body?.username ?? '').trim();
+    const password = String(req.body?.password ?? '');
+
+    if (!username || username.length < 3 || username.length > 64) {
+      const response: ApiResponse = {
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Username must be between 3 and 64 characters' },
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    if (!/^[A-Za-z0-9._-]+$/.test(username)) {
+      const response: ApiResponse = {
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Username may only contain letters, numbers, dot, underscore, or hyphen',
+        },
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    if (!password || password.length < 12) {
+      const response: ApiResponse = {
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Password must be at least 12 characters' },
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const user = await prisma.user.create({
       data: {
-        username: 'admin',
+        username,
         passwordHash: hash,
-        mustChangePassword: true,
+        mustChangePassword: false,
       },
+      select: { id: true, username: true },
     });
 
-    logger.info('Created default admin user (username: admin)');
-    if (isProd) {
-      logger.info('Default admin password is set via DEFAULT_ADMIN_PASSWORD in the environment');
-    }
-    logger.warn('⚠️  Please change the default password immediately!');
+    logger.info(`First-run setup completed; created admin user "${user.username}"`);
+
+    const response: ApiResponse<{ user: { id: number; username: string } }> = {
+      success: true,
+      data: { user },
+    };
+    res.status(201).json(response);
+  } catch (error) {
+    logger.error('Setup error:', error);
+    const response: ApiResponse = {
+      success: false,
+      error: { code: 'SETUP_ERROR', message: 'Failed to complete setup' },
+    };
+    res.status(500).json(response);
   }
+});
+
+// Bootstrap the first admin user when DEFAULT_ADMIN_PASSWORD is set.
+//
+// We deliberately do NOT auto-create an `admin` / `admin123!` account on a
+// fresh install. Shipping a default password — even one flagged for
+// must-change-on-first-login — leaks a foothold during the brief window
+// before first login, leaks confusion ("what is the password?"), and trains
+// users to expect a known credential. Instead, when no DEFAULT_ADMIN_PASSWORD
+// is provided the database stays empty and the frontend's first-run flow
+// directs the user through POST /api/v1/auth/setup to create their own
+// admin account.
+//
+// The env-var path remains for non-interactive provisioning (CI bring-up,
+// IaC stamping, scripted demos) — those callers know the password they set
+// and can pass it through.
+export async function initializeDefaultUser(): Promise<void> {
+  const userCount = await prisma.user.count();
+  if (userCount > 0) return;
+
+  // Read directly from process.env (not config.DEFAULT_ADMIN_PASSWORD, which is
+  // frozen at module load time) so tests and orchestration scripts can control
+  // bootstrap behavior dynamically.
+  const seedPassword = process.env.DEFAULT_ADMIN_PASSWORD?.trim();
+  if (!seedPassword || seedPassword.length < 8) {
+    if (isProd) {
+      logger.info(
+        'No users in database and DEFAULT_ADMIN_PASSWORD is unset; first-run setup will be required at /setup'
+      );
+    }
+    return;
+  }
+
+  const hash = await bcrypt.hash(seedPassword, BCRYPT_ROUNDS);
+  await prisma.user.create({
+    data: {
+      username: 'admin',
+      passwordHash: hash,
+      mustChangePassword: true,
+    },
+  });
+
+  logger.info('Created seed admin user from DEFAULT_ADMIN_PASSWORD (username: admin)');
+  logger.warn('⚠️  Change the seed admin password after first login.');
 }
 
 export default router;

@@ -10,6 +10,7 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+  setupFiles: ['<rootDir>/tests/sandbox/setup.ts'],
   setupFilesAfterEnv: [],
   testTimeout: 60000,
   verbose: true,

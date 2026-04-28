@@ -9,15 +9,13 @@ import { useToast } from '@/hooks/useToast';
 import api from '@/api/client';
 
 export function LoginPage() {
-  const [username] = useState('admin');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { setUser, setMustChangePassword } = useAuthStore();
   const { toast } = useToast();
-  const showDefaultCredentials =
-    import.meta.env.DEV || import.meta.env.VITE_SHOW_DEFAULT_CREDENTIALS === 'true';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,6 +149,24 @@ export function LoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
+                <Label htmlFor="username" className="text-sm font-medium flex items-center gap-2">
+                  <Shield className="h-3.5 w-3.5 text-orange-500" />
+                  Username
+                </Label>
+                <Input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter username"
+                  required
+                  autoComplete="username"
+                  autoFocus
+                  className="bg-background/50 border-border/50 focus:border-orange-500/50 focus:ring-orange-500/20 font-mono h-11"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm font-medium flex items-center gap-2">
                   <Lock className="h-3.5 w-3.5 text-orange-500" />
                   Password
@@ -201,17 +217,6 @@ export function LoginPage() {
               </Button>
             </form>
 
-            {/* Default credentials hint (dev only by default) */}
-            {showDefaultCredentials && (
-              <div className="mt-6 p-4 rounded-lg bg-muted/30 border border-border/50">
-                <p className="text-xs text-muted-foreground font-mono text-center">
-                  <span className="text-orange-500">default password:</span> admin123!
-                </p>
-                <p className="text-xs text-yellow-500/80 mt-1 text-center">
-                  Change password after first login
-                </p>
-              </div>
-            )}
           </div>
 
         </div>
