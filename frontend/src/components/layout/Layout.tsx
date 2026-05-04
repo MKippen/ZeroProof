@@ -12,6 +12,7 @@ import {
   Zap,
   History,
   Users,
+  Network,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/intent', icon: Target, label: 'Intent' },
   { to: '/security', icon: ShieldCheck, label: 'Security' },
+  { to: '/dns-proxy', icon: Network, label: 'DNS Proxy' },
   { to: '/timeline', icon: History, label: 'Timeline' },
   { to: '/optimization', icon: Zap, label: 'Optimization' },
   { to: '/devices', icon: Cpu, label: 'Devices' },
