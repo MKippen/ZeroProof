@@ -31,6 +31,7 @@ model Configuration {
 
   vulnerabilities Vulnerability[]
   testRuns        TestRun[]
+  campaignRuns    CampaignRun[]
 }
 
 model Device {
@@ -106,6 +107,9 @@ model Vulnerability {
   testRun       TestRun?       @relation(fields: [testRunId], references: [id])
   configId      String?
   configuration Configuration? @relation(fields: [configId], references: [id])
+  campaignId    String?
+  campaignRunId String?
+  campaignRun   CampaignRun?   @relation(fields: [campaignRunId], references: [id], onDelete: SetNull)
 
   type        String
   severity    Severity
@@ -124,6 +128,8 @@ model Vulnerability {
 
   @@index([severity, status])
   @@index([type])
+  @@index([campaignId, status])
+  @@index([campaignRunId])
 }
 
 enum Severity {
@@ -139,6 +145,57 @@ enum VulnStatus {
   ACKNOWLEDGED
   FIXED
   FALSE_POSITIVE
+}
+
+model CampaignSetting {
+  id         String   @id @default(cuid())
+  campaignId String   @unique
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model CampaignRun {
+  id            String            @id @default(cuid())
+  campaignId    String
+  status        CampaignRunStatus @default(QUEUED)
+  verdict       CampaignVerdict   @default(NOT_RUN)
+  configId      String?
+  configuration Configuration?    @relation(fields: [configId], references: [id], onDelete: SetNull)
+
+  stepsJson      Json
+  optionsJson    Json?
+  evidenceJson   Json?
+  summaryJson    Json?
+  testRunIdsJson Json?
+  error          String? @db.Text
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  vulnerabilities Vulnerability[]
+
+  @@index([campaignId, startedAt])
+  @@index([status])
+  @@index([verdict])
+}
+
+enum CampaignRunStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum CampaignVerdict {
+  NOT_RUN
+  VALIDATED
+  AT_RISK
+  SUSPECTED_COMPROMISE
+  INCONCLUSIVE
+  DISABLED
 }
 
 model DiscoveredService {

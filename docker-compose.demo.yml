@@ -1,0 +1,142 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: zeroproof-postgres-demo
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-demo_password}
+      POSTGRES_DB: zeroproof_demo
+    ports:
+      - "127.0.0.1:5442:5432"
+    volumes:
+      - postgres_demo_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "app=zeroproof"
+      - "env=demo"
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: zeroproof-mqtt-demo
+    # Bound to all interfaces so ESP32 sensors on the LAN can reach the broker.
+    # Authenticated via mosquitto/config/passwd.
+    ports:
+      - "1893:1883"
+      - "9011:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config:ro
+      - mosquitto_demo_data:/mosquitto/data
+    restart: unless-stopped
+    labels:
+      - "app=zeroproof"
+      - "env=demo"
+
+  redis:
+    image: redis:7-alpine
+    container_name: zeroproof-redis-demo
+    ports:
+      - "127.0.0.1:6389:6379"
+    restart: unless-stopped
+    labels:
+      - "app=zeroproof"
+      - "env=demo"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: zeroproof-backend-demo
+    volumes:
+      - ./rules:/rules:ro
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-demo_password}@postgres:5432/zeroproof_demo
+      - MQTT_BROKER=mosquitto
+      - MQTT_PORT=1883
+      - MQTT_USERNAME=${MQTT_USERNAME:-auditor}
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-mqtt_password}
+      - NODE_ENV=development
+      - SESSION_SECRET=${DEMO_SESSION_SECRET:-demo-session-secret-change-me-32chars}
+      - ENCRYPTION_KEY=${DEMO_ENCRYPTION_KEY:-demo-encryption-key-32-bytes-min!}
+      - DEFAULT_ADMIN_PASSWORD=${DEMO_ADMIN_PASSWORD:-admin123!}
+      - PORT=3000
+      - HOST_IP=${HOST_IP:-}
+    # Use prisma db push instead of migrate deploy — migrations are stale and don't
+    # include UniFiConnection / UniFiConfigChange / Notification tables.
+    command: ["sh", "-c", "pnpm exec prisma db push --skip-generate --accept-data-loss && node dist/index.js"]
+    ports:
+      - "3010:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "app=zeroproof"
+      - "env=demo"
+      - "component=backend"
+
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: zeroproof-scheduler-demo
+    volumes:
+      - ./rules:/rules:ro
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-demo_password}@postgres:5432/zeroproof_demo
+      - MQTT_BROKER=mosquitto
+      - MQTT_PORT=1883
+      - MQTT_USERNAME=${MQTT_USERNAME:-auditor}
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-mqtt_password}
+      - NODE_ENV=development
+      - SESSION_SECRET=${DEMO_SESSION_SECRET:-demo-session-secret-change-me-32chars}
+      - ENCRYPTION_KEY=${DEMO_ENCRYPTION_KEY:-demo-encryption-key-32-bytes-min!}
+      - HOST_IP=${HOST_IP:-}
+    command: ["node", "dist/scheduler.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    restart: unless-stopped
+    labels:
+      - "app=zeroproof"
+      - "env=demo"
+      - "component=scheduler"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: zeroproof-frontend-demo
+    ports:
+      - "5180:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "app=zeroproof"
+      - "env=demo"
+      - "component=frontend"
+
+volumes:
+  postgres_demo_data:
+  mosquitto_demo_data:

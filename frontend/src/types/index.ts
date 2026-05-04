@@ -2,82 +2,16 @@ export type Severity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO';
 export type VulnStatus = 'OPEN' | 'ACKNOWLEDGED' | 'FIXED' | 'FALSE_POSITIVE';
 export type DeviceStatus = 'ONLINE' | 'OFFLINE' | 'TESTING' | 'UPDATING' | 'ERROR';
 export type TestStatus = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+export type CampaignRunStatus = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+export type CampaignVerdict =
+  | 'NOT_RUN'
+  | 'VALIDATED'
+  | 'AT_RISK'
+  | 'SUSPECTED_COMPROMISE'
+  | 'INCONCLUSIVE'
+  | 'DISABLED';
+export type CampaignStepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
 export type DnsAttributionStatus = 'HEALTHY' | 'DEGRADED' | 'UNKNOWN';
-
-export interface DnsProxySettings {
-  id: string;
-  host: string;
-  port: number;
-  useHttps: boolean;
-  username: string;
-  pollingEnabled: boolean;
-  pollingIntervalSec: number;
-  retentionDays: number;
-  lastSyncAt?: string;
-  lastSyncStatus?: string;
-  lastSyncError?: string | null;
-  lastQueryAt?: string;
-  queryLogEnabled?: boolean | null;
-  anonymizeClientIp?: boolean | null;
-  attributionStatus: DnsAttributionStatus;
-  attributionReason?: string | null;
-}
-
-export interface DnsProxyQuery {
-  id: string;
-  queriedAt: string;
-  clientIp?: string | null;
-  clientName?: string | null;
-  domain: string;
-  queryType?: string | null;
-  status?: string | null;
-  reason?: string | null;
-  rule?: string | null;
-  upstream?: string | null;
-  isBlocked: boolean;
-  isSuspicious: boolean;
-}
-
-export interface DnsProxyQueriesResponse {
-  queries: DnsProxyQuery[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-}
-
-export interface DnsProxyStatus {
-  configured: boolean;
-  settings: DnsProxySettings | null;
-  adguard?: {
-    reachable: boolean;
-    version?: string;
-    protectionEnabled?: boolean;
-    queryLogConfig?: {
-      enabled?: boolean;
-      anonymize_client_ip?: boolean;
-      interval?: number | string;
-    };
-    error?: string;
-  };
-  stats: {
-    totalQueries: number;
-    recentQueries: number;
-    blockedQueries: number;
-    suspiciousQueries: number;
-    uniqueClients: number;
-    lastQueryAt?: string;
-  };
-  attribution: {
-    status: DnsAttributionStatus;
-    reason: string;
-    uniqueClientCount: number;
-    matchedClientCount: number;
-    sampleClients: string[];
-  };
-}
 
 export interface User {
   id: number;
@@ -122,6 +56,8 @@ export interface Vulnerability {
   testRunId?: string;
   testRun?: { id: string; testType: string };
   configId?: string;
+  campaignId?: string;
+  campaignRunId?: string;
   configuration?: { siteName: string };
   type: string;
   severity: Severity;
@@ -146,6 +82,308 @@ export interface Configuration {
   notes?: string;
   vulnerabilityCount?: number;
   testRunCount?: number;
+}
+
+export interface CampaignDefinition {
+  id: string;
+  name: string;
+  shortName: string;
+  description: string;
+  category: string;
+  severity: Severity;
+  frontendComponent: string;
+  references: Array<{ label: string; url: string }>;
+  requiredDataSources: string[];
+  steps: Array<{
+    id: CampaignStepId;
+    label: string;
+    description: string;
+  }>;
+  options: Array<{
+    id: string;
+    label: string;
+    type: string;
+    defaultValue: unknown;
+    description?: string;
+  }>;
+  defaultOptions: ResidentialProxyCampaignOptions;
+}
+
+export type CampaignStepId = 'setup' | 'configure' | 'collect' | 'evaluate' | 'validate' | 'cleanup';
+
+export interface CampaignStepState {
+  id: CampaignStepId;
+  label: string;
+  description: string;
+  status: CampaignStepStatus;
+  startedAt?: string;
+  completedAt?: string;
+  message?: string;
+}
+
+export interface ResidentialProxyCampaignOptions {
+  targetNetworkKeywords: string[];
+  validationPorts: number[];
+  manualClientMacs: string[];
+  lookbackHours: number;
+  validationTimeoutMs: number;
+  cleanupCompleted: string[];
+}
+
+export interface ResidentialProxyEvidence {
+  collectedAt: string;
+  configId?: string;
+  siteName?: string | null;
+  dataSources: {
+    activeConfig: boolean;
+    unifiConnection: boolean;
+    eventsChecked: number;
+    alarmsChecked: number;
+    validationRunners: Array<{ id: string; deviceId: string; name: string; status: string; ipAddress?: string | null }>;
+  };
+  candidateDevices: Array<{
+    mac: string;
+    ip?: string;
+    name: string;
+    hostname?: string;
+    networkId?: string;
+    networkName?: string;
+    oui?: string;
+    reasonCodes: string[];
+    confidence: number;
+  }>;
+  riskyNetworkPosture: {
+    targetNetworks: Array<{ id: string; name: string; vlan?: number | null; subnet?: string | null }>;
+    weakSegmentation: boolean;
+    indicators: string[];
+  };
+  dnsPosture: {
+    protectiveDnsLikely: boolean | null;
+    indicators: string[];
+  };
+  dnsProxyEvidence?: {
+    configured: boolean;
+    queryLogEnabled?: boolean | null;
+    anonymizedClientIp?: boolean | null;
+    attributionStatus: DnsAttributionStatus;
+    attributionReason: string;
+    deviceLevelQueryCount: number;
+    networkLevelSignalCount: number;
+    matches: Array<{
+      source: 'device' | 'network';
+      attribution: 'device' | 'network';
+      queriedAt: string;
+      clientIp?: string | null;
+      clientName?: string | null;
+      domain: string;
+      queryType?: string | null;
+      status?: string | null;
+      reason?: string | null;
+      rule?: string | null;
+      upstream?: string | null;
+      blocked: boolean;
+      suspicious: boolean;
+      signalType?: string;
+      severity?: Severity;
+      title?: string;
+    }>;
+    indicators: string[];
+  };
+  idsHoneypotStatus: {
+    idsIpsEnabled: boolean | null;
+    honeypotEnabled: boolean | null;
+    honeypotCount: number;
+    indicators: string[];
+  };
+  portForwards: Array<{
+    id?: string;
+    name: string;
+    externalPort?: string;
+    internalPort?: string;
+    targetIp?: string;
+    protocol?: string;
+    matchedPorts: number[];
+  }>;
+  upnpNatPmp: {
+    upnpEnabled: boolean | null;
+    natPmpEnabled: boolean | null;
+    indicators: string[];
+  };
+  telemetryMatches: {
+    snippets: Array<{
+      source: 'event' | 'alarm';
+      id?: string;
+      key?: string;
+      datetime?: string;
+      matchedTerms: string[];
+      subject: string;
+    }>;
+    eventMatchCount: number;
+    alarmMatchCount: number;
+  };
+  validation?: {
+    runner?: { id: string; deviceId: string; name: string; ipAddress?: string | null };
+    testRunIds: string[];
+    scannedHosts: number;
+    scannedPorts: number;
+    openPorts: Array<{
+      host: string;
+      port: number;
+      service: string;
+      candidateName?: string;
+      candidateMac?: string;
+    }>;
+    cleanHosts: string[];
+    failedTestRuns: string[];
+  };
+}
+
+export interface ResidentialProxySummary {
+  verdict: CampaignVerdict;
+  score: number;
+  confidence: number;
+  highSignals: string[];
+  mediumSignals: string[];
+  lowSignals: string[];
+  findings: Array<{
+    resourceKey: string;
+    type: string;
+    severity: Severity;
+    title: string;
+    description: string;
+    impact: string;
+    remediation: string;
+    affectedResource: string;
+    confidence: number;
+    evidence: string[];
+  }>;
+  cleanup?: {
+    completed: string[];
+    updatedAt: string;
+  };
+}
+
+export interface CampaignRun {
+  id: string;
+  campaignId: string;
+  status: CampaignRunStatus;
+  verdict: CampaignVerdict;
+  configId?: string;
+  stepsJson: CampaignStepState[];
+  optionsJson?: ResidentialProxyCampaignOptions;
+  evidenceJson?: ResidentialProxyEvidence;
+  summaryJson?: ResidentialProxySummary;
+  testRunIdsJson?: string[];
+  startedAt: string;
+  completedAt?: string;
+  updatedAt: string;
+  error?: string;
+}
+
+export interface CampaignListItem {
+  definition: CampaignDefinition;
+  enabled: boolean;
+  latestRun: CampaignRun | null;
+  openFindingCount: number;
+}
+
+export interface CampaignDetail extends CampaignListItem {
+  runs: CampaignRun[];
+}
+
+export interface DnsProxySettings {
+  id?: string;
+  host: string;
+  port: number;
+  useHttps: boolean;
+  username: string;
+  pollingEnabled: boolean;
+  pollingIntervalSec?: number;
+  retentionDays: number;
+  lastSyncAt?: string;
+  lastSyncStatus?: string;
+  lastSyncError?: string | null;
+  lastQueryAt?: string;
+  queryLogEnabled?: boolean | null;
+  anonymizeClientIp?: boolean | null;
+  attributionStatus?: DnsAttributionStatus;
+  attributionReason?: string | null;
+}
+
+export interface DnsProxyAttribution {
+  status: DnsAttributionStatus;
+  reason: string;
+  uniqueClientCount: number;
+  matchedClientCount: number;
+  sampleClients: string[];
+}
+
+export interface DnsProxyStatus {
+  configured: boolean;
+  settings: DnsProxySettings | null;
+  adguard?: {
+    reachable: boolean;
+    version?: string;
+    protectionEnabled?: boolean;
+    queryLogConfig?: {
+      enabled?: boolean;
+      interval?: number;
+      anonymize_client_ip?: boolean;
+      ignored?: string[];
+    };
+    error?: string;
+  };
+  stats: {
+    totalQueries: number;
+    recentQueries: number;
+    blockedQueries: number;
+    suspiciousQueries: number;
+    uniqueClients: number;
+    lastQueryAt?: string;
+  };
+  attribution: DnsProxyAttribution;
+}
+
+export interface DnsProxyQuery {
+  id: string;
+  queriedAt: string;
+  clientIp?: string | null;
+  clientName?: string | null;
+  domain: string;
+  queryType?: string | null;
+  status?: string | null;
+  reason?: string | null;
+  rule?: string | null;
+  upstream?: string | null;
+  isBlocked: boolean;
+  isSuspicious: boolean;
+}
+
+export interface DnsProxyQueriesResponse {
+  queries: DnsProxyQuery[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface DnsProxySignal {
+  id: string;
+  type: string;
+  severity: Severity;
+  title: string;
+  description: string;
+  domain?: string | null;
+  clientIp?: string | null;
+  clientName?: string | null;
+  campaignId?: string | null;
+  campaignRunId?: string | null;
+  confidence: number;
+  evidenceJson?: unknown;
+  detectedAt: string;
+  expiresAt: string;
 }
 
 // Honeypot types

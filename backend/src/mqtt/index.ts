@@ -515,6 +515,38 @@ class MqttService {
     });
   }
 
+  broadcastCampaignProgress(
+    campaignId: string,
+    runId: string,
+    stepId: string,
+    status: string,
+    progress?: number
+  ): void {
+    this.broadcastToWebSockets({
+      type: 'campaign_progress',
+      campaignId,
+      runId,
+      stepId,
+      status,
+      progress,
+    });
+  }
+
+  broadcastCampaignComplete(
+    campaignId: string,
+    runId: string,
+    verdict: string,
+    status: string
+  ): void {
+    this.broadcastToWebSockets({
+      type: 'campaign_completed',
+      campaignId,
+      runId,
+      verdict,
+      status,
+    });
+  }
+
   addWebSocketClient(ws: WebSocket): void {
     this.wsClients.add(ws);
   }

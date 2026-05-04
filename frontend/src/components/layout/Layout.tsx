@@ -13,6 +13,7 @@ import {
   History,
   Users,
   Network,
+  Crosshair,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/intent', icon: Target, label: 'Intent' },
   { to: '/security', icon: ShieldCheck, label: 'Security' },
+  { to: '/campaigns', icon: Crosshair, label: 'Campaigns' },
   { to: '/dns-proxy', icon: Network, label: 'DNS Proxy' },
   { to: '/timeline', icon: History, label: 'Timeline' },
   { to: '/optimization', icon: Zap, label: 'Optimization' },

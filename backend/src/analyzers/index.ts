@@ -28,7 +28,7 @@ export async function analyzeConfiguration(
 
     // Delete existing vulnerabilities for this config to prevent duplicates
     await prisma.vulnerability.deleteMany({
-      where: { configId },
+      where: { configId, campaignId: null },
     });
 
     // Store findings in database

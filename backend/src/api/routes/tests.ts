@@ -6,14 +6,10 @@ import { validate } from '../middleware/validate';
 import { ApiResponse, StartTestSchema } from '../../types';
 import { mqttClient } from '../../mqtt';
 import logger from '../../utils/logger';
-import { getTestDefinition, getAvailableTests, Command } from '../../services/testDefinitions';
-import { localTestExecutor } from '../../services/localTestExecutor';
+import { getAvailableTests } from '../../services/testDefinitions';
 import { enrichWithDeviceNames } from '../../services/deviceLookup';
-import { getHoneypotExclusions, generateHoneypotValidationCommands } from '../../services/honeypotService';
-import { generateTopologyTestCommands, generateDeviceToDeviceCommands, generateMeshTestData, analyzeMeshResults } from '../../services/topologyTestGenerator';
-import { mergeTestRunResultsJson } from '../../services/testRunResultsJson';
-
-const SERVER_DEVICE_ID = 'server-local';
+import { generateMeshTestData, analyzeMeshResults } from '../../services/topologyTestGenerator';
+import { startConfiguredTest, TestStartError } from '../../services/testStartService';
 
 const router = Router();
 
@@ -30,239 +26,8 @@ router.get('/types', requireAuth, (_req: Request, res: Response) => {
 router.post('/start', requireAuth, validate(StartTestSchema), async (req: Request, res: Response) => {
   try {
     const { deviceId, testType, configId, options } = req.body;
-
-    // Verify device exists and is online
-    const device = await prisma.device.findUnique({
-      where: { id: deviceId },
-    });
-
-    if (!device) {
-      const response: ApiResponse = {
-        success: false,
-        error: { code: 'DEVICE_NOT_FOUND', message: 'Device not found' },
-      };
-      res.status(404).json(response);
-      return;
-    }
-
-    if (device.status !== 'ONLINE') {
-      const response: ApiResponse = {
-        success: false,
-        error: { code: 'DEVICE_OFFLINE', message: 'Device is not online' },
-      };
-      res.status(400).json(response);
-      return;
-    }
-
-    // Check for active test on this device
-    const activeTest = await prisma.testRun.findFirst({
-      where: {
-        deviceId,
-        status: { in: ['QUEUED', 'RUNNING'] },
-      },
-      orderBy: { startedAt: 'desc' },
-    });
-
-    if (activeTest) {
-      const now = Date.now();
-      const startedAt = activeTest.startedAt?.getTime() ?? now;
-      const ageMs = now - startedAt;
-      const staleQueued = activeTest.status === 'QUEUED' && ageMs > 2 * 60 * 1000;
-      const staleRunning = activeTest.status === 'RUNNING' && ageMs > 30 * 60 * 1000;
-
-      if (staleQueued || staleRunning) {
-        logger.warn(
-          `Auto-clearing stale ${activeTest.status} test ${activeTest.id} on device ${device.deviceId} before starting new test`
-        );
-
-        await prisma.testRun.update({
-          where: { id: activeTest.id },
-          data: {
-            status: 'FAILED',
-            completedAt: new Date(),
-            errorMessage: `Auto-cleared stale ${activeTest.status.toLowerCase()} test before new run`,
-          },
-        });
-
-        await prisma.device.update({
-          where: { id: deviceId },
-          data: { status: 'ONLINE' },
-        });
-      } else {
-        const response: ApiResponse = {
-          success: false,
-          error: {
-            code: 'TEST_IN_PROGRESS',
-            message: `A test is already running on this device (${activeTest.testType})`,
-          },
-        };
-        res.status(409).json(response);
-        return;
-      }
-    }
-
-    // Recheck active test after stale cleanup (if any)
-    const blockingTest = await prisma.testRun.findFirst({
-      where: {
-        deviceId,
-        status: { in: ['QUEUED', 'RUNNING'] },
-      },
-      orderBy: { startedAt: 'desc' },
-    });
-
-    if (blockingTest) {
-      const response: ApiResponse = {
-        success: false,
-        error: { code: 'TEST_IN_PROGRESS', message: 'A test is already running on this device' },
-      };
-      res.status(409).json(response);
-      return;
-    }
-
-    // Get active config if not specified
-    let targetConfigId = configId;
-    if (!targetConfigId) {
-      const activeConfig = await prisma.configuration.findFirst({
-        where: { isActive: true },
-      });
-      targetConfigId = activeConfig?.id;
-    }
-
-    // Create test run
-    const testRun = await prisma.testRun.create({
-      data: {
-        deviceId,
-        testType,
-        configId: targetConfigId,
-        status: 'QUEUED',
-        progress: 0,
-        currentStep: 'Initializing',
-      },
-    });
-
-    // Update device status
-    await prisma.device.update({
-      where: { id: deviceId },
-      data: { status: 'TESTING' },
-    });
-
-    // Get test definition
-    const testDef = getTestDefinition(testType);
-
-    if (testDef) {
-      // New command-based execution
-      let commands: Command[] = testDef.commands.map(cmd => {
-        // Clone command and resolve any template variables
-        const resolved = { ...cmd };
-        // ${gateway} will be resolved by the device from get_network_info
-        return resolved;
-      });
-
-      // Handle topology validation test - generate commands dynamically
-      if (testType === 'topology_validation') {
-        const { commands: topoCommands, metadata } = await generateTopologyTestCommands(device.ipAddress || undefined);
-        if (topoCommands.length <= 1) {
-          const response: ApiResponse = {
-            success: false,
-            error: { code: 'NO_TOPOLOGY_DATA', message: metadata.error || 'No topology data available for validation' },
-          };
-          // Clean up test run
-          await prisma.testRun.delete({ where: { id: testRun.id } });
-          await prisma.device.update({ where: { id: deviceId }, data: { status: 'ONLINE' } });
-          res.status(400).json(response);
-          return;
-        }
-        commands = topoCommands;
-        // Store metadata in test run for result processing
-        await mergeTestRunResultsJson(testRun.id, {
-          metadata: { topologyMetadata: metadata },
-          topologyMetadata: metadata,
-          schemaVersion: 2,
-        });
-        logger.info(`Topology validation test with ${commands.length} test commands`);
-      }
-
-      // Handle honeypot validation test - add commands for each honeypot
-      if (testType === 'honeypot_validation') {
-        const honeypotCommands = await generateHoneypotValidationCommands(options?.honeypotIds);
-        if (honeypotCommands.length === 0) {
-          const response: ApiResponse = {
-            success: false,
-            error: { code: 'NO_HONEYPOTS', message: 'No honeypots configured to validate' },
-          };
-          // Clean up test run
-          await prisma.testRun.delete({ where: { id: testRun.id } });
-          await prisma.device.update({ where: { id: deviceId }, data: { status: 'ONLINE' } });
-          res.status(400).json(response);
-          return;
-        }
-        commands = [...commands, ...honeypotCommands];
-        logger.info(`Honeypot validation test with ${honeypotCommands.length} honeypot targets`);
-      }
-
-      // Handle device-to-device test - test connectivity between ESP32 devices
-      if (testType === 'device_to_device') {
-        const { commands: d2dCommands, metadata } = await generateDeviceToDeviceCommands(device.deviceId);
-        if (metadata.error || metadata.targetDevices.length === 0) {
-          const response: ApiResponse = {
-            success: false,
-            error: { code: 'NO_DEVICES', message: metadata.error || 'No other ESP32 devices available for testing' },
-          };
-          // Clean up test run
-          await prisma.testRun.delete({ where: { id: testRun.id } });
-          await prisma.device.update({ where: { id: deviceId }, data: { status: 'ONLINE' } });
-          res.status(400).json(response);
-          return;
-        }
-        commands = d2dCommands;
-        // Store metadata in test run for result processing
-        await mergeTestRunResultsJson(testRun.id, {
-          metadata: { deviceToDeviceMetadata: metadata },
-          deviceToDeviceMetadata: metadata,
-          schemaVersion: 2,
-        });
-        logger.info(`Device-to-device test: ${metadata.sourceDevice.name} (${metadata.sourceDevice.network || 'unknown'}) -> ${metadata.targetDevices.map(t => `${t.name} (${t.network || 'unknown'})`).join(', ')}`);
-      }
-
-      // Handle honeypot exclusion for other tests
-      let honeypotExclusions: Array<{ ip: string; port: number }> = [];
-      if (options?.excludeHoneypots && testType !== 'honeypot_validation') {
-        honeypotExclusions = await getHoneypotExclusions();
-        if (honeypotExclusions.length > 0) {
-          logger.info(`Excluding ${honeypotExclusions.length} honeypot targets from scan`);
-          // Store exclusions in test run for result processing
-          await mergeTestRunResultsJson(testRun.id, {
-            metadata: { honeypotExclusions },
-            honeypotExclusions,
-            schemaVersion: 2,
-          });
-        }
-      }
-
-      // Check if this is the server device - run locally instead of via MQTT
-      if (device.deviceId === SERVER_DEVICE_ID) {
-        logger.info(`Running ${commands.length} commands locally on server`);
-        // Execute asynchronously so we can return immediately
-        localTestExecutor.executeBatch(testRun.id, commands, honeypotExclusions).catch((err) => {
-          logger.error('Local test execution error:', err);
-        });
-      } else {
-        mqttClient.sendCommand(device.deviceId, 'execute', {
-          testId: testRun.id,
-          commands,
-          honeypotExclusions, // Send to device so it can skip honeypot IPs
-        });
-        logger.info(`Sending ${commands.length} commands to device ${device.deviceId}`);
-      }
-    } else {
-      // Fallback to legacy test executor for backward compatibility
-      mqttClient.sendTestCommand(device.deviceId, {
-        testId: testRun.id,
-        deviceId: device.deviceId,
-        testType,
-        options,
-      });
-    }
+    const testRun = await startConfiguredTest({ deviceId, testType, configId, options });
+    const device = await prisma.device.findUnique({ where: { id: deviceId } });
 
     // Audit log
     await prisma.auditLog.create({
@@ -270,12 +35,10 @@ router.post('/start', requireAuth, validate(StartTestSchema), async (req: Reques
         userId: req.session.userId,
         action: 'TEST_START',
         resource: testRun.id,
-        details: { testType, deviceId: device.deviceId },
+        details: { testType, deviceId: device?.deviceId },
         ipAddress: req.ip,
       },
     });
-
-    logger.info(`Test started: ${testType} on device ${device.deviceId}`);
 
     const response: ApiResponse = {
       success: true,
@@ -283,6 +46,15 @@ router.post('/start', requireAuth, validate(StartTestSchema), async (req: Reques
     };
     res.json(response);
   } catch (error) {
+    if (error instanceof TestStartError) {
+      const response: ApiResponse = {
+        success: false,
+        error: { code: error.code, message: error.message },
+      };
+      res.status(error.status).json(response);
+      return;
+    }
+
     logger.error('Start test error:', error);
     const response: ApiResponse = {
       success: false,
