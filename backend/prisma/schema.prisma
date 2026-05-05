@@ -10,27 +10,27 @@ datasource db {
 }
 
 model User {
-  id                Int       @id @default(autoincrement())
-  username          String    @unique
-  passwordHash      String
-  mustChangePassword Boolean  @default(true)
-  createdAt         DateTime  @default(now())
-  lastLogin         DateTime?
-  auditLogs         AuditLog[]
+  id                 Int        @id @default(autoincrement())
+  username           String     @unique
+  passwordHash       String
+  mustChangePassword Boolean    @default(true)
+  createdAt          DateTime   @default(now())
+  lastLogin          DateTime?
+  auditLogs          AuditLog[]
 }
 
 model Configuration {
-  id                String          @id @default(cuid())
-  importedAt        DateTime        @default(now())
-  configHash        String          @unique
+  id                String   @id @default(cuid())
+  importedAt        DateTime @default(now())
+  configHash        String   @unique
   siteName          String?
   controllerVersion String?
   configJson        Json
   notes             String?
-  isActive          Boolean         @default(true)
+  isActive          Boolean  @default(true)
 
-  vulnerabilities   Vulnerability[]
-  testRuns          TestRun[]
+  vulnerabilities Vulnerability[]
+  testRuns        TestRun[]
 }
 
 model Device {
@@ -43,11 +43,11 @@ model Device {
   status          DeviceStatus @default(OFFLINE)
   ipAddress       String?
 
-  testRuns        TestRun[]
-  credentials     WifiCredential[]
+  testRuns    TestRun[]
+  credentials WifiCredential[]
 
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum DeviceStatus {
@@ -70,23 +70,23 @@ model WifiCredential {
 }
 
 model TestRun {
-  id            String     @id @default(cuid())
+  id            String         @id @default(cuid())
   deviceId      String
-  device        Device     @relation(fields: [deviceId], references: [id])
+  device        Device         @relation(fields: [deviceId], references: [id])
   configId      String?
   configuration Configuration? @relation(fields: [configId], references: [id])
 
-  testType      String
-  status        TestStatus @default(QUEUED)
-  progress      Int        @default(0)
-  currentStep   String?
+  testType    String
+  status      TestStatus @default(QUEUED)
+  progress    Int        @default(0)
+  currentStep String?
 
-  startedAt     DateTime   @default(now())
-  completedAt   DateTime?
-  duration      Int?
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  duration    Int?
 
-  resultsJson   Json?
-  errorMessage  String?
+  resultsJson  Json?
+  errorMessage String?
 
   vulnerabilities    Vulnerability[]
   discoveredServices DiscoveredService[]
@@ -101,26 +101,26 @@ enum TestStatus {
 }
 
 model Vulnerability {
-  id              String    @id @default(cuid())
-  testRunId       String?
-  testRun         TestRun?  @relation(fields: [testRunId], references: [id])
-  configId        String?
-  configuration   Configuration? @relation(fields: [configId], references: [id])
+  id            String         @id @default(cuid())
+  testRunId     String?
+  testRun       TestRun?       @relation(fields: [testRunId], references: [id])
+  configId      String?
+  configuration Configuration? @relation(fields: [configId], references: [id])
 
-  type            String
-  severity        Severity
-  title           String
-  description     String    @db.Text
-  impact          String?   @db.Text
-  remediation     String?   @db.Text
+  type        String
+  severity    Severity
+  title       String
+  description String   @db.Text
+  impact      String?  @db.Text
+  remediation String?  @db.Text
 
   affectedResource String?
   cveId            String?
 
-  status          VulnStatus @default(OPEN)
-  firstSeen       DateTime   @default(now())
-  lastSeen        DateTime   @default(now())
-  notes           String?    @db.Text
+  status    VulnStatus @default(OPEN)
+  firstSeen DateTime   @default(now())
+  lastSeen  DateTime   @default(now())
+  notes     String?    @db.Text
 
   @@index([severity, status])
   @@index([type])
@@ -142,16 +142,16 @@ enum VulnStatus {
 }
 
 model DiscoveredService {
-  id           Int      @id @default(autoincrement())
-  testRunId    String
-  testRun      TestRun  @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  id        Int     @id @default(autoincrement())
+  testRunId String
+  testRun   TestRun @relation(fields: [testRunId], references: [id], onDelete: Cascade)
 
-  ipAddress    String
-  port         Int
-  protocol     String   @default("tcp")
-  serviceName  String?
-  version      String?
-  banner       String?
+  ipAddress   String
+  port        Int
+  protocol    String  @default("tcp")
+  serviceName String?
+  version     String?
+  banner      String?
 
   discoveredAt DateTime @default(now())
 
@@ -159,9 +159,9 @@ model DiscoveredService {
 }
 
 model AuditLog {
-  id        Int      @id @default(autoincrement())
-  userId    Int?
-  user      User?    @relation(fields: [userId], references: [id])
+  id     Int   @id @default(autoincrement())
+  userId Int?
+  user   User? @relation(fields: [userId], references: [id])
 
   action    String
   resource  String?
@@ -183,30 +183,70 @@ model Setting {
 
 // UniFi Controller Connection
 model UniFiConnection {
-  id              String   @id @default(cuid())
-  name            String
-  host            String
-  port            Int      @default(443)
-  usernameEnc     String   // Encrypted
-  passwordEnc     String   // Encrypted
-  siteId          String   @default("default")
+  id          String @id @default(cuid())
+  name        String
+  host        String
+  port        Int    @default(443)
+  usernameEnc String // Encrypted
+  passwordEnc String // Encrypted
+  siteId      String @default("default")
 
-  isActive        Boolean  @default(true)
-  autoSync        Boolean  @default(false)
-  syncIntervalMin Int      @default(1440)  // Minutes between syncs (default: daily)
+  isActive        Boolean @default(true)
+  autoSync        Boolean @default(false)
+  syncIntervalMin Int     @default(1440) // Minutes between syncs (default: daily)
 
-  lastSyncAt      DateTime?
-  lastSyncStatus  SyncStatus?
-  lastSyncError   String?
+  lastSyncAt     DateTime?
+  lastSyncStatus SyncStatus?
+  lastSyncError  String?
 
   // Permissions
-  canWrite        Boolean  @default(false)  // Can push firewall rules
+  canWrite Boolean @default(false) // Can push firewall rules
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  syncHistory     UniFiSyncHistory[]
-  configChanges   UniFiConfigChange[]
+  syncHistory   UniFiSyncHistory[]
+  configChanges UniFiConfigChange[]
+}
+
+model AdGuardConnection {
+  id          String  @id @default(cuid())
+  name        String  @default("AdGuard Home")
+  host        String
+  port        Int     @default(3000)
+  useHttps    Boolean @default(false)
+  // Opt-in for self-signed TLS certs (home labs). Default false so we never
+  // disable certificate validation unless the user explicitly enables it.
+  allowSelfSigned Boolean @default(false)
+  usernameEnc String
+  passwordEnc String
+
+  isActive           Boolean @default(true)
+  pollingEnabled     Boolean @default(false)
+  pollingIntervalSec Int     @default(60)
+  retentionDays      Int     @default(7)
+
+  lastSyncAt     DateTime?
+  lastSyncStatus SyncStatus?
+  lastSyncError  String?
+  lastQueryAt    DateTime?
+
+  queryLogEnabled   Boolean?
+  anonymizeClientIp Boolean?
+  attributionStatus DnsAttributionStatus @default(UNKNOWN)
+  attributionReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  queryEvents DnsQueryEvent[]
+  dnsSignals  DnsSignal[]
+}
+
+enum DnsAttributionStatus {
+  HEALTHY
+  DEGRADED
+  UNKNOWN
 }
 
 enum SyncStatus {
@@ -216,46 +256,46 @@ enum SyncStatus {
 }
 
 model UniFiSyncHistory {
-  id              String   @id @default(cuid())
-  connectionId    String
-  connection      UniFiConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  id           String          @id @default(cuid())
+  connectionId String
+  connection   UniFiConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
-  status          SyncStatus
-  startedAt       DateTime @default(now())
-  completedAt     DateTime?
+  status      SyncStatus
+  startedAt   DateTime   @default(now())
+  completedAt DateTime?
 
   // Stats
-  devicesFound    Int?
-  networksFound   Int?
-  rulesFound      Int?
-  wlansFound      Int?
-  changesDetected Int?
+  devicesFound         Int?
+  networksFound        Int?
+  rulesFound           Int?
+  wlansFound           Int?
+  changesDetected      Int?
   vulnerabilitiesFound Int?
 
-  errorMessage    String?
-  configId        String?  // Link to imported configuration
+  errorMessage String?
+  configId     String? // Link to imported configuration
 
   @@index([connectionId, startedAt])
 }
 
 // Track configuration changes over time
 model UniFiConfigChange {
-  id              String   @id @default(cuid())
-  connectionId    String
-  connection      UniFiConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  id           String          @id @default(cuid())
+  connectionId String
+  connection   UniFiConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
-  changeType      ChangeType
-  resourceType    String    // firewallRule, network, wlan, portForward, etc.
-  resourceId      String?
-  resourceName    String?
+  changeType   ChangeType
+  resourceType String // firewallRule, network, wlan, portForward, etc.
+  resourceId   String?
+  resourceName String?
 
-  previousValue   Json?
-  newValue        Json?
+  previousValue Json?
+  newValue      Json?
 
-  detectedAt      DateTime @default(now())
+  detectedAt DateTime @default(now())
 
   // If we know who made the change (from UniFi audit logs)
-  changedBy       String?
+  changedBy String?
 
   @@index([connectionId, detectedAt])
   @@index([resourceType])
@@ -278,40 +318,116 @@ enum NotificationType {
 }
 
 model Notification {
-  id            String           @id @default(cuid())
-  type          NotificationType
-  severity      Severity
-  title         String
-  message       String           @db.Text
-  resourceType  String?          // "configuration", "connection", "client"
-  resourceId    String?
-  isRead        Boolean          @default(false)
-  isDismissed   Boolean          @default(false)
-  createdAt     DateTime         @default(now())
-  readAt        DateTime?
+  id           String           @id @default(cuid())
+  type         NotificationType
+  severity     Severity
+  title        String
+  message      String           @db.Text
+  resourceType String? // "configuration", "connection", "client"
+  resourceId   String?
+  isRead       Boolean          @default(false)
+  isDismissed  Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  readAt       DateTime?
 
   @@index([isRead, isDismissed, createdAt])
   @@index([type])
 }
 
+model DnsQueryEvent {
+  id           String            @id @default(cuid())
+  connectionId String
+  connection   AdGuardConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  source     String   @default("adguard_home")
+  eventHash  String   @unique
+  queriedAt  DateTime
+  ingestedAt DateTime @default(now())
+  expiresAt  DateTime
+
+  clientIp    String?
+  clientName  String?
+  clientId    String?
+  clientProto String?
+
+  domain    String
+  queryType String?
+  status    String?
+  reason    String?
+  rule      String?
+  upstream  String?
+
+  answerJson Json?
+  rulesJson  Json?
+  rawJson    Json?
+
+  isBlocked    Boolean @default(false)
+  isSuspicious Boolean @default(false)
+
+  campaignId    String?
+  campaignRunId String?
+
+  dnsSignals DnsSignal[]
+
+  @@index([connectionId, queriedAt])
+  @@index([clientIp])
+  @@index([domain])
+  @@index([reason])
+  @@index([status])
+  @@index([isSuspicious, queriedAt])
+  @@index([expiresAt])
+}
+
+model DnsSignal {
+  id           String            @id @default(cuid())
+  connectionId String
+  connection   AdGuardConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  queryEventId String?
+  queryEvent   DnsQueryEvent?    @relation(fields: [queryEventId], references: [id], onDelete: Cascade)
+
+  type          String
+  severity      Severity
+  title         String
+  description   String   @db.Text
+  domain        String?
+  clientIp      String?
+  clientName    String?
+  campaignId    String?
+  campaignRunId String?
+  confidence    Float    @default(0.5)
+  evidenceJson  Json?
+
+  detectedAt DateTime @default(now())
+  expiresAt  DateTime
+
+  @@index([connectionId, detectedAt])
+  @@index([type])
+  @@index([severity])
+  @@index([domain])
+  @@index([clientIp])
+  @@index([campaignId])
+  @@index([campaignRunId])
+  @@index([expiresAt])
+}
+
 model NetworkClient {
-  id              String    @id @default(cuid())
-  mac             String    @unique
+  id              String  @id @default(cuid())
+  mac             String  @unique
   hostname        String?
   displayName     String?
-  oui             String?           // Manufacturer from UniFi OUI lookup
+  oui             String? // Manufacturer from UniFi OUI lookup
   lastIp          String?
   lastNetworkId   String?
   lastNetworkName String?
-  isWired         Boolean   @default(false)
+  isWired         Boolean @default(false)
 
   // Timestamps from UniFi (unix epoch seconds converted to DateTime)
-  unifiFirstSeen  DateTime?
-  unifiLastSeen   DateTime?
+  unifiFirstSeen DateTime?
+  unifiLastSeen  DateTime?
 
   // Our tracking
-  firstTrackedAt  DateTime  @default(now())
-  lastUpdatedAt   DateTime  @updatedAt
+  firstTrackedAt DateTime @default(now())
+  lastUpdatedAt  DateTime @updatedAt
 
   @@index([lastNetworkId])
   @@index([unifiFirstSeen])
@@ -320,25 +436,25 @@ model NetworkClient {
 
 // Audit remediation actions taken
 model RemediationAction {
-  id              String   @id @default(cuid())
+  id              String @id @default(cuid())
   vulnerabilityId String
 
-  actionType      String    // create_rule, modify_rule, delete_rule, etc.
-  description     String
+  actionType  String // create_rule, modify_rule, delete_rule, etc.
+  description String
 
   // The actual change made
-  resourceType    String
-  resourceId      String?
-  changeData      Json
+  resourceType String
+  resourceId   String?
+  changeData   Json
 
-  status          RemediationStatus @default(PENDING)
-  appliedAt       DateTime?
-  appliedBy       Int?      // User ID who approved
+  status    RemediationStatus @default(PENDING)
+  appliedAt DateTime?
+  appliedBy Int? // User ID who approved
 
-  errorMessage    String?
-  rollbackData    Json?     // Data needed to undo this action
+  errorMessage String?
+  rollbackData Json? // Data needed to undo this action
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([vulnerabilityId])
 }
@@ -355,8 +471,8 @@ enum RemediationStatus {
 model FindingDismissal {
   id               String      @id @default(cuid())
   findingType      FindingType // RULE | INTENT_GAP
-  findingId        String      // e.g., "OC-WIFI-003" for rules, "work_vlan" for intent settings
-  affectedResource String?     // e.g., "WiFi: IoT-Network" (null = all instances)
+  findingId        String // e.g., "OC-WIFI-003" for rules, "work_vlan" for intent settings
+  affectedResource String? // e.g., "WiFi: IoT-Network" (null = all instances)
   reason           String      @db.Text
   dismissedAt      DateTime    @default(now())
   isActive         Boolean     @default(true)
@@ -376,30 +492,30 @@ enum FindingType {
 
 // Cached security rules loaded from YAML
 model CachedRule {
-  id              String       @id // Rule ID from YAML (e.g., "IS-FW-001")
-  sourceId        String       // Source attribution (e.g., "industry-standards")
-  category        String       // Rule category
-  name            String
-  description     String       @db.Text
-  severity        Severity
-  impact          String       @db.Text
-  remediation     String       @db.Text
+  id          String   @id // Rule ID from YAML (e.g., "IS-FW-001")
+  sourceId    String // Source attribution (e.g., "industry-standards")
+  category    String // Rule category
+  name        String
+  description String   @db.Text
+  severity    Severity
+  impact      String   @db.Text
+  remediation String   @db.Text
 
   // Full YAML content for reference
-  yamlContent     String       @db.Text
-  fileHash        String       // Hash of source file for change detection
-  filePath        String       // Path to source YAML file
+  yamlContent String @db.Text
+  fileHash    String // Hash of source file for change detection
+  filePath    String // Path to source YAML file
 
   // Metadata
-  author          String?
-  version         String?
-  tags            String[]     @default([])
-  references      String[]     @default([])
+  author     String?
+  version    String?
+  tags       String[] @default([])
+  references String[] @default([])
 
-  enabled         Boolean      @default(true)  // Can disable specific rules
+  enabled Boolean @default(true) // Can disable specific rules
 
-  loadedAt        DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  loadedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([sourceId])
   @@index([category])
@@ -408,31 +524,31 @@ model CachedRule {
 
 // Cached test definitions loaded from YAML
 model CachedTest {
-  id              String       @id // Test ID from YAML (e.g., "connectivity")
-  sourceId        String
-  name            String
-  description     String       @db.Text
-  category        String
-  target          String       // esp32, server, both
+  id          String @id // Test ID from YAML (e.g., "connectivity")
+  sourceId    String
+  name        String
+  description String @db.Text
+  category    String
+  target      String // esp32, server, both
 
-  isDynamic       Boolean      @default(false)
-  isMeshTest      Boolean      @default(false)
+  isDynamic  Boolean @default(false)
+  isMeshTest Boolean @default(false)
 
   // Full YAML content
-  yamlContent     String       @db.Text
-  fileHash        String
-  filePath        String
+  yamlContent String @db.Text
+  fileHash    String
+  filePath    String
 
   // Metadata
-  author          String?
-  version         String?
-  tags            String[]     @default([])
+  author            String?
+  version           String?
+  tags              String[] @default([])
   estimatedDuration String?
 
-  enabled         Boolean      @default(true)
+  enabled Boolean @default(true)
 
-  loadedAt        DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  loadedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([sourceId])
   @@index([category])
@@ -440,28 +556,28 @@ model CachedTest {
 
 // Cached intent evaluations loaded from YAML
 model CachedIntentEval {
-  id              String       @id // Evaluation ID from YAML
-  sourceId        String
-  name            String
-  description     String       @db.Text
-  category        String
-  priority        Int
-  intentSetting   String       // Maps to NetworkIntentProfile field
+  id            String @id // Evaluation ID from YAML
+  sourceId      String
+  name          String
+  description   String @db.Text
+  category      String
+  priority      Int
+  intentSetting String // Maps to NetworkIntentProfile field
 
   // Full YAML content
-  yamlContent     String       @db.Text
-  fileHash        String
-  filePath        String
+  yamlContent String @db.Text
+  fileHash    String
+  filePath    String
 
   // Metadata
-  author          String?
-  version         String?
-  tags            String[]     @default([])
+  author  String?
+  version String?
+  tags    String[] @default([])
 
-  enabled         Boolean      @default(true)
+  enabled Boolean @default(true)
 
-  loadedAt        DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  loadedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([sourceId])
   @@index([intentSetting])
@@ -469,33 +585,33 @@ model CachedIntentEval {
 
 // Rule sources for attribution
 model RuleSource {
-  id              String       @id // Source ID (e.g., "industry-standards")
-  name            String
-  description     String       @db.Text
-  url             String?
-  license         String?
-  references      String[]     @default([])
+  id          String   @id // Source ID (e.g., "industry-standards")
+  name        String
+  description String   @db.Text
+  url         String?
+  license     String?
+  references  String[] @default([])
 
-  loadedAt        DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  loadedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // GitHub repository configuration for rule sync
 model GitHubRuleRepo {
-  id              String       @id @default(cuid())
-  owner           String
-  repo            String
-  branch          String       @default("main")
-  path            String       @default("rules")
+  id     String @id @default(cuid())
+  owner  String
+  repo   String
+  branch String @default("main")
+  path   String @default("rules")
 
-  name            String       // Display name
-  description     String?
+  name        String // Display name
+  description String?
 
-  tokenEnc        String?      // Encrypted GitHub token (for private repos)
+  tokenEnc String? // Encrypted GitHub token (for private repos)
 
-  enabled         Boolean      @default(true)
-  autoSync        Boolean      @default(false)
-  syncIntervalMin Int          @default(1440)  // Default: daily
+  enabled         Boolean @default(true)
+  autoSync        Boolean @default(false)
+  syncIntervalMin Int     @default(1440) // Default: daily
 
   lastSyncAt      DateTime?
   lastSyncStatus  SyncStatus?
@@ -503,8 +619,8 @@ model GitHubRuleRepo {
   filesDownloaded Int?
   filesUpdated    Int?
 
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([owner, repo])
 }
