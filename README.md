@@ -74,9 +74,13 @@ cd ZeroProof
 ./scripts/install.sh
 ```
 
-Access the dashboard at `https://your-ip`. Credentials are printed by the installer (stored in `.env`).
+Access the dashboard at `https://your-ip`. On first visit ZeroProof routes
+you to **/setup** to create your administrator account — you choose the
+username and password yourself. There is no shipped default password.
 
-**Change the default password after first login.**
+If you're scripting the install (CI / IaC), set `DEFAULT_ADMIN_PASSWORD` in
+`.env` and the backend will seed an `admin` account with that password
+instead. The seeded admin will be flagged with `mustChangePassword=true`.
 
 The installer generates `.env`, the Mosquitto password file, and a local self-signed certificate. Those generated files are intentionally ignored by git.
 
@@ -157,7 +161,9 @@ cd backend && pnpm test -- --no-coverage
 cd frontend && pnpm test -- run
 ```
 
-See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for full development setup.
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for full development setup,
+and [docs/UNIFI_SETUP.md](docs/UNIFI_SETUP.md) for connecting ZeroProof to
+your UniFi controller with a least-privileged read-only user.
 
 ### Sandbox Testing
 

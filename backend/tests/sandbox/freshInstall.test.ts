@@ -1,7 +1,6 @@
 import request from 'supertest';
 import { closeServerResources, createServer } from '../../src/server';
 import prisma, { connectDatabase, disconnectDatabase } from '../../src/services/database';
-import { initializeDefaultUser } from '../../src/api/routes/auth';
 import { ruleLoader } from '../../src/services/ruleLoader';
 import { SANDBOX_IMPORT_CONFIGS } from './fixtures/unifiNetworkApi_9_2_17';
 
@@ -25,12 +24,15 @@ async function resetDatabase(): Promise<void> {
 describe('Fresh Install Experience', () => {
   const app = createServer();
   const agent = request.agent(app);
-  const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123!';
+  const setupUsername = 'mike';
+  const setupPassword = 'CorrectHorseBattery42!';
 
   beforeAll(async () => {
     await connectDatabase();
     await resetDatabase();
-    await initializeDefaultUser();
+    // Deliberately skip initializeDefaultUser() — these tests model a fresh
+    // install where no operator-supplied seed password is set, so the DB
+    // stays empty until /setup is hit.
 
     const loadResult = await ruleLoader.initialize();
     if (!loadResult.success) {
@@ -44,38 +46,74 @@ describe('Fresh Install Experience', () => {
     await disconnectDatabase();
   });
 
-  it('creates default admin user and enforces password change', async () => {
-    const login = await agent.post('/api/v1/auth/login').send({
+  it('reports initialized=false on a truly fresh install', async () => {
+    const res = await request(app).get('/api/v1/auth/setup-status');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.initialized).toBe(false);
+  });
+
+  it('refuses login before setup has been completed', async () => {
+    const login = await request(app).post('/api/v1/auth/login').send({
       username: 'admin',
-      password: adminPassword,
+      password: 'admin123!',
+    });
+    expect(login.status).toBe(401);
+    expect(login.body.success).toBe(false);
+  });
+
+  it('rejects setup with weak password', async () => {
+    const res = await request(app).post('/api/v1/auth/setup').send({
+      username: setupUsername,
+      password: 'short',
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('rejects setup with invalid username characters', async () => {
+    const res = await request(app).post('/api/v1/auth/setup').send({
+      username: 'has spaces',
+      password: setupPassword,
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('completes setup and creates the admin user', async () => {
+    const res = await request(app).post('/api/v1/auth/setup').send({
+      username: setupUsername,
+      password: setupPassword,
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.user.username).toBe(setupUsername);
+  });
+
+  it('reports initialized=true after setup', async () => {
+    const res = await request(app).get('/api/v1/auth/setup-status');
+    expect(res.status).toBe(200);
+    expect(res.body.data.initialized).toBe(true);
+  });
+
+  it('refuses to run setup a second time', async () => {
+    const res = await request(app).post('/api/v1/auth/setup').send({
+      username: 'someone-else',
+      password: 'AnotherStrongP@ss123',
+    });
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('ALREADY_INITIALIZED');
+  });
+
+  it('logs in with the credentials chosen during setup', async () => {
+    const login = await agent.post('/api/v1/auth/login').send({
+      username: setupUsername,
+      password: setupPassword,
     });
     expect(login.status).toBe(200);
     expect(login.body.success).toBe(true);
-    expect(login.body.data.mustChangePassword).toBe(true);
-  });
-
-  it('allows password change on first login', async () => {
-    const newPassword = 'NewSecureP@ss1!';
-
-    const changeRes = await agent.post('/api/v1/auth/change-password').send({
-      currentPassword: adminPassword,
-      newPassword,
-    });
-    expect(changeRes.status).toBe(200);
-    expect(changeRes.body.success).toBe(true);
-
-    // Verify mustChangePassword is now false by checking /me
-    const meRes = await agent.get('/api/v1/auth/me');
-    expect(meRes.status).toBe(200);
-    expect(meRes.body.data.user.mustChangePassword).toBe(false);
-
-    // Change password back so subsequent tests can still use the original
-    const revertRes = await agent.post('/api/v1/auth/change-password').send({
-      currentPassword: newPassword,
-      newPassword: adminPassword,
-    });
-    expect(revertRes.status).toBe(200);
-    expect(revertRes.body.success).toBe(true);
+    // No "must change password" because the user just chose it themselves.
+    expect(login.body.data.mustChangePassword).toBe(false);
   });
 
   it('returns empty state for dashboard with no config', async () => {
@@ -83,7 +121,9 @@ describe('Fresh Install Experience', () => {
     expect(dashboard.status).toBe(200);
     expect(dashboard.body.success).toBe(true);
     expect(dashboard.body.data.hasConfig).toBe(false);
-    expect(dashboard.body.data.securityScore).toBe(100);
+    // securityScore is null until something has been scanned — see
+    // dashboard.ts; "100" would falsely advertise a clean network.
+    expect(dashboard.body.data.securityScore).toBeNull();
   });
 
   it('returns empty state for security analysis with no config', async () => {
@@ -144,6 +184,27 @@ describe('Fresh Install Experience', () => {
     expect(networks.body.success).toBe(true);
     expect(networks.body.data.hasConfig).toBe(true);
     expect(networks.body.data.networks.length).toBeGreaterThan(0);
+  });
+
+  it('exposes firmware info that matches the on-disk binary', async () => {
+    const res = await agent.get('/api/v1/esp32/firmware/info');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.firmware).toMatchObject({
+      version: expect.any(String),
+      filename: expect.any(String),
+      releaseDate: expect.any(String),
+    });
+    // available reflects actual on-disk state — true when the binary is
+    // present and non-empty, false otherwise. Asserting both branches keeps
+    // this useful regardless of whether the dev box has run `pio run` yet.
+    expect(typeof res.body.data.available).toBe('boolean');
+    if (res.body.data.available) {
+      expect(res.body.data.firmware.size).toBeGreaterThan(0);
+      expect(res.body.data.firmware.checksum).toMatch(/^[a-f0-9]{64}$/);
+    } else {
+      expect(res.body.data.firmware.size).toBe(0);
+    }
   });
 
   it('handles logout and session invalidation', async () => {

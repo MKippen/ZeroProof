@@ -10,6 +10,8 @@ import {
   ChevronRight,
   Settings,
   Trash2,
+  ShieldCheck,
+  Network,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -204,6 +206,83 @@ export function ControllerConnectionForm() {
               </div>
             ) : (
               <div className="space-y-6">
+                {!isConfigured && (
+                  <>
+                    <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-2">
+                      <div className="flex items-start gap-2">
+                        <ShieldCheck className="h-4 w-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                        <div className="text-sm">
+                          <p className="font-medium text-emerald-300">
+                            Use a read-only UniFi account
+                          </p>
+                          <p className="text-muted-foreground mt-1">
+                            ZeroProof only reads your controller configuration
+                            — it never writes. Create a dedicated read-only
+                            user so even a compromised credential can&apos;t
+                            change your network.
+                          </p>
+                          <details className="mt-2">
+                            <summary className="cursor-pointer text-emerald-300 hover:text-emerald-200 select-none text-xs">
+                              How to create one in UniFi Network →
+                            </summary>
+                            <ol className="mt-2 space-y-1 text-xs text-muted-foreground list-decimal list-inside">
+                              <li>
+                                Open the UniFi Network UI →{' '}
+                                <span className="font-mono">Settings</span> →{' '}
+                                <span className="font-mono">Admins &amp; Users</span>.
+                              </li>
+                              <li>
+                                Click{' '}
+                                <span className="font-mono">Add New Admin</span>{' '}
+                                (or{' '}
+                                <span className="font-mono">+ Invite Admin</span>{' '}
+                                on UniFi OS).
+                              </li>
+                              <li>
+                                Choose{' '}
+                                <span className="font-mono">Restrict to local access only</span>{' '}
+                                and set a username (e.g.{' '}
+                                <span className="font-mono">zeroproof</span>) and a strong password.
+                              </li>
+                              <li>
+                                For the role, pick{' '}
+                                <span className="font-mono">Limited Admin</span>{' '}
+                                (UniFi OS) or{' '}
+                                <span className="font-mono">Read Only</span>{' '}
+                                (legacy controller).
+                              </li>
+                              <li>
+                                Save, then enter those credentials below.
+                              </li>
+                            </ol>
+                          </details>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4">
+                      <div className="flex items-start gap-2">
+                        <Network className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                        <div className="text-sm">
+                          <p className="font-medium text-amber-300">
+                            Network reachability
+                          </p>
+                          <p className="text-muted-foreground mt-1">
+                            ZeroProof must be able to reach your controller on
+                            the host and port below. If this server runs on a
+                            different VLAN than your controller (e.g. a Server
+                            VLAN reaching a Mgmt VLAN), allow that traffic in
+                            UniFi → <span className="font-mono">Settings →
+                            Security → Traffic Rules</span>. UniFi OS uses{' '}
+                            <span className="font-mono">443</span>; legacy
+                            self-hosted controllers use{' '}
+                            <span className="font-mono">8443</span>.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="unifi-host">Controller Host / IP</Label>

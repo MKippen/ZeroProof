@@ -1,10 +1,12 @@
-import { lazy, Suspense, type ReactNode } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { useAuthStore } from '@/stores/authStore';
 import { Layout } from '@/components/layout/Layout';
+import api from '@/api/client';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })));
+const SetupPage = lazy(() => import('@/pages/SetupPage').then((m) => ({ default: m.SetupPage })));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
 const DevicesPage = lazy(() => import('@/pages/DevicesPage').then((m) => ({ default: m.DevicesPage })));
 const ConfigPage = lazy(() => import('@/pages/ConfigPage').then((m) => ({ default: m.ConfigPage })));
@@ -29,6 +31,50 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+// Probe /auth/setup-status on first load; if no admin exists, route the
+// user to /setup before any login screen. Avoids the "what is the password?"
+// trap on a true fresh install.
+function SetupGate({ children }: { children: ReactNode }) {
+  const [status, setStatus] = useState<'loading' | 'initialized' | 'needs-setup'>('loading');
+  const location = useLocation();
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get<{ initialized: boolean }>('/auth/setup-status')
+      .then((res) => {
+        if (cancelled) return;
+        if (res.success && res.data) {
+          setStatus(res.data.initialized ? 'initialized' : 'needs-setup');
+        } else {
+          // If the probe fails we fail open to "initialized" so the existing
+          // login flow still works rather than trapping the user on /setup.
+          setStatus('initialized');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setStatus('initialized');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (status === 'loading') {
+    return <RouteFallback />;
+  }
+
+  if (status === 'needs-setup' && location.pathname !== '/setup') {
+    return <Navigate to="/setup" replace />;
+  }
+
+  if (status === 'initialized' && location.pathname === '/setup') {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 function RouteFallback() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center text-sm text-muted-foreground">
@@ -41,7 +87,9 @@ function App() {
   return (
     <BrowserRouter>
       <Suspense fallback={<RouteFallback />}>
+        <SetupGate>
         <Routes>
+          <Route path="/setup" element={<SetupPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route
             path="/"
@@ -69,6 +117,7 @@ function App() {
             <Route path="clients" element={<ClientsPage />} />
           </Route>
         </Routes>
+        </SetupGate>
       </Suspense>
       <Toaster />
     </BrowserRouter>
