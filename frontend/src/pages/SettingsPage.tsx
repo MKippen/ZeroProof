@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import {
   Settings,
   Lock,
-  Bell,
   Database,
   FileJson,
   FileText,
   Wand2,
+  Network,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,12 +21,26 @@ import { useAuthStore } from '@/stores/authStore';
 import { ConfigContent } from './ConfigPage';
 import { WizardContent } from './NetworkWizardPage';
 import { RulesContent } from './RulesPage';
+import { DnsProxyConnectionForm } from '@/components/DnsProxyConnectionForm';
+
+const TAB_VALUES = ['general', 'configuration', 'dns-proxy', 'wizard', 'rules'] as const;
+type TabValue = (typeof TAB_VALUES)[number];
+
+function tabFromHash(hash: string): TabValue {
+  const stripped = hash.replace(/^#/, '');
+  return (TAB_VALUES as readonly string[]).includes(stripped) ? (stripped as TabValue) : 'general';
+}
 
 export function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const { toast } = useToast();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<TabValue>(() => tabFromHash(location.hash));
+  useEffect(() => {
+    setActiveTab(tabFromHash(location.hash));
+  }, [location.hash]);
   const { mustChangePassword, setMustChangePassword } = useAuthStore();
   const changePasswordMutation = useMutation({
     mutationFn: async () => {
@@ -76,7 +91,7 @@ export function SettingsPage() {
         </Card>
       )}
 
-      <Tabs defaultValue="general" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)} className="space-y-4">
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="general" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
@@ -85,6 +100,10 @@ export function SettingsPage() {
           <TabsTrigger value="configuration" className="flex items-center gap-2">
             <FileJson className="h-4 w-4" />
             UniFi Configuration
+          </TabsTrigger>
+          <TabsTrigger value="dns-proxy" className="flex items-center gap-2">
+            <Network className="h-4 w-4" />
+            DNS Proxy
           </TabsTrigger>
           <TabsTrigger value="wizard" className="flex items-center gap-2">
             <Wand2 className="h-4 w-4" />
@@ -153,22 +172,6 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Notifications (placeholder) */}
-      <Card className="border-border/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Notifications
-          </CardTitle>
-          <CardDescription>Configure alert notifications</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            Email and Slack notifications will be available in a future update.
-          </p>
-        </CardContent>
-      </Card>
-
       {/* System Info */}
       <Card className="border-border/50">
         <CardHeader>
@@ -203,6 +206,10 @@ export function SettingsPage() {
         <TabsContent value="configuration" className="space-y-6">
           <ConfigContent />
 
+        </TabsContent>
+
+        <TabsContent value="dns-proxy" className="space-y-6">
+          <DnsProxyConnectionForm />
         </TabsContent>
 
         <TabsContent value="wizard">

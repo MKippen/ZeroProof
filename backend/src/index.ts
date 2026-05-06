@@ -5,6 +5,8 @@ import { mqttClient } from './mqtt';
 import { initializeDefaultUser } from './api/routes/auth';
 import { ensureServerDevice } from './services/localTestExecutor';
 import { ruleLoader } from './services/ruleLoader';
+import { registerBaselineDnsIndicators } from './services/dnsIndicators';
+import { registerBuiltinDnsProxyConfigAdapters } from './services/dnsProxyConfig';
 import logger from './utils/logger';
 
 const PORT = parseInt(config.PORT);
@@ -15,6 +17,12 @@ async function main(): Promise<void> {
   try {
     // Connect to database
     await connectDatabase();
+
+    // Register baseline DNS indicators (campaigns register their own at load)
+    registerBaselineDnsIndicators();
+
+    // Register built-in DNS proxy config adapters (AdGuard Home today; more later)
+    registerBuiltinDnsProxyConfigAdapters();
 
     // Initialize default user if needed
     await initializeDefaultUser();

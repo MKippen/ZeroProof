@@ -1,10 +1,12 @@
 import prisma from '../services/database';
 import logger from '../utils/logger';
-import { UniFiConfig, VulnerabilityFinding } from '../types';
+import { UniFiConfig, VulnerabilityFinding, NetworkIntentProfile } from '../types';
 import { analyzeFirewallRules } from './firewallAnalyzer';
 import { analyzeVlanConfig } from './vlanAnalyzer';
 import { analyzePortForwards } from './portForwardAnalyzer';
 import { analyzeWlanConfig } from './wlanAnalyzer';
+import { analyzeDnsProxyHygiene } from './dnsProxyAnalyzer';
+import { analyzeDnsProxyClientCoverage } from './dnsProxyClientAnalyzer';
 
 export async function analyzeConfiguration(
   config: UniFiConfig,
@@ -19,11 +21,37 @@ export async function analyzeConfiguration(
     const portForwardFindings = analyzePortForwards(config);
     const wlanFindings = analyzeWlanConfig(config);
 
+    // Load intent profile + DNS proxy connection for hygiene checks
+    const [intentSetting, adguardConnection] = await Promise.all([
+      prisma.setting.findUnique({ where: { key: 'network_intent_profile' } }),
+      prisma.adGuardConnection.findFirst({ where: { isActive: true } }),
+    ]);
+    const intent = (intentSetting?.value as unknown as NetworkIntentProfile | null) || null;
+
+    const dnsProxyFindings = analyzeDnsProxyHygiene({
+      config,
+      intent,
+      adguardConnection,
+    });
+
+    let dnsProxyClientFindings: VulnerabilityFinding[] = [];
+    if (adguardConnection) {
+      const unifiClients = await prisma.networkClient.findMany({
+        select: { mac: true, displayName: true, hostname: true, lastIp: true },
+      });
+      dnsProxyClientFindings = await analyzeDnsProxyClientCoverage({
+        adguardConnection,
+        unifiClients,
+      });
+    }
+
     allFindings.push(
       ...firewallFindings,
       ...vlanFindings,
       ...portForwardFindings,
-      ...wlanFindings
+      ...wlanFindings,
+      ...dnsProxyFindings,
+      ...dnsProxyClientFindings
     );
 
     // Delete existing vulnerabilities for this config to prevent duplicates

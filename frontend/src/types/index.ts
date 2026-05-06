@@ -2,6 +2,135 @@ export type Severity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO';
 export type VulnStatus = 'OPEN' | 'ACKNOWLEDGED' | 'FIXED' | 'FALSE_POSITIVE';
 export type DeviceStatus = 'ONLINE' | 'OFFLINE' | 'TESTING' | 'UPDATING' | 'ERROR';
 export type TestStatus = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+export type DnsAttributionStatus = 'HEALTHY' | 'DEGRADED' | 'UNKNOWN';
+
+export interface DnsProxySettings {
+  id: string;
+  host: string;
+  port: number;
+  useHttps: boolean;
+  allowSelfSigned: boolean;
+  username: string;
+  pollingEnabled: boolean;
+  pollingIntervalSec: number;
+  retentionDays: number;
+  lastSyncAt?: string;
+  lastSyncStatus?: string;
+  lastSyncError?: string | null;
+  lastQueryAt?: string;
+  queryLogEnabled?: boolean | null;
+  anonymizeClientIp?: boolean | null;
+  attributionStatus: DnsAttributionStatus;
+  attributionReason?: string | null;
+}
+
+export interface DnsProxyQuery {
+  id: string;
+  queriedAt: string;
+  clientIp?: string | null;
+  clientName?: string | null;
+  domain: string;
+  queryType?: string | null;
+  status?: string | null;
+  reason?: string | null;
+  rule?: string | null;
+  upstream?: string | null;
+  isBlocked: boolean;
+  isSuspicious: boolean;
+}
+
+export interface DnsProxyQueriesResponse {
+  queries: DnsProxyQuery[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface DnsProxyStatus {
+  configured: boolean;
+  settings: DnsProxySettings | null;
+  adguard?: {
+    reachable: boolean;
+    version?: string;
+    protectionEnabled?: boolean;
+    queryLogConfig?: {
+      enabled?: boolean;
+      anonymize_client_ip?: boolean;
+      interval?: number | string;
+    };
+    error?: string;
+  };
+  stats: {
+    totalQueries: number;
+    recentQueries: number;
+    blockedQueries: number;
+    suspiciousQueries: number;
+    uniqueClients: number;
+    lastQueryAt?: string;
+  };
+  attribution: {
+    status: DnsAttributionStatus;
+    reason: string;
+    uniqueClientCount: number;
+    matchedClientCount: number;
+    sampleClients: string[];
+  };
+}
+
+export interface DnsHourlyBucket {
+  hour: string;
+  allowed: number;
+  blocked: number;
+}
+
+export interface DnsTopDomain {
+  domain: string;
+  count: number;
+}
+
+export interface DnsTopClient {
+  mac: string;
+  displayName: string;
+  queries: number;
+  blocked: number;
+  suspicious: number;
+  lastSeen: string;
+  adguardName: string | null;
+}
+
+export interface DnsCoverageSilent {
+  mac: string;
+  displayName: string;
+  lastIp?: string | null;
+  adguardName: string | null;
+}
+
+export interface DnsCoverageUnknownSource {
+  clientIp: string;
+  clientName: string | null;
+  queries: number;
+  blocked: number;
+  lastSeen: string;
+}
+
+export interface DnsProxyAnalytics {
+  configured: boolean;
+  windowHours: number;
+  since: string;
+  hourlyBuckets: DnsHourlyBucket[];
+  topBlocked: DnsTopDomain[];
+  topAllowed: DnsTopDomain[];
+  topClients: DnsTopClient[];
+  coverage: {
+    seen: DnsTopClient[];
+    silent: DnsCoverageSilent[];
+    unknownSources: DnsCoverageUnknownSource[];
+    totals: { unifi: number; adguard: number; matched: number };
+  };
+}
 
 export interface User {
   id: number;

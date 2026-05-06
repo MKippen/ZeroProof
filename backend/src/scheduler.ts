@@ -9,6 +9,9 @@ import { detectConfigChanges } from './services/configChangeService';
 import { createNotification, cleanupOldNotifications } from './services/notificationService';
 import { bootstrapHistoricalTimeline } from './services/historyBootstrapService';
 import { ensureServerDevice } from './services/localTestExecutor';
+import { cleanupExpiredDnsProxyData, syncActiveDnsProxyConnections } from './services/dnsProxyService';
+import { registerBaselineDnsIndicators } from './services/dnsIndicators';
+import { registerBuiltinDnsProxyConfigAdapters } from './services/dnsProxyConfig';
 
 const INTERVALS = {
   DEVICE_CLEANUP: 5 * 60 * 1000, // 5 minutes
@@ -16,6 +19,7 @@ const INTERVALS = {
   RETRY_QUEUED_TESTS: 1 * 60 * 1000, // 1 minute
   DB_CLEANUP: 24 * 60 * 60 * 1000, // 24 hours
   UNIFI_SYNC_CHECK: 1 * 60 * 1000, // 1 minute (check if any connections need sync)
+  DNS_PROXY_POLL: 60 * 1000, // 1 minute
   VLAN_VALIDATION: 4 * 60 * 60 * 1000, // 4 hours
   SERVER_HEARTBEAT: 60 * 1000, // 1 minute - keep server-local device online
 };
@@ -151,6 +155,11 @@ async function cleanupOldData(): Promise<void> {
 
     // Clean up old notifications
     await cleanupOldNotifications();
+
+    const dnsProxyDeleted = await cleanupExpiredDnsProxyData();
+    if (dnsProxyDeleted > 0) {
+      logger.info(`Deleted ${dnsProxyDeleted} expired DNS proxy records`);
+    }
   } catch (error) {
     logger.error('Old data cleanup error:', error);
   }
@@ -552,6 +561,7 @@ async function runScheduledTasks(): Promise<void> {
   await retryQueuedTests();
   await cleanupStaleTests();
   await syncUniFiConnections();
+  await syncActiveDnsProxyConnections();
 }
 
 async function main(): Promise<void> {
@@ -559,6 +569,12 @@ async function main(): Promise<void> {
 
   try {
     await connectDatabase();
+
+    // Register baseline DNS indicators (campaigns register their own at load)
+    registerBaselineDnsIndicators();
+
+    // Register built-in DNS proxy config adapters (AdGuard Home today; more later)
+    registerBuiltinDnsProxyConfigAdapters();
 
     try {
       await mqttClient.connect();
@@ -576,10 +592,11 @@ async function main(): Promise<void> {
     setInterval(cleanupStaleTests, INTERVALS.STALE_TEST_CLEANUP);
     setInterval(cleanupOldData, INTERVALS.DB_CLEANUP);
     setInterval(syncUniFiConnections, INTERVALS.UNIFI_SYNC_CHECK);
+    setInterval(syncActiveDnsProxyConnections, INTERVALS.DNS_PROXY_POLL);
     setInterval(runScheduledVlanValidation, INTERVALS.VLAN_VALIDATION);
     setInterval(serverHeartbeat, INTERVALS.SERVER_HEARTBEAT);
 
-    logger.info('Scheduler running with UniFi auto-sync, VLAN validation, and server heartbeat enabled');
+    logger.info('Scheduler running with UniFi auto-sync, DNS proxy polling, VLAN validation, and server heartbeat enabled');
 
     // Graceful shutdown
     const shutdown = async (signal: string) => {

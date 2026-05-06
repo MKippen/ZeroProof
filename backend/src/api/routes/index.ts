@@ -13,6 +13,7 @@ import dismissalRoutes from './dismissals';
 import rulesRoutes from './rules';
 import notificationRoutes from './notifications';
 import timelineRoutes from './timeline';
+import dnsProxyRoutes from './dnsProxy';
 
 const router = Router();
 
@@ -30,5 +31,6 @@ router.use('/dismissals', dismissalRoutes);
 router.use('/rules', rulesRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/timeline', timelineRoutes);
+router.use('/dns-proxy', dnsProxyRoutes);
 
 export default router;
