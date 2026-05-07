@@ -13,7 +13,6 @@ jest.mock('../../../src/services/firewall/trafficAnalytics', () => ({
 }));
 
 import express from 'express';
-import session from 'express-session';
 import request from 'supertest';
 import trafficRoutes from '../../../src/api/routes/traffic';
 import prisma from '../../../src/services/database';
@@ -22,18 +21,18 @@ import * as analytics from '../../../src/services/firewall/trafficAnalytics';
 const mockedPrisma = prisma as jest.Mocked<typeof prisma>;
 const mockedAnalytics = analytics as jest.Mocked<typeof analytics>;
 
+/**
+ * Build a tiny test harness for the route. We deliberately do NOT mount
+ * express-session — that path is exercised end-to-end elsewhere — and instead
+ * fake the session object directly so this test exercises only the route
+ * handler + analytics service it under test. (Avoiding express-session also
+ * sidesteps a CodeQL false-positive about test-only `secure: false` cookies.)
+ */
 function buildApp(authed = true): express.Express {
   const app = express();
   app.use(express.json());
-  app.use(
-    session({
-      secret: 'test-secret',
-      resave: false,
-      saveUninitialized: false,
-    })
-  );
   app.use((req, _res, next) => {
-    if (authed) (req.session as unknown as { userId?: number }).userId = 42;
+    (req as { session?: { userId?: number } }).session = authed ? { userId: 42 } : {};
     next();
   });
   app.use('/api/v1/traffic', trafficRoutes);
