@@ -120,8 +120,8 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     container_name: zeroproof-frontend-dev
     ports:
       - "5173:80"

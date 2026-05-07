@@ -24,8 +24,8 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     container_name: zeroproof-frontend
     environment:
       - VITE_API_URL=/api/v1
