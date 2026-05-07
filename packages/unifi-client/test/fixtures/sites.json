@@ -1,0 +1,19 @@
+{
+  "meta": {
+    "rc": "ok"
+  },
+  "data": [
+    {
+      "anonymous_id": "d79450d0-be78-4f59-8ef2-d331ad1fef86",
+      "name": "default",
+      "external_id": "88f7af54-98f8-306a-a1c7-c9349722b1f6",
+      "_id": "5dcadb04f8cd8804ddee7b9b",
+      "attr_no_delete": true,
+      "attr_hidden_id": "default",
+      "desc": "Default",
+      "role": "readonly",
+      "role_hotspot": false,
+      "device_count": 10
+    }
+  ]
+}

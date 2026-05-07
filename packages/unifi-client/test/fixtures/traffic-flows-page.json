@@ -1,0 +1,3740 @@
+{
+  "data": [
+    {
+      "action": "blocked",
+      "count": 4,
+      "destination": {
+        "client_fingerprint": {
+          "computed_dev_id": 5419,
+          "computed_engine": 0,
+          "confidence": 93,
+          "dev_cat": 46,
+          "dev_family": 13,
+          "dev_id": 5419,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 72
+        },
+        "client_name": "sonu 27:e8",
+        "client_oui": "",
+        "domains": [],
+        "host_name": "sonu",
+        "id": "aa:bb:cc:dd:ee:01",
+        "ip": "192.168.1.123",
+        "mac": "aa:bb:cc:dd:ee:01",
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default",
+        "port": 49154,
+        "subnet": "192.168.1.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 1046,
+      "flow_end_time": 1778078153353,
+      "flow_start_time": 1778078152307,
+      "id": "69fb51c955d0f00238bbabd6",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 248,
+          "computed_engine": 1,
+          "dev_cat": 30,
+          "dev_family": 3,
+          "dev_id": 248,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 16,
+          "os_name": 25
+        },
+        "client_name": "Bedroom iPad",
+        "client_oui": "",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:02",
+        "ip": "192.168.2.60",
+        "mac": "aa:bb:cc:dd:ee:02",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 50909,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078152307,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.100",
+        "ip": "203.0.113.100",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb51c955d0f00238bbabd5",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:03",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:03",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4162,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078152066,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "client_fingerprint": {
+          "has_override": false
+        },
+        "client_name": "iPad 05:8d",
+        "client_oui": "",
+        "domains": [],
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:04",
+        "ip": "192.168.3.245",
+        "mac": "aa:bb:cc:dd:ee:04",
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home",
+        "port": 62674,
+        "subnet": "192.168.3.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "id": "69fb51c855d0f00238bbabd3",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 248,
+          "computed_engine": 1,
+          "dev_cat": 30,
+          "dev_family": 3,
+          "dev_id": 248,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 16,
+          "os_name": 25
+        },
+        "client_name": "Bedroom iPad",
+        "client_oui": "",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:05",
+        "ip": "192.168.2.60",
+        "mac": "aa:bb:cc:dd:ee:05",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 50908,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078150946,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.101",
+        "ip": "203.0.113.101",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb51c455d0f00238bbabd1",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:06",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:06",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4160,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078146064,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.102",
+        "ip": "203.0.113.102",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb51bd55d0f00238bbabd0",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:07",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:07",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4158,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078140062,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.103",
+        "ip": "203.0.113.103",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb51b755d0f00238bbabcf",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:08",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:08",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4156,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078134060,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 8,
+      "destination": {
+        "client_fingerprint": {
+          "has_override": false
+        },
+        "client_name": "iPad 05:8d",
+        "client_oui": "",
+        "domains": [],
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:09",
+        "ip": "192.168.3.245",
+        "mac": "aa:bb:cc:dd:ee:09",
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home",
+        "port": 62674,
+        "subnet": "192.168.3.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 988,
+      "flow_end_time": 1778078132939,
+      "flow_start_time": 1778078131951,
+      "id": "69fb51b555d0f00238bbabce",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 248,
+          "computed_engine": 1,
+          "dev_cat": 30,
+          "dev_family": 3,
+          "dev_id": 248,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 16,
+          "os_name": 25
+        },
+        "client_name": "Bedroom iPad",
+        "client_oui": "",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:0a",
+        "ip": "192.168.2.60",
+        "mac": "aa:bb:cc:dd:ee:0a",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 50908,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078131951,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "has_override": false
+        },
+        "client_name": "iPad 05:8d",
+        "client_oui": "",
+        "domains": [],
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:0b",
+        "ip": "192.168.3.245",
+        "mac": "aa:bb:cc:dd:ee:0b",
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home",
+        "port": 62674,
+        "subnet": "192.168.3.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 1058,
+      "flow_end_time": 1778078131347,
+      "flow_start_time": 1778078130289,
+      "id": "69fb51b355d0f00238bbabcd",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 92,
+          "computed_engine": 0,
+          "confidence": 90,
+          "dev_cat": 44,
+          "dev_family": 10,
+          "dev_id": 92,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 24
+        },
+        "client_name": "iPad 0a:05",
+        "client_oui": "Apple, Inc.",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:0c",
+        "ip": "192.168.2.224",
+        "mac": "aa:bb:cc:dd:ee:0c",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 59179,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078130289,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "computed_dev_id": 5419,
+          "computed_engine": 0,
+          "confidence": 93,
+          "dev_cat": 46,
+          "dev_family": 13,
+          "dev_id": 5419,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 72
+        },
+        "client_name": "sonu 27:e8",
+        "client_oui": "",
+        "domains": [],
+        "host_name": "sonu",
+        "id": "aa:bb:cc:dd:ee:0d",
+        "ip": "192.168.1.123",
+        "mac": "aa:bb:cc:dd:ee:0d",
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default",
+        "port": 49154,
+        "subnet": "192.168.1.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 993,
+      "flow_end_time": 1778078131126,
+      "flow_start_time": 1778078130133,
+      "id": "69fb51b355d0f00238bbabcc",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 92,
+          "computed_engine": 0,
+          "confidence": 90,
+          "dev_cat": 44,
+          "dev_family": 10,
+          "dev_id": 92,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 24
+        },
+        "client_name": "iPad 0a:05",
+        "client_oui": "Apple, Inc.",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:0e",
+        "ip": "192.168.2.224",
+        "mac": "aa:bb:cc:dd:ee:0e",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 59178,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078130133,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.104",
+        "ip": "203.0.113.104",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb51b155d0f00238bbabcb",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:0f",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:0f",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4154,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078128058,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "computed_dev_id": 2900,
+          "computed_engine": 1,
+          "dev_cat": 1,
+          "dev_family": 4,
+          "dev_id": 2900,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 7,
+          "os_name": 12
+        },
+        "client_name": "Apple MacBook 30:84",
+        "client_oui": "",
+        "domains": [],
+        "id": "aa:bb:cc:dd:ee:10",
+        "ip": "192.168.3.246",
+        "mac": "aa:bb:cc:dd:ee:10",
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home",
+        "port": 49154,
+        "subnet": "192.168.3.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 1001,
+      "flow_end_time": 1778078126157,
+      "flow_start_time": 1778078125156,
+      "id": "69fb51ae55d0f00238bbabca",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 248,
+          "computed_engine": 1,
+          "dev_cat": 30,
+          "dev_family": 3,
+          "dev_id": 248,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 16,
+          "os_name": 25
+        },
+        "client_name": "Bedroom iPad",
+        "client_oui": "",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:11",
+        "ip": "192.168.2.60",
+        "mac": "aa:bb:cc:dd:ee:11",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 50907,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078125156,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "computed_dev_id": 5419,
+          "computed_engine": 0,
+          "confidence": 93,
+          "dev_cat": 46,
+          "dev_family": 13,
+          "dev_id": 5419,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 72
+        },
+        "client_name": "sonu 27:e8",
+        "client_oui": "",
+        "domains": [],
+        "host_name": "sonu",
+        "id": "aa:bb:cc:dd:ee:12",
+        "ip": "192.168.1.123",
+        "mac": "aa:bb:cc:dd:ee:12",
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default",
+        "port": 49154,
+        "subnet": "192.168.1.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 911,
+      "flow_end_time": 1778078123202,
+      "flow_start_time": 1778078122291,
+      "id": "69fb51ab55d0f00238bbabc9",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 248,
+          "computed_engine": 1,
+          "dev_cat": 30,
+          "dev_family": 3,
+          "dev_id": 248,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 16,
+          "os_name": 25
+        },
+        "client_name": "Bedroom iPad",
+        "client_oui": "",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:13",
+        "ip": "192.168.2.60",
+        "mac": "aa:bb:cc:dd:ee:13",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 50906,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078122291,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.105",
+        "ip": "203.0.113.105",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb51ab55d0f00238bbabc8",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:14",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:14",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4152,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078122056,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.106",
+        "ip": "203.0.113.106",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb51a555d0f00238bbabc7",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:15",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:15",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4150,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078116054,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.107",
+        "ip": "203.0.113.107",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb519f55d0f00238bbabc4",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:16",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:16",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4148,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078110052,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.108",
+        "ip": "203.0.113.108",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb519855d0f00238bbabc1",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:17",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:17",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4146,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078104051,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "computed_dev_id": 2900,
+          "computed_engine": 1,
+          "dev_cat": 1,
+          "dev_family": 4,
+          "dev_id": 2900,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 7,
+          "os_name": 12
+        },
+        "client_name": "Apple MacBook 30:84",
+        "client_oui": "",
+        "domains": [],
+        "id": "aa:bb:cc:dd:ee:18",
+        "ip": "192.168.3.246",
+        "mac": "aa:bb:cc:dd:ee:18",
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home",
+        "port": 49154,
+        "subnet": "192.168.3.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 1010,
+      "flow_end_time": 1778078104185,
+      "flow_start_time": 1778078103175,
+      "id": "69fb519955d0f00238bbabc3",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 92,
+          "computed_engine": 0,
+          "confidence": 90,
+          "dev_cat": 44,
+          "dev_family": 10,
+          "dev_id": 92,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 24
+        },
+        "client_name": "iPad 0a:05",
+        "client_oui": "Apple, Inc.",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:19",
+        "ip": "192.168.2.224",
+        "mac": "aa:bb:cc:dd:ee:19",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 59177,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078103175,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "computed_dev_id": 2900,
+          "computed_engine": 1,
+          "dev_cat": 1,
+          "dev_family": 4,
+          "dev_id": 2900,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 7,
+          "os_name": 12
+        },
+        "client_name": "Apple MacBook 30:84",
+        "client_oui": "",
+        "domains": [],
+        "id": "aa:bb:cc:dd:ee:1a",
+        "ip": "192.168.3.246",
+        "mac": "aa:bb:cc:dd:ee:1a",
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home",
+        "port": 49154,
+        "subnet": "192.168.3.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 1003,
+      "flow_end_time": 1778078104110,
+      "flow_start_time": 1778078103107,
+      "id": "69fb519955d0f00238bbabc2",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 248,
+          "computed_engine": 1,
+          "dev_cat": 30,
+          "dev_family": 3,
+          "dev_id": 248,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 16,
+          "os_name": 25
+        },
+        "client_name": "Bedroom iPad",
+        "client_oui": "",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:1b",
+        "ip": "192.168.2.60",
+        "mac": "aa:bb:cc:dd:ee:1b",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 50905,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078103107,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "has_override": false
+        },
+        "client_name": "iPad 05:8d",
+        "client_oui": "",
+        "domains": [],
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:1c",
+        "ip": "192.168.3.245",
+        "mac": "aa:bb:cc:dd:ee:1c",
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home",
+        "port": 62674,
+        "subnet": "192.168.3.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 2028,
+      "flow_end_time": 1778078103839,
+      "flow_start_time": 1778078101811,
+      "id": "69fb519655d0f00238bbabc0",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 248,
+          "computed_engine": 1,
+          "dev_cat": 30,
+          "dev_family": 3,
+          "dev_id": 248,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 16,
+          "os_name": 25
+        },
+        "client_name": "Bedroom iPad",
+        "client_oui": "",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:1d",
+        "ip": "192.168.2.60",
+        "mac": "aa:bb:cc:dd:ee:1d",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 50904,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078101811,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "has_override": false
+        },
+        "client_name": "iPad 05:8d",
+        "client_oui": "",
+        "domains": [],
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:1e",
+        "ip": "192.168.3.245",
+        "mac": "aa:bb:cc:dd:ee:1e",
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home",
+        "port": 62674,
+        "subnet": "192.168.3.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 1075,
+      "flow_end_time": 1778078101354,
+      "flow_start_time": 1778078100279,
+      "id": "69fb519555d0f00238bbabbf",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 92,
+          "computed_engine": 0,
+          "confidence": 90,
+          "dev_cat": 44,
+          "dev_family": 10,
+          "dev_id": 92,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 24
+        },
+        "client_name": "iPad 0a:05",
+        "client_oui": "Apple, Inc.",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:1f",
+        "ip": "192.168.2.224",
+        "mac": "aa:bb:cc:dd:ee:1f",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 59176,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078100279,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "computed_dev_id": 5419,
+          "computed_engine": 0,
+          "confidence": 93,
+          "dev_cat": 46,
+          "dev_family": 13,
+          "dev_id": 5419,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 72
+        },
+        "client_name": "sonu 27:e8",
+        "client_oui": "",
+        "domains": [],
+        "host_name": "sonu",
+        "id": "aa:bb:cc:dd:ee:20",
+        "ip": "192.168.1.123",
+        "mac": "aa:bb:cc:dd:ee:20",
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default",
+        "port": 49154,
+        "subnet": "192.168.1.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 989,
+      "flow_end_time": 1778078101110,
+      "flow_start_time": 1778078100121,
+      "id": "69fb519555d0f00238bbabbe",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 92,
+          "computed_engine": 0,
+          "confidence": 90,
+          "dev_cat": 44,
+          "dev_family": 10,
+          "dev_id": 92,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 24
+        },
+        "client_name": "iPad 0a:05",
+        "client_oui": "Apple, Inc.",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:21",
+        "ip": "192.168.2.224",
+        "mac": "aa:bb:cc:dd:ee:21",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 59175,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078100121,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.109",
+        "ip": "203.0.113.109",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb519355d0f00238bbab4c",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:22",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:22",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4144,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078098049,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "computed_dev_id": 5419,
+          "computed_engine": 0,
+          "confidence": 93,
+          "dev_cat": 46,
+          "dev_family": 13,
+          "dev_id": 5419,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 72
+        },
+        "client_name": "sonu 27:e8",
+        "client_oui": "",
+        "domains": [],
+        "host_name": "sonu",
+        "id": "aa:bb:cc:dd:ee:23",
+        "ip": "192.168.1.123",
+        "mac": "aa:bb:cc:dd:ee:23",
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default",
+        "port": 49154,
+        "subnet": "192.168.1.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 1001,
+      "flow_end_time": 1778078093107,
+      "flow_start_time": 1778078092106,
+      "id": "69fb518d55d0f00238bbab4b",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 248,
+          "computed_engine": 1,
+          "dev_cat": 30,
+          "dev_family": 3,
+          "dev_id": 248,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 16,
+          "os_name": 25
+        },
+        "client_name": "Bedroom iPad",
+        "client_oui": "",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:24",
+        "ip": "192.168.2.60",
+        "mac": "aa:bb:cc:dd:ee:24",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 50903,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078092106,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.110",
+        "ip": "203.0.113.110",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb518d55d0f00238bbab4a",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:25",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:25",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4142,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078092047,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.111",
+        "ip": "203.0.113.111",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb518755d0f00238bbab49",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:26",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:26",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4140,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078086045,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.112",
+        "ip": "203.0.113.112",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb518255d0f00238bbab48",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:27",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:27",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4138,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078080043,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "computed_dev_id": 5419,
+          "computed_engine": 0,
+          "confidence": 93,
+          "dev_cat": 46,
+          "dev_family": 13,
+          "dev_id": 5419,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 72
+        },
+        "client_name": "sonu 27:e8",
+        "client_oui": "",
+        "domains": [],
+        "host_name": "sonu",
+        "id": "aa:bb:cc:dd:ee:28",
+        "ip": "192.168.1.123",
+        "mac": "aa:bb:cc:dd:ee:28",
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default",
+        "port": 49154,
+        "subnet": "192.168.1.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 1000,
+      "flow_end_time": 1778078077015,
+      "flow_start_time": 1778078076015,
+      "id": "69fb517d55d0f00238bbab45",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 92,
+          "computed_engine": 0,
+          "confidence": 90,
+          "dev_cat": 44,
+          "dev_family": 10,
+          "dev_id": 92,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 24
+        },
+        "client_name": "iPad 0a:05",
+        "client_oui": "Apple, Inc.",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:29",
+        "ip": "192.168.2.224",
+        "mac": "aa:bb:cc:dd:ee:29",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 59174,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078076015,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.113",
+        "ip": "203.0.113.113",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb517a55d0f00238bbab44",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:2a",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:2a",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4136,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078074041,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "computed_dev_id": 2900,
+          "computed_engine": 1,
+          "dev_cat": 1,
+          "dev_family": 4,
+          "dev_id": 2900,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 7,
+          "os_name": 12
+        },
+        "client_name": "Apple MacBook 30:84",
+        "client_oui": "",
+        "domains": [],
+        "id": "aa:bb:cc:dd:ee:2b",
+        "ip": "192.168.3.246",
+        "mac": "aa:bb:cc:dd:ee:2b",
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home",
+        "port": 49154,
+        "subnet": "192.168.3.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 1002,
+      "flow_end_time": 1778078073772,
+      "flow_start_time": 1778078072770,
+      "id": "69fb517a55d0f00238bbab43",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 92,
+          "computed_engine": 0,
+          "confidence": 90,
+          "dev_cat": 44,
+          "dev_family": 10,
+          "dev_id": 92,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 24
+        },
+        "client_name": "iPad 0a:05",
+        "client_oui": "Apple, Inc.",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:2c",
+        "ip": "192.168.2.224",
+        "mac": "aa:bb:cc:dd:ee:2c",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 59173,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078072770,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "computed_dev_id": 2900,
+          "computed_engine": 1,
+          "dev_cat": 1,
+          "dev_family": 4,
+          "dev_id": 2900,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 7,
+          "os_name": 12
+        },
+        "client_name": "Apple MacBook 30:84",
+        "client_oui": "",
+        "domains": [],
+        "id": "aa:bb:cc:dd:ee:2d",
+        "ip": "192.168.3.246",
+        "mac": "aa:bb:cc:dd:ee:2d",
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home",
+        "port": 49154,
+        "subnet": "192.168.3.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 918,
+      "flow_end_time": 1778078072875,
+      "flow_start_time": 1778078071957,
+      "id": "69fb517a55d0f00238bbab42",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 248,
+          "computed_engine": 1,
+          "dev_cat": 30,
+          "dev_family": 3,
+          "dev_id": 248,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 16,
+          "os_name": 25
+        },
+        "client_name": "Bedroom iPad",
+        "client_oui": "",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:2e",
+        "ip": "192.168.2.60",
+        "mac": "aa:bb:cc:dd:ee:2e",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 50902,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078071957,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "has_override": false
+        },
+        "client_name": "iPad 05:8d",
+        "client_oui": "",
+        "domains": [],
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:2f",
+        "ip": "192.168.3.245",
+        "mac": "aa:bb:cc:dd:ee:2f",
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home",
+        "port": 62674,
+        "subnet": "192.168.3.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 1992,
+      "flow_end_time": 1778078073713,
+      "flow_start_time": 1778078071721,
+      "id": "69fb517855d0f00238bbab41",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 248,
+          "computed_engine": 1,
+          "dev_cat": 30,
+          "dev_family": 3,
+          "dev_id": 248,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 16,
+          "os_name": 25
+        },
+        "client_name": "Bedroom iPad",
+        "client_oui": "",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:30",
+        "ip": "192.168.2.60",
+        "mac": "aa:bb:cc:dd:ee:30",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 50901,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078071721,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "has_override": false
+        },
+        "client_name": "iPad 05:8d",
+        "client_oui": "",
+        "domains": [],
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:31",
+        "ip": "192.168.3.245",
+        "mac": "aa:bb:cc:dd:ee:31",
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home",
+        "port": 62674,
+        "subnet": "192.168.3.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 997,
+      "flow_end_time": 1778078071146,
+      "flow_start_time": 1778078070149,
+      "id": "69fb517755d0f00238bbab40",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 92,
+          "computed_engine": 0,
+          "confidence": 90,
+          "dev_cat": 44,
+          "dev_family": 10,
+          "dev_id": 92,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 24
+        },
+        "client_name": "iPad 0a:05",
+        "client_oui": "Apple, Inc.",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:32",
+        "ip": "192.168.2.224",
+        "mac": "aa:bb:cc:dd:ee:32",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 59172,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078070149,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "computed_dev_id": 5419,
+          "computed_engine": 0,
+          "confidence": 93,
+          "dev_cat": 46,
+          "dev_family": 13,
+          "dev_id": 5419,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 72
+        },
+        "client_name": "sonu 27:e8",
+        "client_oui": "",
+        "domains": [],
+        "host_name": "sonu",
+        "id": "aa:bb:cc:dd:ee:33",
+        "ip": "192.168.1.123",
+        "mac": "aa:bb:cc:dd:ee:33",
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default",
+        "port": 49154,
+        "subnet": "192.168.1.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 1048,
+      "flow_end_time": 1778078071053,
+      "flow_start_time": 1778078070005,
+      "id": "69fb517755d0f00238bbab3f",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 92,
+          "computed_engine": 0,
+          "confidence": 90,
+          "dev_cat": 44,
+          "dev_family": 10,
+          "dev_id": 92,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 24
+        },
+        "client_name": "iPad 0a:05",
+        "client_oui": "Apple, Inc.",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:34",
+        "ip": "192.168.2.224",
+        "mac": "aa:bb:cc:dd:ee:34",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 59171,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078070005,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.114",
+        "ip": "203.0.113.114",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb517555d0f00238bbab3e",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:35",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:35",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4134,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078068039,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "computed_dev_id": 5419,
+          "computed_engine": 0,
+          "confidence": 93,
+          "dev_cat": 46,
+          "dev_family": 13,
+          "dev_id": 5419,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 72
+        },
+        "client_name": "sonu 27:e8",
+        "client_oui": "",
+        "domains": [],
+        "host_name": "sonu",
+        "id": "aa:bb:cc:dd:ee:36",
+        "ip": "192.168.1.123",
+        "mac": "aa:bb:cc:dd:ee:36",
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default",
+        "port": 49154,
+        "subnet": "192.168.1.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 952,
+      "flow_end_time": 1778078063020,
+      "flow_start_time": 1778078062068,
+      "id": "69fb516f55d0f00238bbab38",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 248,
+          "computed_engine": 1,
+          "dev_cat": 30,
+          "dev_family": 3,
+          "dev_id": 248,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 16,
+          "os_name": 25
+        },
+        "client_name": "Bedroom iPad",
+        "client_oui": "",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:37",
+        "ip": "192.168.2.60",
+        "mac": "aa:bb:cc:dd:ee:37",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 50900,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078062068,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.115",
+        "ip": "203.0.113.115",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb516f55d0f00238bbab37",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:38",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:38",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4132,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078062037,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.116",
+        "ip": "203.0.113.116",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb516955d0f00238bbab36",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:39",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:39",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4130,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078056035,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.117",
+        "ip": "203.0.113.117",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb516455d0f00238bbab34",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:3a",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:3a",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4128,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078050033,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 7,
+      "destination": {
+        "domains": [],
+        "id": "192.168.3.69",
+        "ip": "192.168.3.69",
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home",
+        "port": 49152,
+        "subnet": "192.168.3.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 1010,
+      "flow_end_time": 1778078050386,
+      "flow_start_time": 1778078049376,
+      "id": "69fb516255d0f00238bbab31",
+      "in": {
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 5419,
+          "computed_engine": 0,
+          "confidence": 93,
+          "dev_cat": 46,
+          "dev_family": 13,
+          "dev_id": 5419,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 72
+        },
+        "client_name": "sonu 27:e8",
+        "client_oui": "",
+        "host_name": "sonu",
+        "id": "aa:bb:cc:dd:ee:3b",
+        "ip": "192.168.1.123",
+        "mac": "aa:bb:cc:dd:ee:3b",
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default",
+        "port": 55661,
+        "subnet": "192.168.1.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078049376,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 8,
+      "destination": {
+        "client_fingerprint": {
+          "computed_dev_id": 2900,
+          "computed_engine": 1,
+          "dev_cat": 1,
+          "dev_family": 4,
+          "dev_id": 2900,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 7,
+          "os_name": 12
+        },
+        "client_name": "Apple MacBook 30:84",
+        "client_oui": "",
+        "domains": [],
+        "id": "aa:bb:cc:dd:ee:3c",
+        "ip": "192.168.3.246",
+        "mac": "aa:bb:cc:dd:ee:3c",
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home",
+        "port": 49154,
+        "subnet": "192.168.3.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 1002,
+      "flow_end_time": 1778078045428,
+      "flow_start_time": 1778078044426,
+      "id": "69fb515d55d0f00238bbab2e",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 248,
+          "computed_engine": 1,
+          "dev_cat": 30,
+          "dev_family": 3,
+          "dev_id": 248,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 16,
+          "os_name": 25
+        },
+        "client_name": "Bedroom iPad",
+        "client_oui": "",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:3d",
+        "ip": "192.168.2.60",
+        "mac": "aa:bb:cc:dd:ee:3d",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 50899,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078044426,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.118",
+        "ip": "203.0.113.118",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb515d55d0f00238bbab2f",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:3e",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:3e",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4126,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078044031,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "has_override": false
+        },
+        "client_name": "iPad 05:8d",
+        "client_oui": "",
+        "domains": [],
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:3f",
+        "ip": "192.168.3.245",
+        "mac": "aa:bb:cc:dd:ee:3f",
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home",
+        "port": 62674,
+        "subnet": "192.168.3.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 1983,
+      "flow_end_time": 1778078043655,
+      "flow_start_time": 1778078041672,
+      "id": "69fb515a55d0f00238bbab2d",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 248,
+          "computed_engine": 1,
+          "dev_cat": 30,
+          "dev_family": 3,
+          "dev_id": 248,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 16,
+          "os_name": 25
+        },
+        "client_name": "Bedroom iPad",
+        "client_oui": "",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:40",
+        "ip": "192.168.2.60",
+        "mac": "aa:bb:cc:dd:ee:40",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 50898,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078041672,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "has_override": false
+        },
+        "client_name": "iPad 05:8d",
+        "client_oui": "",
+        "domains": [],
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:41",
+        "ip": "192.168.3.245",
+        "mac": "aa:bb:cc:dd:ee:41",
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home",
+        "port": 62674,
+        "subnet": "192.168.3.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 1047,
+      "flow_end_time": 1778078041162,
+      "flow_start_time": 1778078040115,
+      "id": "69fb515a55d0f00238bbab2c",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 92,
+          "computed_engine": 0,
+          "confidence": 90,
+          "dev_cat": 44,
+          "dev_family": 10,
+          "dev_id": 92,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 24
+        },
+        "client_name": "iPad 0a:05",
+        "client_oui": "Apple, Inc.",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:42",
+        "ip": "192.168.2.224",
+        "mac": "aa:bb:cc:dd:ee:42",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 59170,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078040115,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "computed_dev_id": 2900,
+          "computed_engine": 1,
+          "dev_cat": 1,
+          "dev_family": 4,
+          "dev_id": 2900,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 7,
+          "os_name": 12
+        },
+        "client_name": "Apple MacBook 30:84",
+        "client_oui": "",
+        "domains": [],
+        "id": "aa:bb:cc:dd:ee:43",
+        "ip": "192.168.3.246",
+        "mac": "aa:bb:cc:dd:ee:43",
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home",
+        "port": 49154,
+        "subnet": "192.168.3.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 939,
+      "flow_end_time": 1778078041054,
+      "flow_start_time": 1778078040115,
+      "id": "69fb515955d0f00238bbab2b",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 92,
+          "computed_engine": 0,
+          "confidence": 90,
+          "dev_cat": 44,
+          "dev_family": 10,
+          "dev_id": 92,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 24
+        },
+        "client_name": "iPad 0a:05",
+        "client_oui": "Apple, Inc.",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:44",
+        "ip": "192.168.2.224",
+        "mac": "aa:bb:cc:dd:ee:44",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 59169,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078040115,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "computed_dev_id": 5419,
+          "computed_engine": 0,
+          "confidence": 93,
+          "dev_cat": 46,
+          "dev_family": 13,
+          "dev_id": 5419,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 72
+        },
+        "client_name": "sonu 27:e8",
+        "client_oui": "",
+        "domains": [],
+        "host_name": "sonu",
+        "id": "aa:bb:cc:dd:ee:45",
+        "ip": "192.168.1.123",
+        "mac": "aa:bb:cc:dd:ee:45",
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default",
+        "port": 49154,
+        "subnet": "192.168.1.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 1001,
+      "flow_end_time": 1778078040952,
+      "flow_start_time": 1778078039951,
+      "id": "69fb515955d0f00238bbab2a",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 92,
+          "computed_engine": 0,
+          "confidence": 90,
+          "dev_cat": 44,
+          "dev_family": 10,
+          "dev_id": 92,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 24
+        },
+        "client_name": "iPad 0a:05",
+        "client_oui": "Apple, Inc.",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:46",
+        "ip": "192.168.2.224",
+        "mac": "aa:bb:cc:dd:ee:46",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 59168,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078039951,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.119",
+        "ip": "203.0.113.119",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb515755d0f00238bbab29",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:47",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:47",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4124,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078038029,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "computed_dev_id": 2900,
+          "computed_engine": 1,
+          "dev_cat": 1,
+          "dev_family": 4,
+          "dev_id": 2900,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 7,
+          "os_name": 12
+        },
+        "client_name": "Apple MacBook 30:84",
+        "client_oui": "",
+        "domains": [],
+        "id": "aa:bb:cc:dd:ee:48",
+        "ip": "192.168.3.246",
+        "mac": "aa:bb:cc:dd:ee:48",
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home",
+        "port": 49154,
+        "subnet": "192.168.3.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 1019,
+      "flow_end_time": 1778078036966,
+      "flow_start_time": 1778078035947,
+      "id": "69fb515555d0f00238bbab28",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 248,
+          "computed_engine": 1,
+          "dev_cat": 30,
+          "dev_family": 3,
+          "dev_id": 248,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 16,
+          "os_name": 25
+        },
+        "client_name": "Bedroom iPad",
+        "client_oui": "",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:49",
+        "ip": "192.168.2.60",
+        "mac": "aa:bb:cc:dd:ee:49",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 50897,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078035947,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "computed_dev_id": 5419,
+          "computed_engine": 0,
+          "confidence": 93,
+          "dev_cat": 46,
+          "dev_family": 13,
+          "dev_id": 5419,
+          "dev_vendor": 320,
+          "has_override": false,
+          "os_name": 72
+        },
+        "client_name": "sonu 27:e8",
+        "client_oui": "",
+        "domains": [],
+        "host_name": "sonu",
+        "id": "aa:bb:cc:dd:ee:4a",
+        "ip": "192.168.1.123",
+        "mac": "aa:bb:cc:dd:ee:4a",
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default",
+        "port": 49154,
+        "subnet": "192.168.1.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 914,
+      "flow_end_time": 1778078033035,
+      "flow_start_time": 1778078032121,
+      "id": "69fb515155d0f00238bbab27",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "5dcadb08f8cd8804ddee7ba9",
+        "network_name": "Default"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 248,
+          "computed_engine": 1,
+          "dev_cat": 30,
+          "dev_family": 3,
+          "dev_id": 248,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 16,
+          "os_name": 25
+        },
+        "client_name": "Bedroom iPad",
+        "client_oui": "",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:4b",
+        "ip": "192.168.2.60",
+        "mac": "aa:bb:cc:dd:ee:4b",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 50896,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078032121,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 1,
+      "destination": {
+        "domains": [],
+        "id": "203.0.113.120",
+        "ip": "203.0.113.120",
+        "port": 123,
+        "region": "US",
+        "zone_id": "67e0c02e50492d08c589dd14",
+        "zone_name": "External"
+      },
+      "direction": "outgoing",
+      "id": "69fb515155d0f00238bbab26",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e78f536a9c61680029df8f",
+        "network_name": "Internet 1"
+      },
+      "policies": [
+        {
+          "id": "67e22018591f713383fc1f7a",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Block: IOT Devices > Internet",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "UDP",
+      "risk": "low",
+      "service": "NTP",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 2720,
+          "computed_engine": 0,
+          "confidence": 99,
+          "dev_cat": 2,
+          "dev_family": 7,
+          "dev_id": 2720,
+          "dev_vendor": 335,
+          "has_override": false,
+          "os_name": 1
+        },
+        "client_name": "Insteon",
+        "client_oui": "Smartlabs, Inc.",
+        "host_name": "",
+        "id": "aa:bb:cc:dd:ee:4c",
+        "ip": "192.168.2.253",
+        "mac": "aa:bb:cc:dd:ee:4c",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 4122,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078032027,
+      "traffic_data": {
+        "bytes_total": 76,
+        "packets_total": 1
+      }
+    },
+    {
+      "action": "blocked",
+      "count": 9,
+      "destination": {
+        "client_fingerprint": {
+          "computed_dev_id": 2900,
+          "computed_engine": 1,
+          "dev_cat": 1,
+          "dev_family": 4,
+          "dev_id": 2900,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 7,
+          "os_name": 12
+        },
+        "client_name": "Apple MacBook 30:84",
+        "client_oui": "",
+        "domains": [],
+        "id": "aa:bb:cc:dd:ee:4d",
+        "ip": "192.168.3.246",
+        "mac": "aa:bb:cc:dd:ee:4d",
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home",
+        "port": 49154,
+        "subnet": "192.168.3.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "direction": "local",
+      "duration_milliseconds": 2001,
+      "flow_end_time": 1778078033911,
+      "flow_start_time": 1778078031910,
+      "id": "69fb515055d0f00238bbab25",
+      "in": {
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT"
+      },
+      "next_ai": [],
+      "out": {
+        "network_id": "60e79d0d3facbc05247433d2",
+        "network_name": "Home"
+      },
+      "policies": [
+        {
+          "id": "67f4116bc17fc4006584d5ad",
+          "internal_type": "FIREWALL_POLICY",
+          "name": "Allow: Sonos Ports > Internal",
+          "type": "FIREWALL"
+        }
+      ],
+      "protocol": "TCP",
+      "risk": "low",
+      "service": "OTHER",
+      "source": {
+        "client_fingerprint": {
+          "computed_dev_id": 248,
+          "computed_engine": 1,
+          "dev_cat": 30,
+          "dev_family": 3,
+          "dev_id": 248,
+          "dev_vendor": 11,
+          "has_override": false,
+          "os_class": 16,
+          "os_name": 25
+        },
+        "client_name": "Bedroom iPad",
+        "client_oui": "",
+        "host_name": "iPad",
+        "id": "aa:bb:cc:dd:ee:4e",
+        "ip": "192.168.2.60",
+        "mac": "aa:bb:cc:dd:ee:4e",
+        "network_id": "60e7948c3facbc0524743318",
+        "network_name": "IOT",
+        "port": 50895,
+        "subnet": "192.168.2.0/24",
+        "zone_id": "67e0c02e50492d08c589dd13",
+        "zone_name": "Internal"
+      },
+      "time": 1778078031910,
+      "traffic_data": {
+        "bytes_total": 64,
+        "packets_total": 1
+      }
+    }
+  ],
+  "has_next": true,
+  "or_more": false,
+  "page_number": 0,
+  "total_element_count": 5000,
+  "total_page_count": 100
+}

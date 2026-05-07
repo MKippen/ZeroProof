@@ -85,13 +85,68 @@ jest.mock('@prisma/client', () => {
       deleteMany: jest.fn(),
       count: jest.fn(),
     },
+    uniFiConnection: {
+      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+      delete: jest.fn(),
+      deleteMany: jest.fn(),
+      count: jest.fn(),
+    },
+    firewallFlowEvent: {
+      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      createMany: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+      delete: jest.fn(),
+      deleteMany: jest.fn(),
+      count: jest.fn(),
+    },
+    firewallThreatEvent: {
+      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      createMany: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+      delete: jest.fn(),
+      deleteMany: jest.fn(),
+      count: jest.fn(),
+    },
     $on: jest.fn(),
     $connect: jest.fn(),
     $disconnect: jest.fn(),
   };
 
+  // Lightweight stand-in for Prisma's typed error class. The real one comes
+  // from @prisma/client/runtime — when we mock the module wholesale we need to
+  // re-expose enough of the Prisma namespace for `instanceof` + `.code` checks
+  // in production code.
+  class PrismaClientKnownRequestError extends Error {
+    code: string;
+    clientVersion: string;
+    constructor(message: string, options: { code: string; clientVersion: string }) {
+      super(message);
+      this.name = 'PrismaClientKnownRequestError';
+      this.code = options.code;
+      this.clientVersion = options.clientVersion;
+    }
+  }
+
   return {
     PrismaClient: jest.fn(() => mockPrisma),
+    Prisma: {
+      PrismaClientKnownRequestError,
+      JsonNull: 'JsonNull',
+      DbNull: 'DbNull',
+    },
   };
 });
 

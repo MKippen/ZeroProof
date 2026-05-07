@@ -1,0 +1,2457 @@
+{
+  "data": [
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb4e3255d0f00238bba8c0",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb4e3155d0f00238bba8be"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778077234330,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb4b8555d0f00238bba59e",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb4b8455d0f00238bba59c"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778076549786,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb491a55d0f00238bba373",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb491955d0f00238bba371"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778075930804,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb462155d0f00238bba13e",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb462055d0f00238bba13c"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778075169617,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb438655d0f00238bb9f65",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb438555d0f00238bb9f63"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778074502812,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb40d155d0f00238bb9cf1",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb40d055d0f00238bb9cef"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778073809409,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb3e2455d0f00238bb9b05",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb3e2355d0f00238bb9b03"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778073124625,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb3bb955d0f00238bb98d0",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb3bb855d0f00238bb98ce"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778072505487,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb38c055d0f00238bb964d",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb38be55d0f00238bb964b"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778071744059,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb35c755d0f00238bb941d",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb35c555d0f00238bb941b"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778070983183,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb332c55d0f00238bb922e",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb332a55d0f00238bb922c"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778070316166,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb307655d0f00238bb8fad",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb307555d0f00238bb8fab"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778069622883,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb2dc955d0f00238bb8d31",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb2dc855d0f00238bb8d2f"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778068937729,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb2b5f55d0f00238bb8b5e",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb2b5d55d0f00238bb8b5c"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778068319439,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb286555d0f00238bb88cf",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb286455d0f00238bb88cd"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778067557662,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb25ca55d0f00238bb86d1",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb25c955d0f00238bb86cf"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778066890691,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb231555d0f00238bb84cc",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb231455d0f00238bb84ca"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778066197654,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb206855d0f00238bb8255",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb206755d0f00238bb8253"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778065512765,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb1dfd55d0f00238bb7fe5",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb1dfc55d0f00238bb7fe3"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778064893928,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb1b0455d0f00238bb7db0",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb1b0355d0f00238bb7dae"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778064132806,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb186955d0f00238bb7bbc",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb186855d0f00238bb7bba"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778063465986,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb15b455d0f00238bb794b",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb15b355d0f00238bb7949"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778062772687,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb130755d0f00238bb76dd",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb130655d0f00238bb76db"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778062087638,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb109c55d0f00238bb750c",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb109b55d0f00238bb750a"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778061468551,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb0da355d0f00238bb72f2",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb0da255d0f00238bb72f0"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778060707475,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb0b0855d0f00238bb7098",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb0b0755d0f00238bb7096"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778060040857,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb085355d0f00238bb6e93",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb085255d0f00238bb6e91"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778059347479,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb05a755d0f00238bb6c99",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb05a555d0f00238bb6c97"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778058663689,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb033b55d0f00238bb6a50",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb033a55d0f00238bb6a4e"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778058043761,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fb004255d0f00238bb67d4",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fb004155d0f00238bb67d2"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778057282673,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fafd4955d0f00238bb65d6",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fafd4855d0f00238bb65d4"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778056521457,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fafaae55d0f00238bb638a",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fafaad55d0f00238bb6388"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778055854501,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69faf84555d0f00238bb61c3",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69faf84455d0f00238bb61c1"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778055237633,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69faf5b055d0f00238bb5f66",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69faf5af55d0f00238bb5f64"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778054576573,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69faf10a55d0f00238bb5bee",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69faf10855d0f00238bb5bec"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778053386447,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69faee1055d0f00238bb59e4",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69faee0f55d0f00238bb59e2"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778052624916,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69faeb7655d0f00238bb5779",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69faeb7455d0f00238bb5777"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778051958137,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fae8bf55d0f00238bb548c",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fae8bf55d0f00238bb548a"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778051263840,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fae61455d0f00238bb52a4",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fae61255d0f00238bb52a2"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778050580171,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fae37e55d0f00238bb50ae",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fae37d55d0f00238bb50ac"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778049918906,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fae06555d0f00238bb4e22",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fae06455d0f00238bb4e20"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778049125261,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69faddf555d0f00238bb4c3a",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69faddf355d0f00238bb4c38"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778048501230,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fadb4e55d0f00238bb4a59",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fadb4d55d0f00238bb4a57"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778047822465,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fad72355d0f00238bb4688",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fad72155d0f00238bb4686"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778046755077,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fad0ed55d0f00238bb4204",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fad0eb55d0f00238bb4202"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778045165395,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fac9d255d0f00238bb3c35",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fac9d155d0f00238bb3c33"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778043346995,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fac5cb55d0f00238bb38ae",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fac5ca55d0f00238bb38ac"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778042315706,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fac31e55d0f00238bb364a",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fac31d55d0f00238bb3648"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778041630575,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fac0b355d0f00238bb3403",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fac0b255d0f00238bb3401"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778041011499,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    },
+    {
+      "category": "SECURITY",
+      "event": "THREAT_BLOCKED",
+      "id": "69fabdba55d0f00238bb3089",
+      "key": "THREAT_BLOCKED_V3",
+      "message": "A network intrusion attempt from 192.168.3.62 to 100.126.147.59 has been detected and blocked.",
+      "message_raw": "A network intrusion attempt from {SRC_IP} to {DST_IP} has been detected and blocked.",
+      "parameters": {
+        "CONSOLE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "CONSOLE_WITH_DEVICE_NAME": {
+          "id": "UDM",
+          "name": "UDM"
+        },
+        "DEVICE": {
+          "device_fingerprint_id": 3522,
+          "fingerprint_source": 0,
+          "id": "60:22:32:96:06:6d",
+          "ip": "192.168.1.1",
+          "model": "UDM-Pro",
+          "model_name": "UDMPRO",
+          "name": "UDM",
+          "version": "5.0.16"
+        },
+        "DST_IP": {
+          "id": "100.126.147.59",
+          "name": "100.126.147.59",
+          "not_actionable": true
+        },
+        "SRC_IP": {
+          "id": "192.168.3.62",
+          "name": "192.168.3.62",
+          "not_actionable": true
+        },
+        "INITIATOR_ID": {
+          "id": "69fabdb955d0f00238bb3087"
+        }
+      },
+      "severity": "LOW",
+      "show_on_dashboard": false,
+      "status": "NEW",
+      "subcategory": "SECURITY_INTRUSION_PREVENTION",
+      "target": "DEVICE",
+      "timestamp": 1778040250233,
+      "title_raw": "Threat Detected and Blocked",
+      "type": "THREAT_DETECTION_AND_PREVENTION"
+    }
+  ],
+  "page_number": 0,
+  "total_element_count": 60,
+  "total_page_count": 2
+}

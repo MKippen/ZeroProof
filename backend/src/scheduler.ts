@@ -10,6 +10,10 @@ import { createNotification, cleanupOldNotifications } from './services/notifica
 import { bootstrapHistoricalTimeline } from './services/historyBootstrapService';
 import { ensureServerDevice } from './services/localTestExecutor';
 import { cleanupExpiredDnsProxyData, syncActiveDnsProxyConnections } from './services/dnsProxyService';
+import {
+  cleanupExpiredFirewallTelemetry,
+  syncFirewallTelemetry,
+} from './services/firewall/flowSync';
 import { registerBaselineDnsIndicators } from './services/dnsIndicators';
 import { registerBuiltinDnsProxyConfigAdapters } from './services/dnsProxyConfig';
 
@@ -20,6 +24,7 @@ const INTERVALS = {
   DB_CLEANUP: 24 * 60 * 60 * 1000, // 24 hours
   UNIFI_SYNC_CHECK: 1 * 60 * 1000, // 1 minute (check if any connections need sync)
   DNS_PROXY_POLL: 60 * 1000, // 1 minute
+  FIREWALL_TELEMETRY_POLL: 60 * 1000, // 1 minute
   VLAN_VALIDATION: 4 * 60 * 60 * 1000, // 4 hours
   SERVER_HEARTBEAT: 60 * 1000, // 1 minute - keep server-local device online
 };
@@ -159,6 +164,13 @@ async function cleanupOldData(): Promise<void> {
     const dnsProxyDeleted = await cleanupExpiredDnsProxyData();
     if (dnsProxyDeleted > 0) {
       logger.info(`Deleted ${dnsProxyDeleted} expired DNS proxy records`);
+    }
+
+    const firewall = await cleanupExpiredFirewallTelemetry();
+    if (firewall.flowsDeleted > 0 || firewall.threatsDeleted > 0) {
+      logger.info(
+        `Deleted ${firewall.flowsDeleted} expired firewall flow rows, ${firewall.threatsDeleted} threat rows`
+      );
     }
   } catch (error) {
     logger.error('Old data cleanup error:', error);
@@ -562,6 +574,36 @@ async function runScheduledTasks(): Promise<void> {
   await cleanupStaleTests();
   await syncUniFiConnections();
   await syncActiveDnsProxyConnections();
+  await pollFirewallTelemetry();
+}
+
+/**
+ * Pull flow + threat events for every active UniFi connection. Each
+ * connection is independent — failure on one doesn't block the others.
+ */
+async function pollFirewallTelemetry(): Promise<void> {
+  try {
+    const connections = await prisma.uniFiConnection.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+    });
+    for (const conn of connections) {
+      try {
+        const result = await syncFirewallTelemetry(conn.id);
+        if (result.flowsInserted > 0 || result.threatsInserted > 0) {
+          logger.info(
+            `Firewall telemetry sync (${conn.name}): +${result.flowsInserted} flows, +${result.threatsInserted} threats`
+          );
+        }
+      } catch (err) {
+        logger.error(
+          `Firewall telemetry sync failed for ${conn.name}: ${(err as Error).message}`
+        );
+      }
+    }
+  } catch (err) {
+    logger.error(`pollFirewallTelemetry: ${(err as Error).message}`);
+  }
 }
 
 async function main(): Promise<void> {
@@ -593,6 +635,7 @@ async function main(): Promise<void> {
     setInterval(cleanupOldData, INTERVALS.DB_CLEANUP);
     setInterval(syncUniFiConnections, INTERVALS.UNIFI_SYNC_CHECK);
     setInterval(syncActiveDnsProxyConnections, INTERVALS.DNS_PROXY_POLL);
+    setInterval(pollFirewallTelemetry, INTERVALS.FIREWALL_TELEMETRY_POLL);
     setInterval(runScheduledVlanValidation, INTERVALS.VLAN_VALIDATION);
     setInterval(serverHeartbeat, INTERVALS.SERVER_HEARTBEAT);
 

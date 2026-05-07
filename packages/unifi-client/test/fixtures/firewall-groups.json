@@ -1,0 +1,61 @@
+{
+  "meta": {
+    "rc": "ok"
+  },
+  "data": [
+    {
+      "group_members": [
+        "192.168.2.250"
+      ],
+      "name": "HASS",
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "external_id": "47e7dbe5-c22a-4b87-8d4b-56afde6bccb4",
+      "_id": "67e20e4e50492d08c58ab4e9",
+      "group_type": "address-group"
+    },
+    {
+      "group_members": [
+        "53"
+      ],
+      "name": "AdGuard",
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "external_id": "eea7bf79-28da-4ded-b005-5fa569e45cf5",
+      "_id": "67e20f9b50492d08c58ab5b6",
+      "group_type": "port-group"
+    },
+    {
+      "group_members": [
+        "192.168.1.121"
+      ],
+      "name": "Synology",
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "external_id": "e11ec81b-e760-4a07-9c27-46aa7a7dec6f",
+      "_id": "67e225b4591f713383fc22d1",
+      "group_type": "address-group"
+    },
+    {
+      "group_members": [
+        "192.168.1.119"
+      ],
+      "name": "Unifi Protect",
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "external_id": "90a8fe2d-3333-4c36-9abc-d6ceda962346",
+      "_id": "67e2265d591f713383fc22ee",
+      "group_type": "address-group"
+    },
+    {
+      "group_members": [
+        "1900",
+        "1400",
+        "3500",
+        "30000-65535",
+        "5353"
+      ],
+      "name": "Sonos",
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "external_id": "bee02398-2ea2-4928-9ea9-78f4171f4c50",
+      "_id": "67f4119dc17fc4006584d61d",
+      "group_type": "port-group"
+    }
+  ]
+}

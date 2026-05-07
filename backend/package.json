@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.10.0",
-    "axios": "^1.15.2",
+    "@uguard/unifi-client": "workspace:*",
     "bcrypt": "^6.0.0",
     "connect-pg-simple": "^10.0.0",
     "cors": "^2.8.5",

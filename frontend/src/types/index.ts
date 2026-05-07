@@ -116,6 +116,73 @@ export interface DnsCoverageUnknownSource {
   lastSeen: string;
 }
 
+export interface TrafficSummary {
+  windowHours: number;
+  since: string;
+  totalBlocked: number;
+  byRisk: { low: number; medium: number; high: number; concerning: number };
+  uniqueSrcMacs: number;
+  threatCount: number;
+}
+
+export interface TrafficTopPolicy {
+  name: string;
+  type: string | null;
+  count: number;
+}
+
+export interface TrafficTopClient {
+  mac: string;
+  displayName: string;
+  count: number;
+}
+
+export interface TrafficTopRegion {
+  region: string;
+  count: number;
+}
+
+export interface TrafficFlow {
+  id: string;
+  occurredAt: string;
+  action: string;
+  protocol: string | null;
+  service: string | null;
+  risk: string | null;
+  direction: string | null;
+  srcMac: string | null;
+  srcClientName: string | null;
+  srcNetworkName: string | null;
+  dstIp: string | null;
+  dstRegion: string | null;
+  dstClientName: string | null;
+  inNetworkName: string | null;
+  outNetworkName: string | null;
+  primaryPolicyName: string | null;
+}
+
+export interface TrafficThreat {
+  id: string;
+  occurredAt: string;
+  severity: string | null;
+  message: string | null;
+  srcIp: string | null;
+  dstIp: string | null;
+  deviceMac: string | null;
+}
+
+export interface TrafficAnalytics {
+  configured: boolean;
+  windowHours: number;
+  since: string;
+  summary: TrafficSummary | null;
+  topPolicies: TrafficTopPolicy[];
+  topClients: TrafficTopClient[];
+  topRegions: TrafficTopRegion[];
+  recentFlows: TrafficFlow[];
+  recentThreats: TrafficThreat[];
+}
+
 export interface DnsProxyAnalytics {
   configured: boolean;
   windowHours: number;

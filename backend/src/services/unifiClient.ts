@@ -1,6 +1,22 @@
-import axios, { AxiosInstance } from 'axios';
+/**
+ * Backend shim around `@uguard/unifi-client`.
+ *
+ * The shim preserves the legacy public API surface so existing callers
+ * (scheduler, route handlers, history bootstrap) keep working without churn.
+ * All HTTP work, schema validation, pagination, and error wrapping happens
+ * inside the lib — this file is a thin compatibility layer.
+ *
+ * Backend-specific concerns that don't belong in the lib stay here:
+ *   - Docker host resolution (loopback → host.docker.internal / HOST_IP).
+ *   - Composing `getFullConfig` from a dozen typed resource calls.
+ *   - Fingerprint database lookup for client device names.
+ */
+
 import { existsSync } from 'fs';
-import https from 'https';
+import {
+  UnifiClient as LibUnifiClient,
+  type FirewallPolicy as LibFirewallPolicy,
+} from '@uguard/unifi-client';
 import logger from '../utils/logger';
 
 export interface UniFiCredentials {
@@ -9,6 +25,8 @@ export interface UniFiCredentials {
   username: string;
   password: string;
   siteId?: string;
+  /** When true, accept self-signed certs. Defaults to true (UniFi default). */
+  allowSelfSigned?: boolean;
 }
 
 export interface UniFiSite {
@@ -28,7 +46,6 @@ export interface UniFiDevice {
   version: string;
   adopted: boolean;
   state: number;
-  // Timestamps (Unix seconds)
   connected_at?: number;
   disconnected_at?: number;
   provisioned_at?: number;
@@ -41,25 +58,21 @@ export interface UniFiEvent {
   _id: string;
   key: string;
   msg?: string;
-  time: number; // Unix milliseconds
+  time: number;
   datetime: string;
   site_id?: string;
   subsystem?: string;
-  // Device-related fields
   ap?: string;
   ap_name?: string;
   sw?: string;
   sw_name?: string;
   gw?: string;
   gw_name?: string;
-  // Firmware upgrade fields
   version_from?: string;
   version_to?: string;
-  // Client fields
   user?: string;
   hostname?: string;
   ssid?: string;
-  // Admin fields
   admin?: string;
   ip?: string;
   [key: string]: any;
@@ -69,7 +82,7 @@ export interface UniFiAlarm {
   _id: string;
   key: string;
   msg?: string;
-  time: number; // Unix milliseconds
+  time: number;
   datetime: string;
   site_id?: string;
   subsystem?: string;
@@ -117,7 +130,7 @@ export interface UniFiWlan {
   security: string;
   wpa_mode?: string;
   wpa_enc?: string;
-  pmf_mode?: string; // 'disabled' | 'optional' | 'required'
+  pmf_mode?: string;
   is_guest?: boolean;
   vlan_enabled?: boolean;
   vlan?: number;
@@ -160,8 +173,11 @@ export interface UniFiClient_t {
   network_id?: string;
   oui?: string;
   is_wired?: boolean;
-  first_seen?: number;   // Unix timestamp (seconds)
-  last_seen?: number;    // Unix timestamp (seconds)
+  first_seen?: number;
+  last_seen?: number;
+  device_name?: string;
+  dev_id?: number;
+  device_id?: number;
 }
 
 export interface UniFiFirewallPolicy {
@@ -220,7 +236,7 @@ export interface UniFiFullConfig {
   sites: UniFiSite[];
   devices: UniFiDevice[];
   firewallRules: UniFiFirewallRule[];
-  firewallPolicies: UniFiFirewallPolicy[]; // V2 zone-based policies
+  firewallPolicies: UniFiFirewallPolicy[];
   firewallGroups: any[];
   networks: UniFiNetwork[];
   wlans: UniFiWlan[];
@@ -247,31 +263,29 @@ function isLoopbackHost(host: string): boolean {
   );
 }
 
-function resolveControllerHost(host: string): string {
-  if (!isLoopbackHost(host)) {
-    return host;
-  }
-
-  // In containers, localhost points to the container itself, not the host machine.
-  if (!existsSync('/.dockerenv')) {
-    return host;
-  }
-
+/**
+ * Loopback addresses inside a Docker container point at the container itself,
+ * not the host. When running inside Docker, redirect to `HOST_IP` if the user
+ * configured one, otherwise fall back to `host.docker.internal`. This is a
+ * deployment concern, not a library concern — kept in the backend shim.
+ */
+export function resolveControllerHost(host: string): string {
+  if (!isLoopbackHost(host)) return host;
+  if (!existsSync('/.dockerenv')) return host;
   const configuredHostIp = process.env.HOST_IP?.trim();
-  if (configuredHostIp && !isLoopbackHost(configuredHostIp)) {
-    return configuredHostIp;
-  }
-
+  if (configuredHostIp && !isLoopbackHost(configuredHostIp)) return configuredHostIp;
   return 'host.docker.internal';
 }
 
+/**
+ * Backend-facing UniFi client. Public method surface is unchanged from the
+ * legacy implementation — every method delegates to `@uguard/unifi-client`
+ * (or `client.raw.*` for endpoints not yet modeled as typed resources).
+ */
 export class UniFiClient {
-  private client: AxiosInstance;
-  private credentials: UniFiCredentials;
-  private resolvedHost: string;
-  private cookies: string[] = [];
-  private csrfToken: string | null = null;
-  private isLoggedIn = false;
+  private readonly credentials: UniFiCredentials;
+  private readonly resolvedHost: string;
+  private readonly lib: LibUnifiClient;
 
   constructor(credentials: UniFiCredentials) {
     this.credentials = credentials;
@@ -283,459 +297,228 @@ export class UniFiClient {
       );
     }
 
-    // UniFi uses self-signed certs by default
-    const httpsAgent = new https.Agent({
-      rejectUnauthorized: false,
-    });
-
-    this.client = axios.create({
-      baseURL: `https://${this.resolvedHost}:${credentials.port}`,
-      httpsAgent,
-      timeout: 30000,
-      headers: {
-        'Content-Type': 'application/json',
+    this.lib = new LibUnifiClient({
+      host: this.resolvedHost,
+      port: credentials.port,
+      username: credentials.username,
+      password: credentials.password,
+      siteId: credentials.siteId ?? 'default',
+      // UniFi controllers default to self-signed certs. The legacy implementation
+      // accepted them unconditionally; preserve that behaviour here so existing
+      // deployments don't break. Future: make this opt-in like AdGuardConnection.
+      allowSelfSigned: credentials.allowSelfSigned ?? true,
+      timeoutMs: 30_000,
+      logger: {
+        debug: (msg, meta) => logger.debug(msg, meta),
+        info: (msg, meta) => logger.info(msg, meta),
+        warn: (msg, meta) => logger.warn(msg, meta),
+        error: (msg, meta) => logger.error(msg, meta),
       },
-      // Don't throw on non-2xx status codes - we'll handle them
-      validateStatus: (status) => status < 500,
     });
+  }
 
-    // Handle cookies and CSRF token
-    this.client.interceptors.response.use(
-      (response) => {
-        const setCookies = response.headers['set-cookie'];
-        if (setCookies) {
-          this.cookies = setCookies.map((c) => c.split(';')[0]);
-        }
-
-        const csrfToken = response.headers['x-csrf-token'];
-        if (csrfToken) {
-          this.csrfToken = csrfToken;
-        }
-
-        // Check if we got HTML instead of JSON
-        const contentType = String(response.headers['content-type'] || '');
-        if (contentType.includes('text/html') ||
-            (typeof response.data === 'string' && response.data.trim().startsWith('<'))) {
-          const error = new Error('Controller returned HTML instead of JSON - verify host, port, and credentials are correct');
-          (error as any).isHtmlResponse = true;
-          throw error;
-        }
-
-        return response;
-      },
-      (error) => {
-        const hostLabel =
-          this.resolvedHost === credentials.host
-            ? `${credentials.host}:${credentials.port}`
-            : `${credentials.host}:${credentials.port} (resolved as ${this.resolvedHost}:${credentials.port})`;
-
-        // Handle network errors with better messages
-        if (error.code === 'ECONNREFUSED') {
-          throw new Error(`Cannot connect to ${hostLabel} - connection refused. Is the controller running?`);
-        }
-        if (error.code === 'ENOTFOUND') {
-          throw new Error(`Cannot resolve hostname: ${hostLabel}`);
-        }
-        if (
-          error.code === 'ETIMEDOUT' ||
-          error.code === 'ECONNRESET' ||
-          error.code === 'ECONNABORTED' ||
-          error.message?.includes('timeout')
-        ) {
-          throw new Error(`Connection timed out to ${hostLabel}`);
-        }
-        if (error.message?.includes('certificate')) {
-          throw new Error('SSL certificate error - this is normal for UniFi self-signed certs');
-        }
-        throw error;
-      }
-    );
-
-    this.client.interceptors.request.use((config) => {
-      if (this.cookies.length > 0) {
-        config.headers['Cookie'] = this.cookies.join('; ');
-      }
-      if (this.csrfToken) {
-        config.headers['X-Csrf-Token'] = this.csrfToken;
-      }
-      return config;
-    });
+  /** Underlying lib client — escape hatch for callers that want the typed surface directly. */
+  getLib(): LibUnifiClient {
+    return this.lib;
   }
 
   async login(): Promise<boolean> {
     try {
-      const hostLabel =
-        this.resolvedHost === this.credentials.host
-          ? `${this.credentials.host}:${this.credentials.port}`
-          : `${this.credentials.host}:${this.credentials.port} (resolved as ${this.resolvedHost}:${this.credentials.port})`;
-      logger.info(`Connecting to UniFi Controller at ${hostLabel}`);
-
-      // Try UniFi OS (UDM/UDM-Pro) login first
-      try {
-        const response = await this.client.post('/api/auth/login', {
-          username: this.credentials.username,
-          password: this.credentials.password,
-          remember: true,
-        });
-
-        // Check if we got HTML instead of JSON (indicates wrong endpoint or auth failure)
-        if (typeof response.data === 'string' && response.data.includes('<html')) {
-          throw new Error('Received HTML instead of JSON - check host/port');
-        }
-
-        if (response.status === 200) {
-          this.isLoggedIn = true;
-          logger.info('Logged in to UniFi OS controller');
-          return true;
-        }
-      } catch (e: any) {
-        // Check for HTML response error
-        if (e.response?.data && typeof e.response.data === 'string' && e.response.data.includes('<html')) {
-          throw new Error('Controller returned HTML page - verify host, port, and that this is a UniFi Controller');
-        }
-        // Check for specific auth errors
-        if (e.response?.status === 401) {
-          throw new Error('Invalid username or password');
-        }
-        if (e.response?.status === 403) {
-          throw new Error('Access forbidden - check credentials');
-        }
-        // Not UniFi OS, try legacy controller
-        logger.debug('UniFi OS login failed, trying legacy endpoint');
-      }
-
-      // Try legacy controller login
-      const response = await this.client.post('/api/login', {
-        username: this.credentials.username,
-        password: this.credentials.password,
-      });
-
-      // Check if we got HTML instead of JSON
-      if (typeof response.data === 'string' && response.data.includes('<html')) {
-        throw new Error('Controller returned HTML page - verify host, port, and credentials');
-      }
-
-      if (response.data?.meta?.rc === 'ok') {
-        this.isLoggedIn = true;
-        logger.info('Logged in to legacy UniFi controller');
-        return true;
-      }
-
-      // Check for error message in response
-      if (response.data?.meta?.msg) {
-        throw new Error(`Login failed: ${response.data.meta.msg}`);
-      }
-
-      throw new Error('Invalid username or password');
-    } catch (error: any) {
-      const hostLabel =
-        this.resolvedHost === this.credentials.host
-          ? `${this.credentials.host}:${this.credentials.port}`
-          : `${this.credentials.host}:${this.credentials.port} (resolved as ${this.resolvedHost}:${this.credentials.port})`;
-
-      // Provide more specific error messages
-      if (error.code === 'ECONNREFUSED') {
-        throw new Error(`Cannot connect to ${hostLabel} - connection refused`);
-      }
-      if (error.code === 'ENOTFOUND') {
-        throw new Error(`Cannot resolve hostname: ${hostLabel}`);
-      }
-      if (error.code === 'ETIMEDOUT' || error.code === 'ECONNRESET') {
-        throw new Error(`Connection timed out to ${hostLabel}`);
-      }
-      if (error.message?.includes('certificate')) {
-        throw new Error('SSL certificate error - controller may use self-signed certificate');
-      }
-      // Re-throw with original message if it's already a good error
-      if (error.message && !error.message.includes('JSON')) {
-        throw error;
-      }
-      logger.error('UniFi login error:', error.message);
-      throw new Error(`Connection failed: ${error.message || 'Unknown error'}`);
+      await this.lib.login();
+      return true;
+    } catch (err) {
+      logger.error('UniFi login failed', { error: (err as Error).message });
+      return false;
     }
   }
 
   async logout(): Promise<void> {
-    if (!this.isLoggedIn) return;
-
-    try {
-      await this.client.post('/api/logout');
-    } catch (e) {
-      // Ignore logout errors
-    }
-
-    this.isLoggedIn = false;
-    this.cookies = [];
-    this.csrfToken = null;
+    await this.lib.logout();
   }
+
+  // -------------------- Reads --------------------
 
   async getSites(): Promise<UniFiSite[]> {
-    if (!this.isLoggedIn) throw new Error('Not logged in');
-
-    try {
-      // Try UniFi OS endpoint first
-      try {
-        const response = await this.client.get('/proxy/network/api/self/sites');
-        if (response.data?.data) {
-          return response.data.data;
-        }
-      } catch (e) {
-        // Not UniFi OS
-      }
-
-      // Legacy endpoint
-      const response = await this.client.get('/api/self/sites');
-      return response.data?.data || [];
-    } catch (error: any) {
-      logger.error('Failed to get sites:', error.message);
-      return [];
-    }
-  }
-
-  private async apiGet(endpoint: string): Promise<any> {
-    if (!this.isLoggedIn) throw new Error('Not logged in');
-
-    const siteId = this.credentials.siteId || 'default';
-
-    // Try UniFi OS first, then legacy
-    const endpoints = [
-      `/proxy/network/api/s/${siteId}${endpoint}`,
-      `/api/s/${siteId}${endpoint}`,
-    ];
-
-    for (const url of endpoints) {
-      try {
-        const response = await this.client.get(url);
-        if (response.data?.data !== undefined) {
-          return response.data.data;
-        }
-        if (response.data?.meta?.rc === 'ok') {
-          return response.data.data || [];
-        }
-      } catch (e) {
-        continue;
-      }
-    }
-
-    return [];
-  }
-
-  private async apiPost(endpoint: string, data: any): Promise<any> {
-    if (!this.isLoggedIn) throw new Error('Not logged in');
-
-    const siteId = this.credentials.siteId || 'default';
-
-    const endpoints = [
-      `/proxy/network/api/s/${siteId}${endpoint}`,
-      `/api/s/${siteId}${endpoint}`,
-    ];
-
-    for (const url of endpoints) {
-      try {
-        const response = await this.client.post(url, data);
-        return response.data;
-      } catch (e) {
-        continue;
-      }
-    }
-
-    throw new Error('API request failed');
+    return (await this.lib.sites.list()) as unknown as UniFiSite[];
   }
 
   async getDevices(): Promise<UniFiDevice[]> {
-    return this.apiGet('/stat/device');
+    return (await this.lib.devices.list()) as unknown as UniFiDevice[];
   }
 
   async getNetworks(): Promise<UniFiNetwork[]> {
-    return this.apiGet('/rest/networkconf');
+    return (await this.lib.networks.list()) as unknown as UniFiNetwork[];
   }
 
   async getWlans(): Promise<UniFiWlan[]> {
-    return this.apiGet('/rest/wlanconf');
+    return (await this.lib.wlans.list()) as unknown as UniFiWlan[];
   }
 
   async getFirewallRules(): Promise<UniFiFirewallRule[]> {
-    return this.apiGet('/rest/firewallrule');
+    return (await this.lib.firewallRules.list()) as unknown as UniFiFirewallRule[];
   }
 
   async getFirewallGroups(): Promise<any[]> {
-    return this.apiGet('/rest/firewallgroup');
+    return this.lib.firewallGroups.list();
   }
 
   async getPortForwards(): Promise<UniFiPortForward[]> {
-    return this.apiGet('/rest/portforward');
+    return (await this.lib.portForwards.list()) as unknown as UniFiPortForward[];
   }
 
   async getRoutingRules(): Promise<any[]> {
-    return this.apiGet('/rest/routing');
+    return this.lib.routingRules.list();
   }
 
   async getTrafficRules(): Promise<UniFiTrafficRule[]> {
-    return this.apiGet('/rest/trafficrule');
+    return (await this.lib.trafficRules.list()) as unknown as UniFiTrafficRule[];
   }
 
   async getFirewallPolicies(): Promise<UniFiFirewallPolicy[]> {
-    // V2 API for zone-based firewall policies (UniFi Network 10.x+)
-    if (!this.isLoggedIn) throw new Error('Not logged in');
-
-    const siteId = this.credentials.siteId || 'default';
-    const url = `/proxy/network/v2/api/site/${siteId}/firewall-policies`;
-
-    try {
-      const response = await this.client.get(url);
-      // V2 API returns array directly, not wrapped in data
-      return response.data || [];
-    } catch (e) {
-      logger.debug('V2 firewall policies not available, falling back to empty array');
-      return [];
-    }
+    const policies = (await this.lib.firewallPolicies.list()) as LibFirewallPolicy[];
+    return policies as unknown as UniFiFirewallPolicy[];
   }
 
+  /**
+   * Endpoints below have version- and SKU-dependent availability — `raw.get`
+   * gracefully returns an empty array if the controller doesn't expose them
+   * (lib throws UnifiNotFoundError, we swallow it).
+   */
   async getVpnServers(): Promise<UniFiVpnServer[]> {
-    if (!this.isLoggedIn) throw new Error('Not logged in');
-
     const siteId = this.credentials.siteId || 'default';
-    const url = `/proxy/network/v2/api/site/${siteId}/vpn/servers`;
-
-    try {
-      const response = await this.client.get(url);
-      return response.data || [];
-    } catch (e) {
-      logger.debug('VPN servers endpoint not available');
-      return [];
-    }
+    return this.tryRawArray(`/proxy/network/v2/api/site/${siteId}/vpn/servers`, 'VPN servers');
   }
 
   async getTrafficMatchingLists(): Promise<UniFiTrafficMatchingList[]> {
-    if (!this.isLoggedIn) throw new Error('Not logged in');
-
     const siteId = this.credentials.siteId || 'default';
-    const url = `/proxy/network/v2/api/site/${siteId}/traffic-matching-lists`;
-
-    try {
-      const response = await this.client.get(url);
-      return response.data || [];
-    } catch (e) {
-      logger.debug('Traffic matching lists endpoint not available');
-      return [];
-    }
+    return this.tryRawArray(
+      `/proxy/network/v2/api/site/${siteId}/traffic-matching-lists`,
+      'Traffic matching lists'
+    );
   }
 
   async getFirewallZones(): Promise<any[]> {
-    if (!this.isLoggedIn) throw new Error('Not logged in');
-
     const siteId = this.credentials.siteId || 'default';
-    const url = `/proxy/network/v2/api/site/${siteId}/firewall-zones`;
+    return this.tryRawArray(
+      `/proxy/network/v2/api/site/${siteId}/firewall-zones`,
+      'Firewall zones'
+    );
+  }
 
+  async getAclRules(): Promise<any[]> {
+    const siteId = this.credentials.siteId || 'default';
+    const v2 = await this.tryRawArray(
+      `/proxy/network/v2/api/site/${siteId}/acl-rules`,
+      'ACL rules (v2)'
+    );
+    if (v2.length > 0) return v2;
+    // V1 fallback
     try {
-      const response = await this.client.get(url);
-      return response.data || [];
-    } catch (e) {
-      logger.debug('Firewall zones endpoint not available');
+      const result = await this.lib.raw.get<{ data?: any[] }>(`/api/s/${siteId}/rest/aclrule`);
+      return Array.isArray(result) ? result : result.data ?? [];
+    } catch {
       return [];
     }
   }
 
+  /** Fingerprint dev_id → friendly name mapping. Multi-path discovery. */
+  async getFingerprintDevices(source = 0): Promise<any[]> {
+    const siteId = this.credentials.siteId || 'default';
+    const candidates = [
+      `/proxy/network/v2/api/site/${siteId}/fingerprint-devices/${source}`,
+      `/proxy/network/v2/api/fingerprint_devices/${source}`,
+      `/proxy/network/api/s/${siteId}/stat/fingerprint-devices/${source}`,
+    ];
+    for (const url of candidates) {
+      try {
+        const result = await this.lib.raw.get<unknown>(url);
+        const data = Array.isArray(result)
+          ? result
+          : (result as { data?: unknown[] })?.data ?? [];
+        if (Array.isArray(data) && data.length > 0) {
+          logger.debug(`Fetched ${data.length} fingerprint device entries`, { url });
+          return data;
+        }
+      } catch {
+        continue;
+      }
+    }
+    logger.debug('Fingerprint devices endpoint not available on any path');
+    return [];
+  }
+
   async getSettings(): Promise<any> {
-    return this.apiGet('/rest/setting');
+    return this.lib.settings.list();
   }
 
   async getControllerVersion(): Promise<string | null> {
     try {
-      const sysinfo = await this.apiGet('/stat/sysinfo');
-      const entry = Array.isArray(sysinfo) ? sysinfo[0] : sysinfo;
-      return entry?.version ?? null;
-    } catch (e) {
-      logger.debug('sysinfo endpoint not available');
+      return await this.lib.system.getControllerVersion();
+    } catch {
       return null;
     }
   }
 
   async getClients(): Promise<any[]> {
-    return this.apiGet('/stat/sta');
+    return this.lib.clients.listActive();
   }
 
   async getAllUsers(limit = 5000): Promise<UniFiClient_t[]> {
-    return this.apiGet(`/stat/alluser?_limit=${limit}`);
+    return (await this.lib.clients.listAll({ limit })) as unknown as UniFiClient_t[];
   }
 
   async getEvents(limit = 3000): Promise<UniFiEvent[]> {
-    return this.apiGet(`/stat/event?_limit=${limit}`);
+    return (await this.lib.events.list({ limit })) as unknown as UniFiEvent[];
   }
 
   async getAlarms(limit = 3000): Promise<UniFiAlarm[]> {
-    return this.apiGet(`/stat/alarm?_limit=${limit}`);
+    return (await this.lib.alarms.list({ limit })) as unknown as UniFiAlarm[];
   }
 
-  // Fetch ACL rules (Settings > Security > ACL Rules)
-  async getAclRules(): Promise<any[]> {
-    if (!this.isLoggedIn) throw new Error('Not logged in');
-
-    const siteId = this.credentials.siteId || 'default';
-
-    // V2 API path (UniFi Network 10.x+)
-    try {
-      const url = `/proxy/network/v2/api/site/${siteId}/acl-rules`;
-      const response = await this.client.get(url);
-      if (response.data) {
-        return response.data?.data || response.data || [];
-      }
-    } catch (e) {
-      // V2 not available, try V1 fallback
-    }
-
-    // V1 REST fallback
-    try {
-      const rules = await this.apiGet('/rest/aclrule');
-      if (Array.isArray(rules) && rules.length > 0) {
-        return rules;
-      }
-    } catch (e) {
-      // Not available
-    }
-
-    logger.debug('No ACL rules found');
-    return [];
-  }
-
-  // Fetch the fingerprint device database that maps dev_id → device name
-  async getFingerprintDevices(source = 0): Promise<any[]> {
-    if (!this.isLoggedIn) throw new Error('Not logged in');
-
-    const siteId = this.credentials.siteId || 'default';
-    const urls = [
-      `/proxy/network/v2/api/site/${siteId}/fingerprint-devices/${source}`,
-      `/proxy/network/v2/api/fingerprint_devices/${source}`,
-      `/proxy/network/api/s/${siteId}/stat/fingerprint-devices/${source}`,
-      `/api/s/${siteId}/stat/fingerprint-devices/${source}`,
-      `/v2/api/fingerprint_devices/${source}`,
-    ];
-
-    for (const url of urls) {
-      try {
-        const response = await this.client.get(url);
-        const data = response.data?.data || response.data || [];
-        if (Array.isArray(data) && data.length > 0) {
-          logger.info(`Fetched ${data.length} fingerprint device entries from ${url}`);
-          return data;
-        }
-      } catch (e: any) {
-        logger.debug(`Fingerprint endpoint ${url}: ${e.response?.status || e.code || 'failed'}`);
-        continue;
-      }
-    }
-
-    logger.debug('Fingerprint devices endpoint not available on any path');
-    return [];
-  }
-
-  // Fetch raw network config to see all available fields
   async getRawNetworkConfig(): Promise<any[]> {
-    return this.apiGet('/rest/networkconf');
+    return this.lib.networks.list();
+  }
+
+  // -------------------- Writes --------------------
+
+  async createFirewallRule(rule: Partial<UniFiFirewallRule>): Promise<any> {
+    logger.info(`Creating firewall rule: ${rule.name}`);
+    return this.lib.firewallRules.create(rule as never);
+  }
+
+  async updateFirewallRule(ruleId: string, updates: Partial<UniFiFirewallRule>): Promise<any> {
+    logger.info(`Updating firewall rule: ${ruleId}`);
+    return this.lib.firewallRules.update(ruleId, updates as never);
+  }
+
+  async deleteFirewallRule(ruleId: string): Promise<any> {
+    logger.info(`Deleting firewall rule: ${ruleId}`);
+    await this.lib.firewallRules.delete(ruleId);
+    return { ok: true };
+  }
+
+  async createFirewallGroup(group: {
+    name: string;
+    group_type: string;
+    group_members: string[];
+  }): Promise<any> {
+    logger.info(`Creating firewall group: ${group.name}`);
+    return this.lib.firewallGroups.create(group);
+  }
+
+  // -------------------- Convenience --------------------
+
+  async testConnection(): Promise<{ success: boolean; message: string; sites?: UniFiSite[] }> {
+    const result = await this.lib.testConnection();
+    return {
+      success: result.success,
+      message: result.message,
+      sites: result.sites as unknown as UniFiSite[] | undefined,
+    };
   }
 
   async getFullConfig(): Promise<UniFiFullConfig> {
-    if (!this.isLoggedIn) {
+    if (!this.lib.isLoggedIn()) {
       throw new Error('Not logged in to UniFi Controller');
     }
 
@@ -781,7 +564,7 @@ export class UniFiClient {
       this.getFingerprintDevices(),
     ]);
 
-    // Resolve missing device_name from fingerprint database
+    // Fingerprint DB → friendly client device names.
     if (fingerprintDevices.length > 0) {
       const fpMap = new Map<string, string>();
       for (const fp of fingerprintDevices) {
@@ -792,12 +575,12 @@ export class UniFiClient {
         }
       }
       let resolved = 0;
-      for (const client of clients) {
-        const devId = client.dev_id ?? client.device_id;
-        if (!client.device_name && devId !== undefined && devId !== null) {
+      for (const c of clients as UniFiClient_t[]) {
+        const devId = c.dev_id ?? c.device_id;
+        if (!c.device_name && devId !== undefined && devId !== null) {
           const fingerprintName = fpMap.get(String(devId));
           if (!fingerprintName) continue;
-          client.device_name = fingerprintName;
+          c.device_name = fingerprintName;
           resolved++;
         }
       }
@@ -806,20 +589,9 @@ export class UniFiClient {
       }
     }
 
-    // Log all fields from raw network config for debugging ACL/isolation settings
-    if (rawNetworkConfig.length > 0) {
-      const sampleNetwork = rawNetworkConfig[0];
-      const isolationFields = Object.keys(sampleNetwork).filter(k =>
-        k.includes('isolation') || k.includes('acl') || k.includes('l3') || k.includes('device')
-      );
-      if (isolationFields.length > 0) {
-        logger.info(`Network isolation-related fields found: ${isolationFields.join(', ')}`);
-      }
-      // Log all keys for the first network to help discover undocumented fields
-      logger.debug(`All network config keys: ${Object.keys(sampleNetwork).join(', ')}`);
-    }
-
-    logger.info(`Fetched config: ${devices.length} devices, ${firewallRules.length} legacy firewall rules, ${firewallPolicies.length} firewall policies, ${networks.length} networks, ${wlans.length} WLANs, ${portForwards.length} port forwards, ${clients.length} clients, ${trafficRules.length} traffic rules, ${aclRules.length} ACL rules, ${vpnServers.length} VPN servers, ${firewallZones.length} firewall zones`);
+    logger.info(
+      `Fetched config: ${devices.length} devices, ${firewallRules.length} legacy firewall rules, ${firewallPolicies.length} firewall policies, ${networks.length} networks, ${wlans.length} WLANs, ${portForwards.length} port forwards, ${clients.length} clients, ${trafficRules.length} traffic rules, ${aclRules.length} ACL rules, ${vpnServers.length} VPN servers, ${firewallZones.length} firewall zones`
+    );
 
     return {
       sites,
@@ -832,7 +604,7 @@ export class UniFiClient {
       portForwards,
       trafficRules,
       routingRules,
-      clients,
+      clients: clients as UniFiClient_t[],
       settings,
       aclRules,
       rawNetworkConfig,
@@ -843,115 +615,17 @@ export class UniFiClient {
     };
   }
 
-  // === Write Operations (for remediation) ===
-
-  async createFirewallRule(rule: Partial<UniFiFirewallRule>): Promise<any> {
-    logger.info(`Creating firewall rule: ${rule.name}`);
-    return this.apiPost('/rest/firewallrule', rule);
-  }
-
-  async updateFirewallRule(ruleId: string, updates: Partial<UniFiFirewallRule>): Promise<any> {
-    logger.info(`Updating firewall rule: ${ruleId}`);
-    const siteId = this.credentials.siteId || 'default';
-
-    const endpoints = [
-      `/proxy/network/api/s/${siteId}/rest/firewallrule/${ruleId}`,
-      `/api/s/${siteId}/rest/firewallrule/${ruleId}`,
-    ];
-
-    for (const url of endpoints) {
-      try {
-        const response = await this.client.put(url, updates);
-        return response.data;
-      } catch (e) {
-        continue;
-      }
-    }
-
-    throw new Error('Failed to update firewall rule');
-  }
-
-  async deleteFirewallRule(ruleId: string): Promise<any> {
-    logger.info(`Deleting firewall rule: ${ruleId}`);
-    const siteId = this.credentials.siteId || 'default';
-
-    const endpoints = [
-      `/proxy/network/api/s/${siteId}/rest/firewallrule/${ruleId}`,
-      `/api/s/${siteId}/rest/firewallrule/${ruleId}`,
-    ];
-
-    for (const url of endpoints) {
-      try {
-        const response = await this.client.delete(url);
-        return response.data;
-      } catch (e) {
-        continue;
-      }
-    }
-
-    throw new Error('Failed to delete firewall rule');
-  }
-
-  async createFirewallGroup(group: { name: string; group_type: string; group_members: string[] }): Promise<any> {
-    logger.info(`Creating firewall group: ${group.name}`);
-    return this.apiPost('/rest/firewallgroup', group);
-  }
-
-  // Test connection without fetching full config
-  async testConnection(): Promise<{ success: boolean; message: string; sites?: UniFiSite[] }> {
+  /** Helper: try a raw GET, swallow not-found / endpoint-missing as []. */
+  private async tryRawArray<T>(path: string, label: string): Promise<T[]> {
     try {
-      const loggedIn = await this.login();
-      if (!loggedIn) {
-        return { success: false, message: 'Invalid credentials' };
-      }
-
-      const sites = await this.getSites();
-      await this.logout();
-
-      return {
-        success: true,
-        message: `Connected successfully. Found ${sites.length} site(s).`,
-        sites,
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        message: error.message || 'Connection failed',
-      };
+      const result = await this.lib.raw.get<unknown>(path);
+      if (Array.isArray(result)) return result as T[];
+      const wrapped = result as { data?: unknown };
+      if (Array.isArray(wrapped.data)) return wrapped.data as T[];
+      return [];
+    } catch {
+      logger.debug(`${label} endpoint not available`);
+      return [];
     }
   }
 }
-
-// Singleton manager for active connections
-class UniFiConnectionManager {
-  private connections: Map<string, UniFiClient> = new Map();
-
-  async getConnection(connectionId: string, credentials: UniFiCredentials): Promise<UniFiClient> {
-    let client = this.connections.get(connectionId);
-
-    if (!client) {
-      client = new UniFiClient(credentials);
-      await client.login();
-      this.connections.set(connectionId, client);
-    }
-
-    return client;
-  }
-
-  async closeConnection(connectionId: string): Promise<void> {
-    const client = this.connections.get(connectionId);
-    if (client) {
-      await client.logout();
-      this.connections.delete(connectionId);
-    }
-  }
-
-  async closeAll(): Promise<void> {
-    for (const client of this.connections.values()) {
-      await client.logout();
-    }
-    this.connections.clear();
-  }
-}
-
-export const unifiManager = new UniFiConnectionManager();

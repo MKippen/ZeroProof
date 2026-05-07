@@ -1,5 +1,6 @@
-import axios, { AxiosInstance } from 'axios';
-import https from 'https';
+import http from 'node:http';
+import https from 'node:https';
+import { URL } from 'node:url';
 
 export interface AdGuardCredentials {
   host: string;
@@ -112,32 +113,90 @@ export interface AdGuardClientsResponse {
   supported_tags?: string[];
 }
 
+interface HttpResult<T> {
+  status: number;
+  data: T;
+}
+
 export class AdGuardClient {
-  private client: AxiosInstance;
+  private readonly baseUrl: string;
+  private readonly authHeader: string | null;
+  private readonly httpsAgent: https.Agent | undefined;
+  private readonly timeoutMs = 15_000;
 
   constructor(credentials: AdGuardCredentials) {
     const protocol = credentials.useHttps ? 'https' : 'http';
+    this.baseUrl = `${protocol}://${credentials.host}:${credentials.port}/control`;
+
     // Strict TLS by default. Only relax when the user has explicitly opted in
     // via the `allowSelfSigned` flag persisted on AdGuardConnection.
-    const httpsAgent =
+    this.httpsAgent =
       credentials.useHttps && credentials.allowSelfSigned === true
         ? new https.Agent({ rejectUnauthorized: false })
         : undefined;
 
     const hasAuth = Boolean(credentials.username || credentials.password);
-    this.client = axios.create({
-      baseURL: `${protocol}://${credentials.host}:${credentials.port}/control`,
-      ...(hasAuth
-        ? {
-            auth: {
-              username: credentials.username || '',
-              password: credentials.password || '',
-            },
+    if (hasAuth) {
+      const token = Buffer.from(
+        `${credentials.username ?? ''}:${credentials.password ?? ''}`
+      ).toString('base64');
+      this.authHeader = `Basic ${token}`;
+    } else {
+      this.authHeader = null;
+    }
+  }
+
+  /** Issue a JSON GET request — pure stdlib, no external deps. */
+  private async get<T>(path: string, params?: Record<string, string | number>): Promise<HttpResult<T>> {
+    const url = new URL(`${this.baseUrl}${path}`);
+    if (params) {
+      for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
+    }
+
+    const transport = url.protocol === 'http:' ? http : https;
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (this.authHeader) headers.Authorization = this.authHeader;
+
+    const requestOptions: https.RequestOptions = {
+      method: 'GET',
+      hostname: url.hostname,
+      port: url.port || (url.protocol === 'http:' ? 80 : 443),
+      path: `${url.pathname}${url.search}`,
+      headers,
+      timeout: this.timeoutMs,
+    };
+    if (url.protocol === 'https:' && this.httpsAgent) requestOptions.agent = this.httpsAgent;
+
+    return new Promise<HttpResult<T>>((resolve, reject) => {
+      const req = transport.request(requestOptions, (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (c: Buffer) => chunks.push(c));
+        res.on('end', () => {
+          const body = Buffer.concat(chunks).toString('utf8');
+          const ct = String(res.headers['content-type'] ?? '');
+          let data: unknown;
+          if (ct.includes('application/json') && body.length > 0) {
+            try {
+              data = JSON.parse(body);
+            } catch (err) {
+              reject(new Error(`AdGuard returned malformed JSON from ${path}: ${(err as Error).message}`));
+              return;
+            }
+          } else if (body.length === 0 && ct.includes('application/json')) {
+            data = {};
+          } else {
+            data = body;
           }
-        : {}),
-      timeout: 15000,
-      httpsAgent,
-      validateStatus: (status) => status < 500,
+          resolve({ status: res.statusCode ?? 0, data: data as T });
+        });
+        res.on('error', reject);
+      });
+      req.on('error', reject);
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error(`AdGuard request timed out after ${this.timeoutMs}ms: ${path}`));
+      });
+      req.end();
     });
   }
 
@@ -151,32 +210,30 @@ export class AdGuardClient {
   }
 
   async getStatus(): Promise<AdGuardStatusResponse> {
-    const response = await this.client.get('/status');
+    const response = await this.get<AdGuardStatusResponse>('/status');
     this.assertOk(response.status, 'Failed to fetch AdGuard status');
     return response.data || {};
   }
 
   async getQueryLogConfig(): Promise<AdGuardQueryLogConfig> {
-    const response = await this.client.get('/querylog/config');
+    const response = await this.get<AdGuardQueryLogConfig>('/querylog/config');
     this.assertOk(response.status, 'Failed to fetch AdGuard query log configuration');
     return response.data;
   }
 
   async getPersistentClients(): Promise<AdGuardClientsResponse> {
-    const response = await this.client.get('/clients');
+    const response = await this.get<AdGuardClientsResponse>('/clients');
     this.assertOk(response.status, 'Failed to fetch AdGuard clients');
     return response.data || { clients: [], auto_clients: [] };
   }
 
   async getQueryLog(params: QueryLogParams = {}): Promise<AdGuardQueryLogResponse> {
-    const response = await this.client.get('/querylog', {
-      params: {
-        ...(params.limit ? { limit: params.limit } : {}),
-        ...(params.olderThan ? { older_than: params.olderThan } : {}),
-        ...(params.search ? { search: params.search } : {}),
-        ...(params.responseStatus ? { response_status: params.responseStatus } : { response_status: 'all' }),
-      },
-    });
+    const queryParams: Record<string, string | number> = {};
+    if (params.limit) queryParams.limit = params.limit;
+    if (params.olderThan) queryParams.older_than = params.olderThan;
+    if (params.search) queryParams.search = params.search;
+    queryParams.response_status = params.responseStatus ?? 'all';
+    const response = await this.get<AdGuardQueryLogResponse>('/querylog', queryParams);
     this.assertOk(response.status, 'Failed to fetch AdGuard query log');
     return response.data || {};
   }
