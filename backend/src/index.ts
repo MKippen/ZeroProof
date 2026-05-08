@@ -7,6 +7,8 @@ import { ensureServerDevice } from './services/localTestExecutor';
 import { ruleLoader } from './services/ruleLoader';
 import { registerBaselineDnsIndicators } from './services/dnsIndicators';
 import { registerBuiltinDnsProxyConfigAdapters } from './services/dnsProxyConfig';
+import { bootstrapDetectors } from './detectors';
+import { bootstrapThreatIntel } from './services/threatIntel';
 import logger from './utils/logger';
 
 const PORT = parseInt(config.PORT);
@@ -23,6 +25,11 @@ async function main(): Promise<void> {
 
     // Register built-in DNS proxy config adapters (AdGuard Home today; more later)
     registerBuiltinDnsProxyConfigAdapters();
+
+    // Wire up the detection engine (detectors + their YAML rule metadata)
+    // and the threat-intel feed registry. Both are idempotent.
+    bootstrapDetectors();
+    bootstrapThreatIntel();
 
     // Initialize default user if needed
     await initializeDefaultUser();

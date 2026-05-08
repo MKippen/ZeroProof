@@ -1,0 +1,19 @@
+id: high_egress_volume
+description: |
+  A single internal device egressed more than the configured byte threshold
+  during the window. Useful for spotting data exfiltration, an IoT device
+  uploading way more than expected, or a misconfigured backup pumping
+  traffic to an unintended target.
+
+  Tunable: HIGH_EGRESS_BYTES_THRESHOLD (default 1 GiB / hour).
+severity:
+  base: MEDIUM
+remediation: |
+  1. Confirm whether the device is expected to send this volume (e.g.,
+     security-camera cloud upload, NAS off-site backup).
+  2. If unexpected, capture which destination IPs / domains received the
+     traffic and pivot to a flow review.
+  3. Consider rate-limiting non-admin VLANs to a sane upstream quota.
+references:
+  - https://attack.mitre.org/tactics/TA0010/
+retention_days: 30

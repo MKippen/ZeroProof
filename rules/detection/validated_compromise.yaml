@@ -1,0 +1,23 @@
+id: validated_compromise
+description: |
+  The highest-confidence finding the detection engine produces. Fires when a
+  single device shows BOTH (a) an IOC match against a threat-intel feed AND
+  (b) a UniFi IDS hit, in the same time window.
+
+  Two independent signals corroborating each other gives near-zero false
+  positive rate. Treat it as an active incident, not a notification.
+severity:
+  base: CRITICAL
+remediation: |
+  Follow the incident playbook:
+    1. Isolate the host immediately (block egress + block lateral movement).
+    2. Preserve evidence — pull flow logs, DNS logs, and any process snapshots
+       you have access to before remediating.
+    3. Re-image the host. Do not attempt to clean in place.
+    4. Rotate credentials the host had access to (cloud sessions, SSH keys,
+       SaaS logins).
+    5. Document the timeline and root cause; update detection rules if a new
+       indicator class led to the discovery.
+references:
+  - https://attack.mitre.org/
+retention_days: 90

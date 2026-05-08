@@ -1,0 +1,20 @@
+id: admin_port_egress
+description: |
+  An internal device contacted an admin / remote-management port (SSH 22,
+  Telnet 23, RDP 3389, VNC 5900-5905, WinRM 5985/5986) on a public IP.
+  Almost never legitimate from non-administrator hosts; commonly seen with
+  compromised IoT devices, brute-force tools, or lateral-movement attempts.
+
+  Override the watched port set via ADMIN_EGRESS_PORTS env var.
+severity:
+  base: HIGH
+remediation: |
+  1. Identify the source device — was this initiated by a human admin or by
+     an unattended host?
+  2. If unattended, treat the device as suspect: capture flow + DNS history,
+     and isolate while you investigate.
+  3. Add a default-deny outbound traffic rule for these ports for the
+     non-admin VLAN(s) so blocked attempts surface here automatically.
+references:
+  - https://attack.mitre.org/techniques/T1021/
+retention_days: 30

@@ -183,6 +183,47 @@ export interface TrafficAnalytics {
   recentThreats: TrafficThreat[];
 }
 
+// ---------- Detection engine ----------
+
+export type DetectionSeverity = 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+export type DetectionStatus = 'OPEN' | 'RESOLVED' | 'DISMISSED';
+
+export interface DetectionSummary {
+  windowHours: number;
+  since: string;
+  total: number;
+  open: number;
+  resolved: number;
+  dismissed: number;
+  bySeverity: Array<{ severity: DetectionSeverity; count: number }>;
+  byDetector: Array<{ detectorId: string; count: number }>;
+  topAffected: Array<{
+    resource: string;
+    count: number;
+    maxSeverity: DetectionSeverity;
+  }>;
+}
+
+export interface DetectionRow {
+  id: string;
+  detectorId: string;
+  fingerprint: string;
+  severity: DetectionSeverity;
+  status: DetectionStatus;
+  title: string;
+  description: string;
+  affectedResource: string | null;
+  srcMac: string | null;
+  occurrences: number;
+  firstSeen: string;
+  lastSeen: string;
+  expiresAt: string;
+  remediation: string | null;
+  references: unknown;
+  evidence: unknown;
+  metadata: unknown;
+}
+
 export interface DnsProxyAnalytics {
   configured: boolean;
   windowHours: number;

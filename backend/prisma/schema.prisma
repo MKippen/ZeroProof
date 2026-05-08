@@ -327,6 +327,78 @@ model FirewallFlowEvent {
   @@index([connectionId, dstRegion])
 }
 
+// -------------------- Detection engine --------------------
+
+/// Cached entry from an external threat-intel feed. Detectors look up
+/// observed IPs / domains / hashes against this table to enrich findings —
+/// they NEVER make a network call themselves. The IocFeedService refreshes
+/// the cache on a daily cadence.
+model IocEntry {
+  id          String   @id @default(cuid())
+  /// Source feed identifier (e.g. "urlhaus", "spamhaus_drop", "tor_exit").
+  feed        String
+  /// What kind of indicator this is.
+  kind        String   // ip | domain | url | hash
+  /// The actual indicator value, normalized (IPs stripped of CIDR if /32).
+  value       String
+  /// Optional categorization from the feed (e.g. "malware-c2", "phishing").
+  category    String?
+  /// Optional severity hint from the feed.
+  severity    String?
+  /// Free-form context — feed-specific metadata.
+  context     Json?
+  refreshedAt DateTime @default(now())
+
+  @@unique([feed, kind, value])
+  @@index([kind, value])
+  @@index([feed])
+  @@index([refreshedAt])
+}
+
+/// Output of a Detector — an event-driven security finding produced by
+/// evaluating captured signals (flow events, threat events, DNS queries, ESP32
+/// telemetry) against rules over rolling time windows.
+///
+/// Distinct from `Vulnerability` (which captures config-time issues from
+/// snapshot analyzers) and `DnsSignal` (DNS-only campaign hits) — this model
+/// is the cross-source surface for "something is happening" findings.
+model Detection {
+  id           String   @id @default(cuid())
+  /// Detector that produced this finding (e.g. "ioc_match", "honeypot_hit").
+  detectorId   String
+  /// Stable per-finding key — same detector + same evidence collapses to one row.
+  fingerprint  String   @unique
+  severity     Severity
+  status       String   @default("OPEN") // OPEN | ACKNOWLEDGED | RESOLVED | DISMISSED
+  title        String
+  description  String   @db.Text
+  /// Plain-English remediation guidance from the rule's YAML.
+  remediation  String?  @db.Text
+  /// External references (CISA / OFAC / threat-intel feed URLs etc.)
+  references   Json?
+  /// What this detection is about (MAC, IP, domain, network name, etc.).
+  affectedResource String?
+  /// Source MAC when applicable — denormalized for indexing.
+  srcMac       String?
+  /// Confidence 0.0–1.0 — informational, surfaces in UI.
+  confidence   Float    @default(1.0)
+  /// Pointers to the underlying rows that triggered this detection.
+  evidence     Json
+  /// Detector-specific raw context, useful for debugging.
+  metadata     Json?
+  firstSeen    DateTime @default(now())
+  lastSeen     DateTime @default(now())
+  /// Auto-cleanup boundary; matches the Detection's retention window.
+  expiresAt    DateTime
+  occurrences  Int      @default(1)
+
+  @@index([severity, lastSeen])
+  @@index([detectorId, lastSeen])
+  @@index([srcMac, lastSeen])
+  @@index([status])
+  @@index([expiresAt])
+}
+
 // IPS / honeypot detections from POST /v2/api/site/{site}/system-log/threat-alert.
 // Distinct stream from FirewallFlowEvent — when an IPS signature fires inline,
 // you typically see one row here AND one row in FirewallFlowEvent with the

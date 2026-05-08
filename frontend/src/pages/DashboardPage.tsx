@@ -14,6 +14,7 @@ import {
   Scan,
   History,
   AlertTriangle,
+  Radar,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,7 +23,12 @@ import { Progress } from '@/components/ui/progress';
 import api from '@/api/client';
 import { TimelineHistogram } from '@/components/charts/TimelineHistogram';
 import { FirstRunChecklist } from '@/components/FirstRunChecklist';
-import type { ConfigRequirement, DashboardData, TimelineHistogramEntry } from '@/types';
+import type {
+  ConfigRequirement,
+  DashboardData,
+  DetectionSummary,
+  TimelineHistogramEntry,
+} from '@/types';
 import { formatDate, getScoreColor, cn } from '@/lib/utils';
 import { SEVERITY_BADGE_VARIANT } from '@/config/security';
 import { POLL_INTERVALS } from '@/config/polling';
@@ -50,6 +56,19 @@ export function DashboardPage() {
       return [];
     },
     refetchInterval: POLL_INTERVALS.dashboardHistogram,
+  });
+
+  // Detection engine summary — the live-feed counterpart to the static
+  // security score below. Surfaces only when something is actually firing so
+  // the dashboard stays calm when the network is healthy.
+  const { data: detectionSummary } = useQuery({
+    queryKey: ['dashboard', 'detections-summary'],
+    queryFn: async () => {
+      const response = await api.get<DetectionSummary>('/detections/analytics?hours=24');
+      if (response.success && response.data) return response.data;
+      return null;
+    },
+    refetchInterval: POLL_INTERVALS.dashboard,
   });
 
   if (isLoading) {
@@ -93,6 +112,42 @@ export function DashboardPage() {
 
       {/* First-run checklist — hides itself once UniFi + Intent are set up */}
       <FirstRunChecklist />
+
+      {/* Live detections — only surfaces when there are open findings */}
+      {detectionSummary && detectionSummary.open > 0 && (
+        <Card className="border-red-500/30 bg-gradient-to-r from-red-500/5 to-transparent">
+          <CardContent className="pt-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="flex items-start gap-4">
+                <div className="rounded-lg bg-red-500/20 p-3">
+                  <Radar className="h-6 w-6 text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">
+                    {detectionSummary.open} open detection
+                    {detectionSummary.open === 1 ? '' : 's'}
+                  </h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {(detectionSummary.bySeverity.find((s) => s.severity === 'CRITICAL')?.count ?? 0)} critical,{' '}
+                    {(detectionSummary.bySeverity.find((s) => s.severity === 'HIGH')?.count ?? 0)} high
+                    {detectionSummary.topAffected.length > 0 && (
+                      <>
+                        {' '}· top affected: <span className="font-medium">{detectionSummary.topAffected[0]?.resource}</span>
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <Button asChild>
+                <Link to="/detections">
+                  Review detections
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Setup Prompts */}
       {!hasConfig && (

@@ -1,0 +1,21 @@
+id: dns_bypass
+description: |
+  An internal device sent DNS traffic (port 53) directly to an external
+  resolver that isn't on the operator-defined allowlist, bypassing the
+  monitored DNS proxy. Common with IoT devices that hardcode 8.8.8.8 (still
+  noteworthy if the operator wants visibility) and with malware avoiding
+  monitored DNS.
+
+  Allowlist via KNOWN_DNS_RESOLVERS env var (comma-separated). Defaults
+  cover the most common public resolvers.
+severity:
+  base: MEDIUM
+remediation: |
+  1. Identify the device and confirm whether it's expected to use external DNS.
+  2. If unwanted, add a UniFi traffic rule that forces all internal DNS
+     egress through your configured proxy (NAT-redirect 53 → resolver IP).
+  3. If the device hardcodes its own DNS and you can't reconfigure it, mark
+     it as a known exception in KNOWN_DNS_RESOLVERS so it stops alerting.
+references:
+  - https://attack.mitre.org/techniques/T1071/004/
+retention_days: 14

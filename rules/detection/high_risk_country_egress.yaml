@@ -1,0 +1,21 @@
+id: high_risk_country_egress
+description: |
+  A flow was allowed to a country on the operator's high-risk list. This is
+  not automatically suspicious — legitimate traffic to these regions exists —
+  but the flow is worth a human review for hosts that have no business
+  reaching there.
+
+  The list defaults to CN, RU, KP, IR. Override via the HIGH_RISK_COUNTRIES
+  env var (comma-separated ISO alpha-2 codes).
+severity:
+  base: MEDIUM
+remediation: |
+  1. Confirm the source device's expected behavior — is contacting this region
+     legitimate (e.g., a CDN edge, a personal call to family abroad)?
+  2. If unexpected, capture the flow's full destination domain via DNS logs
+     and pivot from there.
+  3. Consider adding a UniFi traffic rule that blocks the region for this
+     specific client / VLAN if the traffic is unwanted.
+references:
+  - https://attack.mitre.org/tactics/TA0011/
+retention_days: 14
