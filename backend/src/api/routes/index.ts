@@ -16,6 +16,7 @@ import timelineRoutes from './timeline';
 import dnsProxyRoutes from './dnsProxy';
 import trafficRoutes from './traffic';
 import detectionsRoutes from './detections';
+import systemRoutes from './system';
 
 const router = Router();
 
@@ -36,5 +37,6 @@ router.use('/timeline', timelineRoutes);
 router.use('/dns-proxy', dnsProxyRoutes);
 router.use('/traffic', trafficRoutes);
 router.use('/detections', detectionsRoutes);
+router.use('/system', systemRoutes);
 
 export default router;

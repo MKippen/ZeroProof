@@ -22,6 +22,7 @@ import { ConfigContent } from './ConfigPage';
 import { WizardContent } from './NetworkWizardPage';
 import { RulesContent } from './RulesPage';
 import { DnsProxyConnectionForm } from '@/components/DnsProxyConnectionForm';
+import { SystemUpdateCard } from '@/components/SystemUpdateCard';
 
 const TAB_VALUES = ['general', 'configuration', 'dns-proxy', 'wizard', 'rules'] as const;
 type TabValue = (typeof TAB_VALUES)[number];
@@ -172,6 +173,9 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Updates */}
+      <SystemUpdateCard />
+
       {/* System Info */}
       <Card className="border-border/50">
         <CardHeader>
@@ -182,10 +186,6 @@ export function SettingsPage() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-2 text-sm">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Version</span>
-              <span className="font-mono">1.0.0</span>
-            </div>
             <div className="flex items-center justify-between gap-3">
               <span className="text-muted-foreground">API Endpoint</span>
               <span className="font-mono text-xs">/api/v1</span>
