@@ -523,6 +523,16 @@ class MqttService {
     this.wsClients.delete(ws);
   }
 
+  /**
+   * Public broadcast hook so other services (e.g. updaterService) can fan
+   * out events to every connected dashboard client without needing their
+   * own WebSocket plumbing. Same fire-and-forget semantics as the internal
+   * MQTT broadcasts.
+   */
+  broadcast(message: object): void {
+    this.broadcastToWebSockets(message);
+  }
+
   private broadcastToWebSockets(message: object): void {
     const data = JSON.stringify(message);
     this.wsClients.forEach((ws) => {
