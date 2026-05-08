@@ -12,6 +12,7 @@ import {
   Trash2,
   ShieldCheck,
   Network,
+  Wand2,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,19 @@ interface UniFiSite {
   name: string;
   desc: string;
 }
+
+interface UniFiCandidate {
+  product: 'unifi_os' | 'unifi_network_legacy';
+  host: string;
+  port: number;
+  confidence: 'high' | 'medium';
+  details?: { server?: string; statusCode?: number } & Record<string, unknown>;
+}
+
+const PRODUCT_LABEL: Record<UniFiCandidate['product'], string> = {
+  unifi_os: 'UniFi OS (UDM/UDR/UCG)',
+  unifi_network_legacy: 'UniFi Network (legacy)',
+};
 
 export function ControllerConnectionForm() {
   const queryClient = useQueryClient();
@@ -167,6 +181,44 @@ export function ControllerConnectionForm() {
   const isConfigured = !!unifiData?.configured;
   const isOpen = showConnectionSettings || !isConfigured;
 
+  // Auto-discovery: probe the host's default gateway for UniFi fingerprints.
+  // Only runs when the connection isn't configured yet so we don't second-guess
+  // an operator who has already saved a working setup.
+  const discoverQuery = useQuery({
+    queryKey: ['unifi', 'discover'],
+    queryFn: async () => {
+      const response = await api.get<{ candidates: UniFiCandidate[] }>(
+        '/unifi/discover'
+      );
+      if (!response.success) throw new Error(response.error?.message || 'Discovery failed');
+      return response.data ?? { candidates: [] };
+    },
+    enabled: !isConfigured && !loadingUnifi,
+    staleTime: 60_000,
+    retry: false,
+  });
+
+  const candidates = discoverQuery.data?.candidates ?? [];
+  const dismissibleCandidates = candidates.filter((c) => {
+    // Hide the suggestion once the user has typed it into the form.
+    return !(unifiHost === c.host && unifiPort === String(c.port));
+  });
+
+  const applyCandidate = (candidate: UniFiCandidate) => {
+    setUnifiHost(candidate.host);
+    setUnifiPort(String(candidate.port));
+    // Local-account creds are unknowable from the network; leave them for
+    // the operator. UniFi OS and legacy controllers both reject the
+    // SSO/cloud-only account with a clear error, so user gets a fast hint
+    // if they try the wrong one.
+    setUnifiPassword('');
+    setConnectionTested(false);
+    toast({
+      title: `Prefilled ${PRODUCT_LABEL[candidate.product]} settings`,
+      description: `${candidate.host}:${candidate.port} — add your local UniFi credentials, then click Test.`,
+    });
+  };
+
   return (
     <Collapsible open={isOpen} onOpenChange={setShowConnectionSettings}>
       <Card className="border-border/50">
@@ -283,6 +335,41 @@ export function ControllerConnectionForm() {
                     </div>
                   </>
                 )}
+                {!isConfigured && dismissibleCandidates.length > 0 && (
+                  <div className="rounded-md border border-orange-500/30 bg-orange-500/10 p-3 text-sm">
+                    <div className="flex items-center gap-2 font-medium">
+                      <Wand2 className="h-4 w-4 text-orange-400" />
+                      We found a UniFi gateway on your network
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Detected by probing your default gateway. Click to prefill — you'll still add your local UniFi credentials and Test before anything is saved.
+                    </p>
+                    <ul className="mt-3 space-y-2">
+                      {dismissibleCandidates.map((candidate) => (
+                        <li
+                          key={`${candidate.product}-${candidate.host}-${candidate.port}`}
+                          className="flex flex-col gap-2 rounded-md bg-background/40 p-2 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div className="text-xs">
+                            <span className="font-medium">{PRODUCT_LABEL[candidate.product]}</span>
+                            <span className="ml-1 font-mono text-muted-foreground">
+                              {candidate.host}:{candidate.port}
+                            </span>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => applyCandidate(candidate)}
+                          >
+                            Use this
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="unifi-host">Controller Host / IP</Label>

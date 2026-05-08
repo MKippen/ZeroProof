@@ -175,6 +175,12 @@ Contributors who want to modify firmware can still build locally with PlatformIO
 └───────────────────────────────────────────────────────┘
 ```
 
+### Networking
+
+ZeroProof's backend, scheduler, and public-facing nginx run with `network_mode: host` on Linux deployments. This is intentional: ZeroProof is a network-security tool, and it needs to see the same default gateway and DNS resolvers as the rest of the host so it can auto-discover your UniFi controller and DNS proxy from DHCP-advertised sources. The same pattern is used by Pi-hole, AdGuard Home, and Tailscale for the same reason.
+
+Stateful services (postgres) and the frontend container stay on the default Docker bridge with their ports bound to `127.0.0.1` so they're not exposed to the LAN. Mosquitto stays on the bridge but with public ports because ESP32 sensors connect to it over MQTT. Docker Desktop on macOS/Windows uses a hidden VM, so `network_mode: host` doesn't expose the real host network there — for that reason dev on Mac/Windows uses `docker-compose.dev.yml` with bridge networking and skips auto-discovery.
+
 ## Development
 
 ```bash
