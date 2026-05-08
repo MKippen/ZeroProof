@@ -18,7 +18,11 @@ import {
   getClientAggregates,
 } from '../../services/dnsProxyService';
 import prisma from '../../services/database';
-import { ADGUARD_PROVIDER, getDnsProxyConfigAdapter } from '../../services/dnsProxyConfig';
+import {
+  ADGUARD_PROVIDER,
+  getDnsProxyConfigAdapter,
+  discoverDnsProxies,
+} from '../../services/dnsProxyConfig';
 
 const router = Router();
 
@@ -91,6 +95,20 @@ router.get('/settings', requireAuth, async (_req: Request, res: Response) => {
     res.json(response);
   } catch (error) {
     sendDnsProxyError(res, error, 'DNS_PROXY_SETTINGS_ERROR', 'Failed to fetch DNS proxy settings');
+  }
+});
+
+// GET /api/v1/dns-proxy/discover — best-effort scan of DHCP-advertised
+// resolvers for AdGuard Home / Pi-hole HTTP fingerprints. The frontend uses
+// the result to offer one-click prefill on the settings form. We never
+// sweep the LAN; only IPs already in resolv.conf are probed.
+router.get('/discover', requireAuth, async (_req: Request, res: Response) => {
+  try {
+    const candidates = await discoverDnsProxies();
+    const response: ApiResponse = { success: true, data: { candidates } };
+    res.json(response);
+  } catch (error) {
+    sendDnsProxyError(res, error, 'DNS_PROXY_DISCOVER_ERROR', 'Failed to auto-discover DNS proxies');
   }
 });
 
