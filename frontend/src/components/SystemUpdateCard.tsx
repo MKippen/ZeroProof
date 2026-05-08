@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, ExternalLink, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, ExternalLink, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import api from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/useToast';
+import { useWebSocketStore } from '@/stores/websocketStore';
 import type { ApiResponse } from '@/types';
 
 type ReleaseChannel = 'stable' | 'beta';
@@ -18,8 +19,18 @@ interface SystemUpdateStatus {
   htmlUrl: string | null;
   notes: string | null;
   publishedAt: string | null;
+  applyEnabled?: boolean;
   error?: string;
 }
+
+type ApplyState =
+  | { kind: 'idle' }
+  | { kind: 'confirming'; target: string }
+  | { kind: 'installing'; target: string; lines: string[] }
+  | { kind: 'restarting'; target: string; lines: string[] }
+  | { kind: 'done'; target: string }
+  | { kind: 'rolledback'; target: string; lines: string[] }
+  | { kind: 'failed'; target: string; lines: string[]; reason: string };
 
 function requireData<T>(response: ApiResponse<T>): T {
   if (!response.success || response.data === undefined) {
@@ -81,6 +92,113 @@ export function SystemUpdateCard() {
   const status = updateQuery.data;
   const notesPreview = useMemo(() => previewNotes(status?.notes ?? null), [status?.notes]);
 
+  const [applyState, setApplyState] = useState<ApplyState>({ kind: 'idle' });
+  const lastMessage = useWebSocketStore((s) => s.lastMessage);
+  const isWsConnected = useWebSocketStore((s) => s.isConnected);
+  const logRef = useRef<HTMLDivElement | null>(null);
+
+  // Stream progress lines into the installing state. Each WS message is a
+  // tiny event (one bash line); we append to the lines array so the UI
+  // can render a scrolling log.
+  useEffect(() => {
+    if (!lastMessage) return;
+    if (lastMessage.type === 'updater_progress' && typeof lastMessage.line === 'string') {
+      setApplyState((prev) => {
+        if (prev.kind !== 'installing' && prev.kind !== 'restarting') return prev;
+        return { ...prev, lines: [...prev.lines, lastMessage.line as string] };
+      });
+    } else if (lastMessage.type === 'updater_complete') {
+      setApplyState((prev) => {
+        if (prev.kind !== 'installing' && prev.kind !== 'restarting') return prev;
+        // Backend may or may not be about to restart. We transition to
+        // 'restarting' first; the WS-disconnect effect below will hold
+        // there until we reconnect, then we refetch /system/update and
+        // resolve to 'done' or 'rolledback'.
+        if (lastMessage.rolledBack) {
+          return { kind: 'rolledback', target: prev.target, lines: prev.lines };
+        }
+        return { kind: 'restarting', target: prev.target, lines: prev.lines };
+      });
+    }
+  }, [lastMessage]);
+
+  // While the apply is in flight, a WS disconnect means the backend is
+  // restarting (host networking + container recreate). Keep the user on
+  // the "Restarting…" state until the WS reconnects, then refetch.
+  useEffect(() => {
+    if (applyState.kind === 'restarting' && isWsConnected) {
+      // Give the new backend a moment to settle before we refetch.
+      const t = setTimeout(() => {
+        updateQuery.refetch().then((r) => {
+          const fresh = r.data;
+          setApplyState((prev) => {
+            if (prev.kind !== 'restarting') return prev;
+            if (fresh && fresh.current === prev.target) {
+              return { kind: 'done', target: prev.target };
+            }
+            // Reconnected but we're still on the old version → rollback
+            // happened or the upgrade silently failed.
+            return {
+              kind: 'failed',
+              target: prev.target,
+              lines: prev.lines,
+              reason: 'Server reconnected but version did not change',
+            };
+          });
+        });
+      }, 1500);
+      return () => clearTimeout(t);
+    }
+  }, [applyState.kind, isWsConnected, updateQuery]);
+
+  // Auto-scroll the progress log on new lines.
+  useEffect(() => {
+    if (logRef.current) {
+      logRef.current.scrollTop = logRef.current.scrollHeight;
+    }
+  }, [applyState]);
+
+  const applyMutation = useMutation({
+    mutationFn: async (target: string) =>
+      requireData(
+        await api.post<{ accepted: boolean; run: { progressPath: string } }>(
+          '/system/update/apply',
+          { target }
+        )
+      ),
+    onSuccess: (_data, target) => {
+      setApplyState({ kind: 'installing', target, lines: [] });
+      toast({
+        title: `Installing ${target}`,
+        description: 'Streaming progress below.',
+      });
+    },
+    onError: (error: Error, target) => {
+      setApplyState({
+        kind: 'failed',
+        target,
+        lines: [],
+        reason: error.message,
+      });
+      toast({
+        variant: 'destructive',
+        title: 'Could not start update',
+        description: error.message,
+      });
+    },
+  });
+
+  const beginInstall = () => {
+    if (!status?.latest) return;
+    setApplyState({ kind: 'confirming', target: status.latest });
+  };
+  const confirmInstall = () => {
+    if (applyState.kind !== 'confirming') return;
+    applyMutation.mutate(applyState.target);
+  };
+  const cancelInstall = () => setApplyState({ kind: 'idle' });
+  const dismissDone = () => setApplyState({ kind: 'idle' });
+
   return (
     <Card className="border-border/50">
       <CardHeader>
@@ -91,7 +209,9 @@ export function SystemUpdateCard() {
               Updates
             </CardTitle>
             <CardDescription>
-              Notify-and-confirm only — applying updates is still a CLI step today (`./scripts/upgrade.sh`).
+              {status?.applyEnabled
+                ? 'Install updates with one click. Services restart for ~1–2 minutes during apply.'
+                : 'Notify-and-confirm — apply updates from the CLI (`./scripts/upgrade.sh`). In-app updates need UPDATER_SECRET set.'}
             </CardDescription>
           </div>
           <Button
@@ -125,8 +245,94 @@ export function SystemUpdateCard() {
           </div>
         </div>
 
-        {/* Update banner */}
-        {status?.hasUpdate ? (
+        {/* Apply-flow status (takes priority over the static "update available" banner) */}
+        {applyState.kind === 'confirming' && (
+          <div className="rounded-md border border-orange-500/30 bg-orange-500/10 p-3 text-sm">
+            <div className="flex items-center gap-2 font-medium">
+              <AlertTriangle className="h-4 w-4 text-orange-400" />
+              Install {applyState.target}?
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Backend, scheduler, and the public web server will restart. Expect ~1–2 minutes of downtime. If health doesn't recover, ZeroProof rolls back automatically.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <Button size="sm" onClick={confirmInstall} disabled={applyMutation.isPending}>
+                {applyMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                Install now
+              </Button>
+              <Button size="sm" variant="outline" onClick={cancelInstall} disabled={applyMutation.isPending}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {(applyState.kind === 'installing' || applyState.kind === 'restarting') && (
+          <div className="rounded-md border border-orange-500/30 bg-orange-500/10 p-3 text-sm">
+            <div className="flex items-center gap-2 font-medium">
+              <Loader2 className="h-4 w-4 animate-spin text-orange-400" />
+              {applyState.kind === 'installing'
+                ? `Installing ${applyState.target}…`
+                : `Server is restarting… (waiting for ${applyState.target})`}
+            </div>
+            <div
+              ref={logRef}
+              className="mt-2 max-h-48 overflow-y-auto whitespace-pre rounded bg-background/40 p-2 font-mono text-xs leading-tight text-muted-foreground"
+            >
+              {applyState.lines.join('\n') || 'Waiting for the updater to start…'}
+            </div>
+          </div>
+        )}
+
+        {applyState.kind === 'done' && (
+          <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm">
+            <div className="flex items-center gap-2 font-medium">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+              Updated to {applyState.target}
+            </div>
+            <Button size="sm" variant="outline" className="mt-3" onClick={dismissDone}>
+              Dismiss
+            </Button>
+          </div>
+        )}
+
+        {applyState.kind === 'rolledback' && (
+          <div className="rounded-md border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm">
+            <div className="flex items-center gap-2 font-medium">
+              <AlertTriangle className="h-4 w-4 text-yellow-400" />
+              Auto-rollback applied: {applyState.target} failed health checks
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              You're back on the previous version. Check the log below for details.
+            </p>
+            <div className="mt-2 max-h-48 overflow-y-auto whitespace-pre rounded bg-background/40 p-2 font-mono text-xs leading-tight text-muted-foreground">
+              {applyState.lines.join('\n')}
+            </div>
+            <Button size="sm" variant="outline" className="mt-3" onClick={dismissDone}>
+              Dismiss
+            </Button>
+          </div>
+        )}
+
+        {applyState.kind === 'failed' && (
+          <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm">
+            <div className="flex items-center gap-2 font-medium">
+              <AlertTriangle className="h-4 w-4 text-red-400" />
+              Update failed: {applyState.reason}
+            </div>
+            {applyState.lines.length > 0 && (
+              <div className="mt-2 max-h-48 overflow-y-auto whitespace-pre rounded bg-background/40 p-2 font-mono text-xs leading-tight text-muted-foreground">
+                {applyState.lines.join('\n')}
+              </div>
+            )}
+            <Button size="sm" variant="outline" className="mt-3" onClick={dismissDone}>
+              Dismiss
+            </Button>
+          </div>
+        )}
+
+        {/* Update banner — only when not actively applying */}
+        {applyState.kind === 'idle' && status?.hasUpdate ? (
           <div className="rounded-md border border-orange-500/30 bg-orange-500/10 p-3">
             <div className="flex items-center gap-2 font-medium text-sm">
               <Sparkles className="h-4 w-4 text-orange-400" />
@@ -146,19 +352,27 @@ export function SystemUpdateCard() {
                 )}
               </div>
             )}
-            {status.htmlUrl && (
-              <a
-                href={status.htmlUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-flex items-center gap-1 text-xs text-orange-400 hover:underline"
-              >
-                View on GitHub
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              {status.applyEnabled && (
+                <Button size="sm" onClick={beginInstall}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Install update
+                </Button>
+              )}
+              {status.htmlUrl && (
+                <a
+                  href={status.htmlUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-orange-400 hover:underline"
+                >
+                  View on GitHub
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+            </div>
           </div>
-        ) : status && !status.error ? (
+        ) : applyState.kind === 'idle' && status && !status.error ? (
           <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-muted-foreground">
             <CheckCircle2 className="h-4 w-4 text-emerald-400" />
             You are running the latest {status.channel} release.

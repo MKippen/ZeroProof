@@ -64,6 +64,9 @@ services:
     volumes:
       - ./backend/firmware:/app/firmware:ro
       - ./rules:/rules:ro
+      # Read-only access to the updater's progress files so the apply route
+      # can tail them and forward to WebSocket clients.
+      - zeroproof_updater_progress:/var/run/zeroproof:ro
     environment:
       # Backend is on the host network namespace, so it reaches stateful
       # services via the host's loopback rather than docker-bridge service
@@ -79,6 +82,11 @@ services:
       - DEFAULT_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD:-}
       - RULES_DIR=/rules
       - PORT=3000
+      # Updater integration — backend signs apply requests with this secret
+      # and POSTs to the local updater sidecar. Blank disables in-app updates.
+      - UPDATER_SECRET=${UPDATER_SECRET:-}
+      - UPDATER_URL=http://127.0.0.1:9090
+      - UPDATER_PROGRESS_DIR=/var/run/zeroproof
     depends_on:
       postgres:
         condition: service_healthy
@@ -131,6 +139,40 @@ services:
       - "app=zeroproof"
       - "component=mqtt"
 
+  updater:
+    # Privileged sidecar that orchestrates self-upgrades. Receives
+    # HMAC-signed apply requests from the backend on 127.0.0.1:9090,
+    # shells to scripts/upgrade.sh in the mounted worktree. Trust
+    # boundary is the Docker socket — keep the image surface area minimal.
+    #
+    # Known limitation in v1.1.5: when an upgrade includes a new updater
+    # image, the updater container itself gets recreated and the
+    # in-progress apply may be interrupted. Backend reconnects to the
+    # progress file via the shared volume so the UI still shows final
+    # state, and CLI scripts/upgrade.sh remains the unconditional
+    # fallback. Self-update of the updater (throwaway pattern) is queued
+    # for v1.1.6.
+    build:
+      context: .
+      dockerfile: updater/Dockerfile
+    container_name: zeroproof-updater
+    network_mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/repo
+      - zeroproof_updater_progress:/var/run/zeroproof
+    environment:
+      - UPDATER_SECRET=${UPDATER_SECRET:-}
+      - UPDATER_PORT=9090
+      - UPDATER_HOST=127.0.0.1
+      - UPDATER_PROGRESS_DIR=/var/run/zeroproof
+      - UPDATER_WORKTREE=/repo
+      - UPDATER_HEALTH_URL=http://127.0.0.1:3000/health
+    restart: unless-stopped
+    labels:
+      - "app=zeroproof"
+      - "component=updater"
+
   scheduler:
     build:
       context: .
@@ -167,3 +209,6 @@ volumes:
   postgres_data:
   mosquitto_data:
   mosquitto_log:
+  # Shared progress log between updater and backend. Backend tails files
+  # in this volume and forwards lines over WebSocket to the UI.
+  zeroproof_updater_progress:

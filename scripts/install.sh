@@ -135,6 +135,7 @@ if [ "${GENERATE_ENV:-false}" = true ]; then
     MQTT_PASSWORD=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 32)
     SESSION_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 48)
     ENCRYPTION_KEY=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 32)
+    UPDATER_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 48)
 
     cat > .env << EOF
 # Generated on $(date)
@@ -152,6 +153,9 @@ MQTT_PASSWORD=$MQTT_PASSWORD
 NODE_ENV=production
 SESSION_SECRET=$SESSION_SECRET
 ENCRYPTION_KEY=$ENCRYPTION_KEY
+
+# Updater sidecar — shared HMAC secret for signed apply requests
+UPDATER_SECRET=$UPDATER_SECRET
 
 # Admin bootstrap
 # By default ZeroProof has no shipped admin account. On first visit the

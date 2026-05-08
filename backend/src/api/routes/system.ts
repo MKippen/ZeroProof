@@ -9,11 +9,17 @@ import {
   setReleaseChannel,
   type ReleaseChannel,
 } from '../../services/systemUpdateService';
+import { isUpdaterConfigured, postApply } from '../../services/updaterService';
 
 const router = Router();
 
 const ChannelSchema = z.object({
   channel: z.enum(['stable', 'beta']),
+});
+
+const ApplySchema = z.object({
+  target: z.string().trim().min(1).max(64).optional(),
+  op: z.enum(['apply', 'rollback']).optional(),
 });
 
 // GET /api/v1/system/update — current version, channel, latest available.
@@ -23,7 +29,10 @@ const ChannelSchema = z.object({
 router.get('/update', requireAuth, async (_req: Request, res: Response) => {
   try {
     const status = await getUpdateStatus();
-    const response: ApiResponse = { success: true, data: status };
+    const response: ApiResponse = {
+      success: true,
+      data: { ...status, applyEnabled: isUpdaterConfigured() },
+    };
     res.json(response);
   } catch (error) {
     logger.error('System update status error:', error);
@@ -75,6 +84,49 @@ router.get('/update/channel', requireAuth, async (_req: Request, res: Response) 
       error: { code: 'SYSTEM_UPDATE_CHANNEL_ERROR', message: 'Failed to get release channel' },
     };
     res.status(500).json(response);
+  }
+});
+
+// POST /api/v1/system/update/apply — kicks off an in-app upgrade via the
+// updater sidecar. Auth-required. Returns immediately with the run handle;
+// progress lines stream over the WebSocket as `updater_progress` events,
+// and a final `updater_complete` event signals the outcome (or rollback).
+router.post('/update/apply', requireAuth, async (req: Request, res: Response) => {
+  try {
+    if (!isUpdaterConfigured()) {
+      const response: ApiResponse = {
+        success: false,
+        error: {
+          code: 'UPDATER_NOT_CONFIGURED',
+          message:
+            'In-app updates are not enabled on this install. Set UPDATER_SECRET in .env and restart, or run scripts/upgrade.sh from the CLI.',
+        },
+      };
+      res.status(503).json(response);
+      return;
+    }
+    const parsed = ApplySchema.parse(req.body ?? {});
+    const result = await postApply(parsed.target ?? null, parsed.op ?? 'apply');
+    const response: ApiResponse = { success: true, data: result };
+    res.status(202).json(response);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const response: ApiResponse = {
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Invalid apply request' },
+      };
+      res.status(400).json(response);
+      return;
+    }
+    logger.error('System update apply error:', error);
+    const response: ApiResponse = {
+      success: false,
+      error: {
+        code: 'SYSTEM_UPDATE_APPLY_ERROR',
+        message: error instanceof Error ? error.message : 'Failed to start update',
+      },
+    };
+    res.status(502).json(response);
   }
 });
 
