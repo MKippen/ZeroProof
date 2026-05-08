@@ -4,6 +4,17 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.3] - 2026-05-08
+
+### Added
+- **Auto-discover for AdGuard Home / Pi-hole.** New `discoverDnsProxies()` reads DHCP-advertised resolvers from `/etc/resolv.conf`, filters to RFC1918 (no LAN sweep, no public probes), and fingerprints AdGuard's `/control/status` and Pi-hole's `/admin/api.php?summaryRaw` over stdlib `node:http`. The DNS proxy settings form shows an orange "We found a DNS filter on your network" banner with one-click prefill — never auto-applied.
+- **Auto-discover for UniFi gateway controllers.** New `discoverUniFiGateways()` reads the host's default-route gateway from `/proc/net/route`, filters to RFC1918, and TCP-probes UniFi-typical ports (443 / 8443) for a listening service. The controller connection form surfaces matches the same way as DNS proxy. Confidence is `medium`; the operator's Test click is the real fingerprint validator.
+- **Host networking for production deployments.** `docker-compose.yml` now runs backend, scheduler, and the public nginx with `network_mode: host` on Linux. ZeroProof is a network-security tool — backend needs to see the host's resolv.conf and routing table to auto-discover UniFi/DNS from DHCP-advertised sources. Same pattern Pi-hole, AdGuard Home, and Tailscale use. Docker Desktop on Mac/Windows uses a hidden VM, so dev keeps using `docker-compose.dev.yml` with bridge networking. Stateful services (postgres, mosquitto) and the frontend container stay on the bridge with their ports bound to `127.0.0.1` (postgres, frontend) or kept public (mosquitto, for ESP32 sensor connections).
+
+### Fixed
+- **`scripts/upgrade.sh` failed when `git rev-parse <annotated-tag>` returned the tag-object SHA instead of the commit SHA**, so the "Already on target" short-circuit silently misfired for every annotated-tag upgrade. Dereference with `^{commit}`.
+- **`scripts/upgrade.sh` aborted with "untracked working tree files would be overwritten by checkout"** for users who downloaded the script before the target version had it tracked (the bootstrap pattern). New pre-flight pass: if an untracked file is byte-identical to the target's version, remove it and continue. Otherwise bail loudly so the operator decides what to do — never silently destructive.
+
 ## [1.1.2] - 2026-05-08
 
 ### Added
