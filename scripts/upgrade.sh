@@ -114,7 +114,11 @@ if ! git rev-parse --verify --quiet "$TARGET" >/dev/null; then
     exit 1
 fi
 
-TARGET_SHA="$(git rev-parse "$TARGET")"
+# Dereference annotated tags to their commit SHA. Without ^{commit}, an
+# annotated tag like v1.1.2 resolves to the tag *object* SHA (not the commit
+# it points at), and the "already on target" short-circuit below silently
+# misfires for every annotated-tag upgrade.
+TARGET_SHA="$(git rev-parse "$TARGET^{commit}")"
 TARGET_DESC="$(git describe --tags --always "$TARGET_SHA" 2>/dev/null || echo "$TARGET_SHA")"
 
 if [[ "$CURRENT_SHA" == "$TARGET_SHA" ]]; then
@@ -148,6 +152,43 @@ if [[ -t 0 ]]; then
 fi
 
 echo "$CURRENT_SHA" > "$PREV_FILE"
+
+# Pre-flight: untracked files that also exist in $TARGET will make
+# `git checkout` abort with "untracked working tree files would be
+# overwritten". The most common case is the bootstrap pattern: a user runs
+# this script before the version they're upgrading to had it tracked, so
+# `scripts/upgrade.sh` itself is untracked locally yet exists in the target.
+# When the local copy is byte-identical to the target's copy, just remove
+# it (checkout will reinstate it). Anything else: bail loudly so the user
+# decides what to do.
+echo ""
+echo "Checking working tree for untracked files that conflict with $TARGET..."
+TARGET_PATHS="$(git ls-tree -r --name-only "$TARGET_SHA")"
+UNTRACKED="$(git ls-files --others --exclude-standard)"
+BLOCKERS=()
+while IFS= read -r path; do
+    [[ -z "$path" ]] && continue
+    if grep -Fxq -- "$path" <<< "$TARGET_PATHS"; then
+        if git show "$TARGET_SHA:$path" 2>/dev/null | cmp -s - "$path"; then
+            echo "  Removing untracked $path (identical to target — bootstrap reinstall)"
+            rm -f -- "$path"
+        else
+            BLOCKERS+=("$path")
+        fi
+    fi
+done <<< "$UNTRACKED"
+
+if (( ${#BLOCKERS[@]} > 0 )); then
+    echo ""
+    echo -e "${RED}${BOLD}Untracked files would be overwritten by checkout:${NC}"
+    for path in "${BLOCKERS[@]}"; do
+        echo "  $path"
+    done
+    echo ""
+    echo "Move, delete, or commit these files, then re-run the upgrade."
+    rm -f "$PREV_FILE"
+    exit 1
+fi
 
 echo ""
 echo "Checking out $TARGET..."
