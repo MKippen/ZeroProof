@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 dotenvConfig();
 
-const envSchema = z.object({
+export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.string().default('3000'),
   DATABASE_URL: z.string(),
@@ -13,7 +13,15 @@ const envSchema = z.object({
   MQTT_PORT: z.string().default('1883'),
   MQTT_USERNAME: z.string().optional(),
   MQTT_PASSWORD: z.string().optional(),
-  DEFAULT_ADMIN_PASSWORD: z.string().min(8).optional(),
+  // Treat an empty string the same as "unset" — docker-compose passes the
+  // var through as `DEFAULT_ADMIN_PASSWORD=` when the operator's .env has
+  // it blank (the documented "leave blank to use /setup" path). Without the
+  // preprocess, zod would reject the empty string for failing min(8) and
+  // crash-loop the backend.
+  DEFAULT_ADMIN_PASSWORD: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().min(8).optional()
+  ),
   CORS_ORIGIN: z.string().optional(),
 });
 

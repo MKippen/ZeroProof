@@ -1,7 +1,10 @@
 -- AlterTable: add polling/retention cursors to UniFiConnection.
-ALTER TABLE "UniFiConnection" ADD COLUMN "flowsHighWater" TIMESTAMP(3);
-ALTER TABLE "UniFiConnection" ADD COLUMN "threatsHighWater" TIMESTAMP(3);
-ALTER TABLE "UniFiConnection" ADD COLUMN "flowRetentionDays" INTEGER NOT NULL DEFAULT 7;
+-- IF NOT EXISTS so this is a no-op on existing prod DBs where the prior
+-- baseline_phantom_objects migration already created UniFiConnection in
+-- its full current shape (those columns are present already).
+ALTER TABLE "UniFiConnection" ADD COLUMN IF NOT EXISTS "flowsHighWater" TIMESTAMP(3);
+ALTER TABLE "UniFiConnection" ADD COLUMN IF NOT EXISTS "threatsHighWater" TIMESTAMP(3);
+ALTER TABLE "UniFiConnection" ADD COLUMN IF NOT EXISTS "flowRetentionDays" INTEGER NOT NULL DEFAULT 7;
 
 -- CreateTable: FirewallFlowEvent
 CREATE TABLE "FirewallFlowEvent" (
