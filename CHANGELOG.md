@@ -4,6 +4,14 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.1] - 2026-05-08
+
+### Fixed
+- **Migration history is incomplete on fresh deploys.** 13 tables (UniFiConnection, UniFiSyncHistory, UniFiConfigChange, Notification, NetworkClient, RemediationAction, CachedRule, CachedTest, CachedIntentEval, RuleSource, GitHubRuleRepo, CampaignSetting, CampaignRun) and 6 enums (SyncStatus, ChangeType, NotificationType, RemediationStatus, CampaignRunStatus, CampaignVerdict) referenced in `schema.prisma` were originally introduced via `prisma db push` and were never captured by `prisma migrate dev`. Fresh `prisma migrate deploy` against an empty Postgres hit `P3009` partway through. Added `20260502000100_baseline_phantom_objects` (idempotent — `CREATE TABLE IF NOT EXISTS` for tables, `DO $$ ... EXCEPTION WHEN duplicate_object $$` for enums and constraints) plus `IF NOT EXISTS` guards on `ADD COLUMN` statements in two later migrations.
+- **`DEFAULT_ADMIN_PASSWORD=""` crashed the backend** instead of routing the user to `/setup`. `docker-compose` passes the var through as empty when `.env` has it blank — the documented "leave blank to use /setup" path. The zod env validator treated `""` as present-but-too-short and crash-looped boot. Now preprocesses `""` → `undefined` before the `.min(8)` check.
+- **`rules/` directory not mounted in production `docker-compose.yml`.** Only the dev compose had it; without the mount the security analyzer, intent system, and detection-engine YAML metadata never loaded. Added `./rules:/rules:ro` + `RULES_DIR=/rules` to backend + scheduler.
+- **Frontend SPA never reached the public nginx.** Browsing to the dashboard URL returned the default `nginx:alpine` welcome page. Root cause: the frontend Dockerfile copies the build to `/usr/share/nginx/html` but compose mounted the named `frontend_build` volume at `/app/dist` on the frontend container, capturing nothing; the public nginx, mounting the same volume, was populated from `nginx:alpine`'s default `/usr/share/nginx/html` (the welcome page) at first volume init. Switched the public nginx to `proxy_pass` `/` to the frontend container's own nginx (port 80), removing the brittle shared-volume hand-off entirely. The `frontend_build` volume is gone.
+
 ## [1.1.0] - 2026-05-08
 
 ### Added
