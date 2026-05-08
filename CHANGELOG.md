@@ -4,7 +4,7 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.1.0] - 2026-05-08
 
 ### Added
 - **Detection engine** — event-driven cross-source security findings layer that evaluates UniFi flow events, UniFi IDS threat events, and DNS query events against rule windows on a schedule. Findings land in a new `Detection` table with fingerprint dedupe, max-severity escalation (never silent downgrade), and per-rule retention.
