@@ -12,6 +12,7 @@ import {
 } from '../../services/configChangeService';
 import { bootstrapHistoricalTimeline } from '../../services/historyBootstrapService';
 import logger from '../../utils/logger';
+import { discoverUniFiGateways } from '../../services/unifiConfig';
 
 const router = Router();
 
@@ -168,6 +169,26 @@ router.get('/settings', requireAuth, async (_req: Request, res: Response) => {
     const response: ApiResponse = {
       success: false,
       error: { code: 'FETCH_ERROR', message: 'Failed to fetch settings' },
+    };
+    res.status(500).json(response);
+  }
+});
+
+// GET /api/v1/unifi/discover - Best-effort scan of the host's default
+// gateway for UniFi OS / legacy Network Application HTTP fingerprints.
+// The frontend uses the result to offer one-click prefill on the
+// connection form. We never sweep the LAN — only the IP DHCP already
+// pointed every machine on the network at gets probed.
+router.get('/discover', requireAuth, async (_req: Request, res: Response) => {
+  try {
+    const candidates = await discoverUniFiGateways();
+    const response: ApiResponse = { success: true, data: { candidates } };
+    res.json(response);
+  } catch (error) {
+    logger.error('UniFi discover error:', error);
+    const response: ApiResponse = {
+      success: false,
+      error: { code: 'UNIFI_DISCOVER_ERROR', message: 'Failed to auto-discover UniFi gateways' },
     };
     res.status(500).json(response);
   }
