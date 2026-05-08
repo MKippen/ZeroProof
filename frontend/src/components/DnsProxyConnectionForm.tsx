@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Loader2, RefreshCw, Save, Server, Trash2 } from 'lucide-react';
+import { CheckCircle2, Loader2, RefreshCw, Save, Server, Trash2, Wand2 } from 'lucide-react';
 import api from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,21 @@ import { formatDate } from '@/lib/utils';
 import type { ApiResponse, DnsProxySettings } from '@/types';
 
 type SettingsResponse = { configured: boolean; settings: DnsProxySettings | null };
+
+interface DnsProxyCandidate {
+  product: 'adguard_home' | 'pihole';
+  host: string;
+  port: number;
+  confidence: 'high' | 'medium';
+  details?: { version?: string; running?: boolean } & Record<string, unknown>;
+}
+
+type DiscoverResponse = { candidates: DnsProxyCandidate[] };
+
+const PRODUCT_LABEL: Record<DnsProxyCandidate['product'], string> = {
+  adguard_home: 'AdGuard Home',
+  pihole: 'Pi-hole',
+};
 
 interface DnsProxyFormState {
   host: string;
@@ -73,6 +88,42 @@ export function DnsProxyConnectionForm() {
 
   const settings = settingsQuery.data?.settings;
   const configured = Boolean(settingsQuery.data?.configured);
+
+  // Auto-discovery: scan DHCP-advertised resolvers for AdGuard/Pi-hole. We
+  // never auto-apply — found candidates are surfaced as one-click prefill
+  // suggestions and only when the form hasn't been configured yet, so we
+  // don't second-guess an operator who has already saved a different proxy.
+  const discoverQuery = useQuery({
+    queryKey: ['dns-proxy', 'discover'],
+    queryFn: async () => requireData(await api.get<DiscoverResponse>('/dns-proxy/discover')),
+    enabled: !configured && !settingsQuery.isLoading,
+    staleTime: 60_000,
+    retry: false,
+  });
+
+  const candidates = discoverQuery.data?.candidates ?? [];
+  const dismissibleCandidates = candidates.filter((c) => {
+    // Hide a candidate once the user has typed it into the form so the banner
+    // doesn't keep nagging them about something they've already accepted.
+    return !(form.host === c.host && Number(form.port) === c.port);
+  });
+
+  const applyCandidate = (candidate: DnsProxyCandidate) => {
+    setForm((current) => ({
+      ...current,
+      host: candidate.host,
+      port: candidate.port,
+      // AdGuard's read-only /control/status doesn't require auth, but the
+      // write-side endpoints we use for /test do. Leave creds blank — the
+      // operator will fill them in if their AdGuard requires login.
+      username: '',
+      password: '',
+    }));
+    toast({
+      title: `Prefilled ${PRODUCT_LABEL[candidate.product]} settings`,
+      description: `${candidate.host}:${candidate.port} — review credentials, then click Test.`,
+    });
+  };
 
   const payload = useMemo(
     () => ({
@@ -198,6 +249,46 @@ export function DnsProxyConnectionForm() {
               that API is reachable without AdGuard's own login.
             </p>
           </div>
+
+          {!configured && dismissibleCandidates.length > 0 && (
+            <div className="rounded-md border border-orange-500/30 bg-orange-500/10 p-3 text-sm">
+              <div className="flex items-center gap-2 font-medium">
+                <Wand2 className="h-4 w-4 text-orange-400" />
+                We found a DNS filter on your network
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Detected by probing your DHCP-advertised resolvers. Click to prefill — nothing is saved until you Test and Save.
+              </p>
+              <ul className="mt-3 space-y-2">
+                {dismissibleCandidates.map((candidate) => (
+                  <li
+                    key={`${candidate.product}-${candidate.host}-${candidate.port}`}
+                    className="flex flex-col gap-2 rounded-md bg-background/40 p-2 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="text-xs">
+                      <span className="font-medium">{PRODUCT_LABEL[candidate.product]}</span>
+                      <span className="ml-1 font-mono text-muted-foreground">
+                        {candidate.host}:{candidate.port}
+                      </span>
+                      {candidate.details?.version && (
+                        <span className="ml-2 text-muted-foreground">
+                          v{String(candidate.details.version)}
+                        </span>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => applyCandidate(candidate)}
+                    >
+                      Use this
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_7rem]">
             <div className="space-y-2">

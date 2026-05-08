@@ -14,6 +14,8 @@ export type {
   ClientIdentifierKind,
 } from './registry';
 export { adguardHomeConfigAdapter, ADGUARD_PROVIDER, normalizeAdGuardPersistentClient } from './adapters/adguardHome';
+export { discoverDnsProxies } from './discover';
+export type { DnsProxyCandidate, DiscoverOptions } from './discover';
 
 import { registerDnsProxyConfigAdapter } from './registry';
 import { adguardHomeConfigAdapter } from './adapters/adguardHome';
