@@ -60,6 +60,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build workspace packages (backend depends on @uguard/unifi-client)
+        working-directory: .
+        run: pnpm --filter @uguard/unifi-client build
+
       - name: Generate Prisma Client
         run: pnpm prisma generate
 
@@ -173,7 +177,8 @@ jobs:
       - name: Build backend image
         uses: docker/build-push-action@v7
         with:
-          context: ./backend
+          context: .
+          file: ./backend/Dockerfile
           push: false
           tags: zeroproof-backend:test
           cache-from: type=gha
@@ -182,7 +187,8 @@ jobs:
       - name: Build frontend image
         uses: docker/build-push-action@v7
         with:
-          context: ./frontend
+          context: .
+          file: ./frontend/Dockerfile
           push: false
           tags: zeroproof-frontend:test
           cache-from: type=gha

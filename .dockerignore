@@ -1,0 +1,32 @@
+# Root-level dockerignore for monorepo builds (backend uses repo root context).
+**/node_modules
+**/dist
+.git
+**/.env
+**/.env.*
+**/*.log
+.DS_Store
+**/coverage
+**/.nyc_output
+**/prisma/*.db
+**/prisma/*.db-journal
+
+# Firmware artefacts (large; mounted at runtime instead)
+backend/firmware/*.bin
+backend/firmware/*.elf
+backend/firmware/*.map
+
+# Both backend and frontend Dockerfiles build from this root context, so we
+# can't exclude either tree wholesale here. The Dockerfiles use explicit
+# COPY paths to pull only what each image needs.
+
+# Docs / scratch — never needed at build time.
+**/*.md
+!**/README.md
+
+# Build caches / sandboxes
+backend/tests/sandbox
+
+# Editor / OS noise
+.vscode
+.idea

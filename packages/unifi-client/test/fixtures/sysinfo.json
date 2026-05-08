@@ -1,0 +1,59 @@
+{
+  "meta": {
+    "rc": "ok"
+  },
+  "data": [
+    {
+      "timezone": "America/Los_Angeles",
+      "autobackup": false,
+      "build": "atag_10.3.58_34147",
+      "version": "10.3.58",
+      "previous_version": "10.3.55",
+      "data_retention_days": 90,
+      "data_retention_time_in_hours_for_5minutes_scale": 24,
+      "data_retention_time_in_hours_for_hourly_scale": 168,
+      "data_retention_time_in_hours_for_daily_scale": 2160,
+      "data_retention_time_in_hours_for_monthly_scale": 8760,
+      "data_retention_time_in_hours_for_others": 2160,
+      "update_available": false,
+      "update_downloaded": false,
+      "live_chat": "super-only",
+      "store_enabled": "super-only",
+      "hostname": "UDM",
+      "name": "UDM",
+      "ip_addrs": [
+        "192.168.3.2",
+        "192.168.4.2",
+        "192.168.2.2",
+        "192.168.1.2",
+        "192.168.6.1",
+        "192.168.4.1",
+        "192.168.3.1",
+        "192.168.2.1",
+        "192.168.1.1"
+      ],
+      "inform_port": 8080,
+      "https_port": 8443,
+      "portal_http_port": 8880,
+      "override_inform_host": false,
+      "image_maps_use_google_engine": false,
+      "radius_disconnect_running": false,
+      "facebook_wifi_registered": false,
+      "sso_app_id": "ZrDx2odjwwMNGB2Vgh04UTMkljIjumJR70WhejXq",
+      "uptime": 1858943,
+      "anonymous_controller_id": "a20e34f9-fb53-49b9-a3a1-9e2b15ee700a",
+      "has_webrtc_support": true,
+      "debug_setting_preference": "auto",
+      "debug_device": "warn",
+      "debug_mgmt": "warn",
+      "debug_system": "warn",
+      "debug_sdn": "warn",
+      "ubnt_device_type": "UDMPRO",
+      "udm_version": "UDMPRO.al324.v5.0.16.238fde6.260227.0037",
+      "unsupported_device_count": 0,
+      "unsupported_device_list": [],
+      "is_cloud_console": false,
+      "console_display_version": "5.0.16"
+    }
+  ]
+}

@@ -1,0 +1,863 @@
+{
+  "meta": {
+    "rc": "ok"
+  },
+  "data": [
+    {
+      "uplink_type": "gateway",
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "5dcadb08f8cd8804ddee7ba1",
+      "key": "connectivity",
+      "enabled": true
+    },
+    {
+      "quickpay_testmode": false,
+      "portal_customized_title": "Cozy Cone Guest WiFi",
+      "auth": "hotspot",
+      "redirect_https": true,
+      "portal_enabled": true,
+      "portal_customized_button_color": "#1379b7",
+      "payment_enabled": false,
+      "portal_customized_bg_image_tile": false,
+      "portal_customized_button_text_color": "#ffffff",
+      "portal_hostname": "",
+      "portal_customized_box_link_color": "#1379b7",
+      "portal_use_hostname": false,
+      "portal_customized_link_color": "#00db9e",
+      "portal_customized_box_radius": "41",
+      "redirect_enabled": false,
+      "radius_enabled": false,
+      "portal_customized_logo_filename": "675f75f7bca94956ed01b79f",
+      "password_enabled": true,
+      "portal_customized_welcome_text_position": "under_logo",
+      "authorize_use_sandbox": false,
+      "radius_disconnect_enabled": false,
+      "portal_customized_box_opacity": 90,
+      "ec_enabled": true,
+      "radiusprofile_id": "5dcadb08f8cd8804ddee7bb2",
+      "portal_customized_bg_type": "image",
+      "portal_customized_tos_enabled": false,
+      "expire": 4320,
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "template_engine": "angular",
+      "portal_customized_box_color": "#ffffff",
+      "_id": "5dcadb08f8cd8804ddee7ba2",
+      "custom_ip": "",
+      "facebook_enabled": false,
+      "redirect_url": "https://www.bing.com",
+      "radius_auth_type": "mschapv2",
+      "portal_customized_logo_enabled": true,
+      "portal_customized_text_color": "#050505",
+      "portal_customized_welcome_text_enabled": false,
+      "radius_disconnect_port": 3799,
+      "portal_customized": false,
+      "portal_customized_languages": [
+        "en"
+      ],
+      "merchantwarrior_use_sandbox": false,
+      "portal_customized_button_text": "Login",
+      "portal_customized_welcome_text": "",
+      "portal_customized_bg_image_enabled": true,
+      "portal_customized_success_text": "Welcome to the Internet!",
+      "ippay_use_sandbox": false,
+      "expire_number": 1,
+      "portal_customized_bg_image_filename": "675f75f6bca94956ed01b79e",
+      "portal_customized_logo_size": "192",
+      "paypal_use_sandbox": false,
+      "portal_customized_tos": "Terms of Use\n\nBy accessing the wireless network, you acknowledge that you're of legal age, you have read and understood and agree to be bound this agreement.\n\nYou agree not to use the wireless network for any purpose that is unlawful and take full responsibility of your acts.\n\nThe wireless network is provided \"as is\" without warranties of any kind, either expressed or implied.",
+      "key": "guest_access",
+      "portal_customized_bg_color": "#73a6f3",
+      "portal_customized_logo_position": "center",
+      "expire_unit": 1,
+      "restricted_subnet_3": "10.0.0.0/8",
+      "restricted_subnet_2": "172.16.0.0/12",
+      "portal_customized_unsplash_author_name": "",
+      "restricted_subnet_1": "192.168.0.0/16",
+      "voucher_enabled": false,
+      "wechat_enabled": false,
+      "portal_customized_box_text_color": "#000000",
+      "redirect_to_https": false,
+      "portal_customized_unsplash_author_username": "",
+      "gateway": "stripe",
+      "portal_customized_authentication_text": "Select Your authentication method"
+    },
+    {
+      "setting_preference": "auto",
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "ntp_server_1": "0.ubnt.pool.ntp.org",
+      "_id": "5dcadb08f8cd8804ddee7ba3",
+      "ntp_server_2": "1.ubnt.pool.ntp.org",
+      "ntp_server_3": "2.ubnt.pool.ntp.org",
+      "ntp_server_4": "3.ubnt.pool.ntp.org",
+      "key": "ntp"
+    },
+    {
+      "wifiman_enabled": true,
+      "direct_connect_enabled": false,
+      "advanced_feature_enabled": true,
+      "unifi_idp_enabled": true,
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "debug_tools_enabled": false,
+      "_id": "5dcadb08f8cd8804ddee7ba4",
+      "auto_upgrade": true,
+      "key": "mgmt",
+      "auto_upgrade_hour": 5
+    },
+    {
+      "fingerprintingEnabled": true,
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "5dcadb08f8cd8804ddee7ba5",
+      "key": "dpi",
+      "enabled": true
+    },
+    {
+      "brightness": 12,
+      "touch_event": true,
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "5dcadb08f8cd8804ddee7ba6",
+      "idle_timeout": 300,
+      "sync": true,
+      "key": "lcm",
+      "enabled": true
+    },
+    {
+      "h323_module": true,
+      "send_redirects": true,
+      "upnp_enabled": false,
+      "broadcast_ping": false,
+      "mss_clamp_mss": 1452,
+      "tcp_close_timeout": 10,
+      "upnp_secure_mode": false,
+      "tcp_fin_wait_timeout": 120,
+      "unbind_wan_monitors": false,
+      "offload_sch": true,
+      "arp_cache_timeout": "custom",
+      "other_timeout": 600,
+      "firewall_wan_default_log": true,
+      "icmp_timeout": 30,
+      "key": "usg",
+      "echo_server": "ping.ubnt.com",
+      "udp_other_timeout": 30,
+      "firewall_lan_default_log": true,
+      "gre_module": true,
+      "arp_cache_base_reachable": 600,
+      "timeout_setting_preference": "auto",
+      "tcp_time_wait_timeout": 120,
+      "ftp_module": true,
+      "firewall_guest_default_log": true,
+      "offload_accounting": true,
+      "mss_clamp": "auto",
+      "udp_stream_timeout": 180,
+      "receive_redirects": false,
+      "syn_cookies": true,
+      "tcp_last_ack_timeout": 30,
+      "upnp_nat_pmp_enabled": false,
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "tftp_module": true,
+      "offload_l2_blocking": true,
+      "dns_verification": {
+        "setting_preference": "auto",
+        "primary_dns_server": "1.1.1.1",
+        "domain": "ui.com",
+        "secondary_dns_server": "8.8.8.8"
+      },
+      "tcp_syn_recv_timeout": 60,
+      "_id": "5dcadb08f8cd8804ddee7ba7",
+      "tcp_close_wait_timeout": 60,
+      "tcp_syn_sent_timeout": 120,
+      "tcp_established_timeout": 7440,
+      "pptp_module": true,
+      "sip_module": false
+    },
+    {
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "60e78f48f8cd8804ddee7bb8",
+      "key": "network_optimization",
+      "enabled": true
+    },
+    {
+      "code": "840",
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "60e78f4ef8cd8804ddee7bbd",
+      "key": "country"
+    },
+    {
+      "timezone": "America/Los_Angeles",
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "60e78f4ef8cd8804ddee7bbe",
+      "key": "locale"
+    },
+    {
+      "download": 50000,
+      "upload": 10000,
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "60e78f4ef8cd8804ddee7bbf",
+      "key": "provider_capabilities"
+    },
+    {
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "60e7908cc5fa7fcf2943e175",
+      "key": "element_adopt",
+      "enabled": true
+    },
+    {
+      "utm_token": "17a02647988137b64e7d1ceff6cdcabf640bd683330e71661f35a0d262cfc0bd4",
+      "last_nmap_id": "609954656-Tue Mar  1 00:09:41 2022",
+      "ad_blocking_enabled": false,
+      "enabled_categories": [
+        "emerging-activex",
+        "emerging-attackresponse",
+        "botcc",
+        "ciarmy",
+        "compromised",
+        "emerging-dns",
+        "emerging-dos",
+        "dshield",
+        "emerging-exploit",
+        "emerging-ftp",
+        "emerging-games",
+        "emerging-icmp",
+        "emerging-imap",
+        "emerging-malware",
+        "emerging-mobile",
+        "emerging-netbios",
+        "emerging-p2p",
+        "emerging-pop3",
+        "emerging-rpc",
+        "emerging-scan",
+        "emerging-shellcode",
+        "emerging-smtp",
+        "emerging-snmp",
+        "emerging-sql",
+        "emerging-telnet",
+        "emerging-tftp",
+        "tor",
+        "emerging-useragent",
+        "emerging-voip",
+        "emerging-webclient",
+        "emerging-webserver",
+        "emerging-webapps",
+        "emerging-worm",
+        "emerging-misc",
+        "dark-web-blocker-list",
+        "malicious-hosts"
+      ],
+      "advanced_filtering_preference": "manual",
+      "dns_filters": [
+        {
+          "filter": "work",
+          "network_id": "60e79dc03facbc05247433ee",
+          "blocked_tld": [],
+          "blocked_sites": [],
+          "allowed_sites": [],
+          "name": "",
+          "description": "",
+          "version": "v4"
+        },
+        {
+          "filter": "none",
+          "network_id": "5dcadb08f8cd8804ddee7ba9",
+          "blocked_tld": [],
+          "blocked_sites": [],
+          "allowed_sites": [],
+          "name": "",
+          "description": "",
+          "version": "v4"
+        },
+        {
+          "filter": "none",
+          "network_id": "60e79d0d3facbc05247433d2",
+          "blocked_tld": [],
+          "blocked_sites": [],
+          "allowed_sites": [],
+          "name": "",
+          "description": "",
+          "version": "v4"
+        },
+        {
+          "filter": "none",
+          "network_id": "60e7948c3facbc0524743318",
+          "blocked_tld": [],
+          "blocked_sites": [],
+          "allowed_sites": [],
+          "name": "",
+          "description": "",
+          "version": "v4"
+        }
+      ],
+      "memory_optimized": true,
+      "dns_filtering": true,
+      "last_honeypot_id": "10-2025-03-17T10:16:12.509238-0700",
+      "last_alert_id": "1-2025-05-04T17:38:02.281967-0700",
+      "honeypot": [
+        {
+          "network_id": "5dcadb08f8cd8804ddee7ba9",
+          "ip_address": "192.168.1.2",
+          "version": "v4"
+        },
+        {
+          "network_id": "60e7948c3facbc0524743318",
+          "ip_address": "192.168.2.2",
+          "version": "v4"
+        },
+        {
+          "network_id": "60e79dc03facbc05247433ee",
+          "ip_address": "192.168.4.2",
+          "version": "v4"
+        },
+        {
+          "network_id": "60e79d0d3facbc05247433d2",
+          "ip_address": "192.168.3.2",
+          "version": "v4"
+        }
+      ],
+      "enabled_networks": [
+        "5dcadb08f8cd8804ddee7ba9",
+        "60e7948c3facbc0524743318",
+        "60e79d0d3facbc05247433d2",
+        "60e79dc03facbc05247433ee",
+        "697fbe8c80f34a2f85c25e09"
+      ],
+      "ips_mode": "ips",
+      "ad_blocking_configurations": [
+        {
+          "network_id": "5dcadb08f8cd8804ddee7ba9"
+        },
+        {
+          "network_id": "60e7948c3facbc0524743318"
+        },
+        {
+          "network_id": "60e79d0d3facbc05247433d2"
+        }
+      ],
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "content_filtering_blocking_page_enabled": true,
+      "_id": "60e7948d3facbc052474331a",
+      "key": "ips",
+      "endpoint_scanning": false,
+      "honeypot_enabled": true
+    },
+    {
+      "setting_preference": "auto",
+      "high_priority_devices": [],
+      "auto_adjust_channels_to_country": true,
+      "channels_na": [
+        "36",
+        "40",
+        "44",
+        "48",
+        "52",
+        "56",
+        "60",
+        "64",
+        "100",
+        "104",
+        "108",
+        "112",
+        "116",
+        "120",
+        "124",
+        "128",
+        "132",
+        "136",
+        "140",
+        "144",
+        "149",
+        "153",
+        "157",
+        "161",
+        "165"
+      ],
+      "ht_modes_na": [
+        "20",
+        "40"
+      ],
+      "ht_modes_ng": [
+        "20"
+      ],
+      "auto_channel_presets_type": "maximum_speed",
+      "channels_ng": [
+        "1",
+        "6",
+        "11"
+      ],
+      "enabled": false,
+      "default": true,
+      "optimize": [
+        "channel"
+      ],
+      "channels_blacklist": [
+        {
+          "channel": "2",
+          "channel_width": "20",
+          "radio": "ng"
+        },
+        {
+          "channel": "3",
+          "channel_width": "20",
+          "radio": "ng"
+        },
+        {
+          "channel": "4",
+          "channel_width": "20",
+          "radio": "ng"
+        },
+        {
+          "channel": "5",
+          "channel_width": "20",
+          "radio": "ng"
+        },
+        {
+          "channel": "7",
+          "channel_width": "20",
+          "radio": "ng"
+        },
+        {
+          "channel": "8",
+          "channel_width": "20",
+          "radio": "ng"
+        },
+        {
+          "channel": "9",
+          "channel_width": "20",
+          "radio": "ng"
+        },
+        {
+          "channel": "10",
+          "channel_width": "20",
+          "radio": "ng"
+        },
+        {
+          "channel": "12",
+          "channel_width": "20",
+          "radio": "ng"
+        },
+        {
+          "channel": "13",
+          "channel_width": "20",
+          "radio": "ng"
+        },
+        {
+          "channel": "14",
+          "channel_width": "20",
+          "radio": "ng"
+        }
+      ],
+      "radios_configuration": [
+        {
+          "dfs": true,
+          "channel_width": 80,
+          "radio": "na"
+        },
+        {
+          "dfs": false,
+          "channel_width": 20,
+          "radio": "ng"
+        },
+        {
+          "dfs": false,
+          "channel_width": 320,
+          "radio": "6e"
+        }
+      ],
+      "cron_expr": "0 3 * * *",
+      "radios": [
+        "ng",
+        "na",
+        "6e"
+      ],
+      "auto_enabled": false,
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "exclude_devices": [],
+      "channels_6e": [
+        "1",
+        "5",
+        "9",
+        "13",
+        "17",
+        "21",
+        "25",
+        "29",
+        "33",
+        "37",
+        "41",
+        "45",
+        "49",
+        "53",
+        "57",
+        "61",
+        "65",
+        "69",
+        "73",
+        "77",
+        "81",
+        "85",
+        "89",
+        "93",
+        "97",
+        "101",
+        "105",
+        "109",
+        "113",
+        "117",
+        "121",
+        "125",
+        "129",
+        "133",
+        "137",
+        "141",
+        "145",
+        "149",
+        "153",
+        "157",
+        "161",
+        "165",
+        "169",
+        "173",
+        "177",
+        "181",
+        "185",
+        "189",
+        "193",
+        "197",
+        "201",
+        "205",
+        "209",
+        "213",
+        "217",
+        "221",
+        "225",
+        "229",
+        "233"
+      ],
+      "_id": "619df37cf400fb5e431a420f",
+      "key": "radio_ai"
+    },
+    {
+      "subnet_cidr": "192.168.5.1/24",
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "6269163a6fef574342c7a1d9",
+      "key": "teleport",
+      "enabled": true
+    },
+    {
+      "ca_certificate": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR1VENDQXFHZ0F3SUJBZ0lJT0dxeS9RNUNMQm93RFFZSktvWklodmNOQVFFTEJRQXdhakVNTUFvR0ExVUUKQmhNRFZWTkJNUTB3Q3dZRFZRUUlFd1JWZEdGb01SY3dGUVlEVlFRSEV3NVRZV3gwSUV4aGEyVWdRMmwwZVRFUApNQTBHQTFVRUNoTUdkV2t1WTI5dE1TRXdId1lEVlFRREV4aFZTU0JEWlhKMGFXWnBZMkYwWlNCQmRYUm9iM0pwCmRIa3dIaGNOTWpNeE1qRXpNRGd5T1RJeFdoY05Namd4TWpFek1EZ3lPVEl4V2pCcU1Rd3dDZ1lEVlFRR0V3TlYKVTBFeERUQUxCZ05WQkFnVEJGVjBZV2d4RnpBVkJnTlZCQWNURGxOaGJIUWdUR0ZyWlNCRGFYUjVNUTh3RFFZRApWUVFLRXdaMWFTNWpiMjB4SVRBZkJnTlZCQU1UR0ZWSklFTmxjblJwWm1sallYUmxJRUYxZEdodmNtbDBlVENDCkFTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTDl1bzdtWnJ2Q3kvcGIwRDlYWjhrVXQKK2hZamgxeEc5MGROb0t2TU1HNzVjN3E2RTE4Unl6M3krQnNTTVVSM25lNXh6Qjk5VlNJMXVJZmwyU2wvKzc5dApKaWFrWjAveCsrb1piZHJvQmg2S3ZoLzdDOHNNSXRkWll6UG1wc25OYTdwWFJVL3dVTXN0Wlp4SUUvQWVxK2RyCkVaeFFFdWQySi9CYnpDMnZtdHhRWWRlS200SjZaTGZiamJxaTJnWUo3aFdoNFBoYVU5UjlOZVkzU0Fxc0lsU1UKY0oyUEhCYzhXRjVWRkdaU2EyRS9uSHZKa2JwK2xnMStxeGhKS1cvZEtWK1Y2YW9WR24vMHM3NFNsTHJ3M3FWbAprMFBMWUNqMStsZmdZTDdnaUJjdGF5ZkhFaXpqdHpqSnpuYnE3TTdkeW1NOXJhYXh2aVNMOVREOG04N29XZDhDCkF3RUFBYU5qTUdFd0RnWURWUjBQQVFIL0JBUURBZ0VHTUE4R0ExVWRFd0VCL3dRRk1BTUJBZjh3SFFZRFZSME8KQkJZRUZOaW1VY1gvMTB6R0tEWURwVnRMRDBCK0l1VWxNQjhHQTFVZEl3UVlNQmFBRk5pbVVjWC8xMHpHS0RZRApwVnRMRDBCK0l1VWxNQTBHQ1NxR1NJYjNEUUVCQ3dVQUE0SUJBUUIvQ2Y3NXh3Mkx6WHgxWjFEd2hVSSs3dTYxClBaTkhEeUUyTkdJNkZhS3NNaW9may9KdmhwcXovaTFGbGlHQ1B5OGVIWStDdTZCZE1HaENpb1pTQ0Fnem02MloKZjR0OW4xWWc1ZDhzZDF4amhWcEs2QkRtTG53T1djd0JWdEZ2V3ArcW8wVTE3RXRDd0NRMnp5Vzkxb0NYMDQyNgppaUM3emlpSENwWXNsakh1WXNEc2szQThyT3h2T0ovS3EwTkdHSnZWYVBGQUlqbjc2T1NWeVNEZnd0TU14NlRICmU4QVdROUc2L1hablp6Q2Q4UTR5WXVWN0YzaHBRNDdLTnhOSEJzS3F0MllzaFN0MHBHZGNqdkhhK0xGQnFqQ3YKUGgwSUpqQzNZcWZtWXBVV0NjZHRNMzUxY2phOERHRmI5VkxMYnBEa1RrcUFudEZqeUlSSUpRNkhZZEpCCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K",
+      "acct_port": 1813,
+      "auth_port": 1812,
+      "enabled": true,
+      "dh_key": null,
+      "server_certificate": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR1VENDQXFHZ0F3SUJBZ0lCQVRBTkJna3Foa2lHOXcwQkFRc0ZBREJxTVF3d0NnWURWUVFHRXdOVlUwRXgKRFRBTEJnTlZCQWdUQkZWMFlXZ3hGekFWQmdOVkJBY1REbE5oYkhRZ1RHRnJaU0JEYVhSNU1ROHdEUVlEVlFRSwpFd1oxYVM1amIyMHhJVEFmQmdOVkJBTVRHRlZKSUVObGNuUnBabWxqWVhSbElFRjFkR2h2Y21sMGVUQWVGdzB5Ck16RXlNVE13T0RJNU1qRmFGdzB5T0RFeU1UTXdPREk1TWpGYU1HRXhEREFLQmdOVkJBWVRBMVZUUVRFTk1Bc0cKQTFVRUNCTUVWWFJoYURFWE1CVUdBMVVFQnhNT1UyRnNkQ0JNWVd0bElFTnBkSGt4RHpBTkJnTlZCQW9UQm5WcApMbU52YlRFWU1CWUdBMVVFQXhNUGMzUmhibVJoY21RdWRXa3VZMjl0TUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGCkFBT0NBUThBTUlJQkNnS0NBUUVBbjNjdm1rOFZhRTdmdVQvY2phTVVaOUUrNnhhWkV6ZEFEK2pxQ29pMFRCNlkKbXFrTk4xbVQrQzJCWVpvbWhmMVJZSElSdFNKVlhncmwvSmdOQVp3NVR5TzJUQnVnb3RjRG9RWjF4WU9vUlFMcgpScEhyYzNDR2JqVFN5WjcrWTRXWWpEa3pJbUlRaFNnWXRvZUFNN1h2YjR6MlZLKzFURHhWbGVibktKbWl0MzJmCkVtRjJVbzE2UVYzUVFBTzVDNEh5bXgwUFlxd3l6Q2t5eC9ka3hkUEM4ZzZrR3R3MjExQk4vWmFFdlVNL3padVoKTDhYYVl6Um1XUHl2cVJzcnRuYUJDM0UxOUlTMksxOWVzSi9Cb0dCZUJVbGxXeExIdkQvMmZlRDlJdlkzTTk0awphbWRyWEMzMkR4dU9mYUtQRFVTSVBoNGtwRWw5Tmh5VFF3ZGVmdEdwcFFJREFRQUJvM013Y1RBVEJnTlZIU1VFCkREQUtCZ2dyQmdFRkJRY0RBVEFkQmdOVkhRNEVGZ1FVZEErMjJyc3RUMnk1amxFMDZLNElYZU1lc1hnd0h3WUQKVlIwakJCZ3dGb0FVMktaUnhmL1hUTVlvTmdPbFcwc1BRSDRpNVNVd0dnWURWUjBSQkJNd0VZSVBjM1JoYm1SaApjbVF1ZFdrdVkyOXRNQTBHQ1NxR1NJYjNEUUVCQ3dVQUE0SUJBUUNGeVArYTRXaDdXaDBVNkxJYlF3N0doaGhtClZpOVNJL2d2STRxZ09EdkpxN3ZnN2R3WjA1dGk4RXp0RWdPNTZuTk1MTUtpeTR5M291SERVVlpmRFBtTkUxNjEKN012bUVBNHJ0Wnp6L2FKQ1A3Q29nZWFoT0t2cDVjN1JXbDkwWWx3Vkc5VDE1dzdmZFRqUGFhTkNLRkU0ZTRuMwpJNHBhcVQ2WmVNbTNzZ3Z2WGRPR2VLc0hSUk40aEdNeFFBK08wUHdmZ2x2QUhYbW1VenVTandIcllOMWlFUm9ICnRvSnUwME1LS2FWM3d4clRZRmJ1U2RBaElZdzBMMGZ2Rlo1VXIzZndRdjNwQVNqK2JxOHQzWnZkQ3oxeWpHZzYKeE5peld6RE5OaWdZV0R1WmtTVVREV3RPalU1bzVUWDFJMlZ5bU9RUXIxWW0weUhLeWp2bnE4bHM0S3dTCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0KCi0tLS0tQkVHSU4gUlNBIFBSSVZBVEUgS0VZLS0tLS0KTUlJRXBBSUJBQUtDQVFFQW4zY3ZtazhWYUU3ZnVUL2NqYU1VWjlFKzZ4YVpFemRBRCtqcUNvaTBUQjZZbXFrTgpOMW1UK0MyQllab21oZjFSWUhJUnRTSlZYZ3JsL0pnTkFadzVUeU8yVEJ1Z290Y0RvUVoxeFlPb1JRTHJScEhyCmMzQ0dialRTeVo3K1k0V1lqRGt6SW1JUWhTZ1l0b2VBTTdYdmI0ejJWSysxVER4VmxlYm5LSm1pdDMyZkVtRjIKVW8xNlFWM1FRQU81QzRIeW14MFBZcXd5ekNreXgvZGt4ZFBDOGc2a0d0dzIxMUJOL1phRXZVTS96WnVaTDhYYQpZelJtV1B5dnFSc3J0bmFCQzNFMTlJUzJLMTllc0ovQm9HQmVCVWxsV3hMSHZELzJmZUQ5SXZZM005NGthbWRyClhDMzJEeHVPZmFLUERVU0lQaDRrcEVsOU5oeVRRd2RlZnRHcHBRSURBUUFCQW9JQkFDOWpxQTNmZXFrbzUydVMKQXVWRWxZZlVzeklCNFRQSXM0MEcxcWFTd2FIdFpjUndnTEQyT2ZjQzd2UW1iMVJhVjVpbHpZVmEwcXZENlYwTApnckg3enp3cGpMOUpabzk5L21JWUhWKzVKSVI5dlpXWFA3VnF0MGlCQWpOUXdLQ3F6dzY4NE9sUzR6M3ZFSWtOCjg1ZHFkZUZjcnNlei85ak1CVk1xNzM4dFNTSG1Cd3d1RDdmNXZnNEFGa3lwdzF5ZkpsRG1xVklWWFByMW43OVYKYncza1pPYkJ1Tyt4TWdKeUxOa0lIbzVKbzJJbHlLZGMwdEtaTkpBYUV3emFsbHJEZldLNmg4WTdGUHE0cWNnaApTNE11dHM4a2w2MHRja0RYZ3Flc1BQSzJNZng4MTFLV3Z2VmkrVkFXMVFXb2pGMlhNN0s0NDNNOFM5S3J0Z1loCmxwdCtlQUVDZ1lFQXlJUThQUG5CaHZRaEV4ZDFPMWFaUElvcHlQb0FvVHd3NVFncXMxTEpCSTIrMTlFRStscFUKN1VLMTV2Y3RqQlJ0TVkwUjlLQ0hybURia1duNHdzUVIrejRNMGZIazBnZndBTHFvOVE3R3VRSFV3WG1GdDJQTQp5QTBFWXNXVEJ0Skt5Z3BSUU1iTEJLdlhmS0szdkdteTUrMEMwbUt4SCs2ZmpNcHhObkNsUllFQ2dZRUF5NWNSCnFwL3FOVmVzQ3FYWkdTV25vbGxXTWwzMk1EeTBtZEQ2RnJqNk1wbHU0QmR4aDJwNDQ4Tjh4dWtMMlJ2YW5LdlUKOEtiTzU3RkYxQkxsS3VNNTRWejdoS2FoQVhQMlU3S2YxeTdpQklYQUtESUlVQ1VCZy9GU3ZJM1NsM05QUklLMQpQdUJ4R25hUFdKNDQzN1Bmb21VR29UbmVuczN2Yk1OQWNnU0puaVVDZ1lBcVNXRGV4eGtlR2N3RDE3V2NidlhnCkE0OHVXRExiemZMTnlqd2ZGejFYWFlFNnlGVFJhMDF2djlyV3U1ZjZhN0JmZTgybWxsZ20yVHhVM1ZGZDJiV2wKRTMvbW9xbkw5V3FTN01xRzY3ZlMrbVRnN0h6Ym9RdGx3UUVFeDMvck4xd1lZYmFpLzRsL0ViSmZFWDNJR1U1bQpoT0JNZUEyOG16bEFtc3puV3pndmdRS0JnUUNrZWUycDNQdklFSVpMSytXU2JWdGF5N1haaHhPbnNNTnZLT2VDCmgvcUorbThhMTVXK2d3UWJiZ2xXWVZ4VEVDK3pOeGNYUEl3WG5wMzlVUzZYVVcrblpBbEhCNTgzbjBtNElLMEYKbVRpNzBwcUZYclpjbVNqNlFYSklKb09tRzJCRXh4eEtLZVQyTGlac3Y1YlBFM0J1c0JPRkdVMkRHbmg5YzlpUwp4SnV4aVFLQmdRQ0R2ZDRyaUZ6WmNHOFo5bW9wKzJmUXVtT1BoMnhMYmdoMzJlYllhWDJTRjYreGs5SFRQVlFuClNlMmVWL1p6cldvOEdSV3JPamtVQjVScjl2RGY3dmRReVYzTGc1emdTL0FiSHljcmErak9vcmc0Kzk4eFI5eGYKelplem4zOFZHeEtpL29JNFBEL3NBYlRMVTZ5L1BnMWNmOFpBMU9WRzdheUpTdGZVVWRZcjFBPT0KLS0tLS1FTkQgUlNBIFBSSVZBVEUgS0VZLS0tLS0K",
+      "interim_update_interval": 3600,
+      "server_certificate_key": "LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFcEFJQkFBS0NBUUVBbjNjdm1rOFZhRTdmdVQvY2phTVVaOUUrNnhhWkV6ZEFEK2pxQ29pMFRCNlltcWtOCk4xbVQrQzJCWVpvbWhmMVJZSElSdFNKVlhncmwvSmdOQVp3NVR5TzJUQnVnb3RjRG9RWjF4WU9vUlFMclJwSHIKYzNDR2JqVFN5WjcrWTRXWWpEa3pJbUlRaFNnWXRvZUFNN1h2YjR6MlZLKzFURHhWbGVibktKbWl0MzJmRW1GMgpVbzE2UVYzUVFBTzVDNEh5bXgwUFlxd3l6Q2t5eC9ka3hkUEM4ZzZrR3R3MjExQk4vWmFFdlVNL3padVpMOFhhCll6Um1XUHl2cVJzcnRuYUJDM0UxOUlTMksxOWVzSi9Cb0dCZUJVbGxXeExIdkQvMmZlRDlJdlkzTTk0a2FtZHIKWEMzMkR4dU9mYUtQRFVTSVBoNGtwRWw5Tmh5VFF3ZGVmdEdwcFFJREFRQUJBb0lCQUM5anFBM2ZlcWtvNTJ1UwpBdVZFbFlmVXN6SUI0VFBJczQwRzFxYVN3YUh0WmNSd2dMRDJPZmNDN3ZRbWIxUmFWNWlsellWYTBxdkQ2VjBMCmdySDd6endwakw5SlpvOTkvbUlZSFYrNUpJUjl2WldYUDdWcXQwaUJBak5Rd0tDcXp3Njg0T2xTNHozdkVJa04KODVkcWRlRmNyc2V6LzlqTUJWTXE3Mzh0U1NIbUJ3d3VEN2Y1dmc0QUZreXB3MXlmSmxEbXFWSVZYUHIxbjc5VgpidzNrWk9iQnVPK3hNZ0p5TE5rSUhvNUpvMklseUtkYzB0S1pOSkFhRXd6YWxsckRmV0s2aDhZN0ZQcTRxY2doClM0TXV0czhrbDYwdGNrRFhncWVzUFBLMk1meDgxMUtXdnZWaStWQVcxUVdvakYyWE03SzQ0M004UzlLcnRnWWgKbHB0K2VBRUNnWUVBeUlROFBQbkJodlFoRXhkMU8xYVpQSW9weVBvQW9Ud3c1UWdxczFMSkJJMisxOUVFK2xwVQo3VUsxNXZjdGpCUnRNWTBSOUtDSHJtRGJrV240d3NRUit6NE0wZkhrMGdmd0FMcW85UTdHdVFIVXdYbUZ0MlBNCnlBMEVZc1dUQnRKS3lncFJRTWJMQkt2WGZLSzN2R215NSswQzBtS3hIKzZmak1weE5uQ2xSWUVDZ1lFQXk1Y1IKcXAvcU5WZXNDcVhaR1NXbm9sbFdNbDMyTUR5MG1kRDZGcmo2TXBsdTRCZHhoMnA0NDhOOHh1a0wyUnZhbkt2VQo4S2JPNTdGRjFCTGxLdU01NFZ6N2hLYWhBWFAyVTdLZjF5N2lCSVhBS0RJSVVDVUJnL0ZTdkkzU2wzTlBSSUsxClB1QnhHbmFQV0o0NDM3UGZvbVVHb1RuZW5zM3ZiTU5BY2dTSm5pVUNnWUFxU1dEZXh4a2VHY3dEMTdXY2J2WGcKQTQ4dVdETGJ6ZkxOeWp3ZkZ6MVhYWUU2eUZUUmEwMXZ2OXJXdTVmNmE3QmZlODJtbGxnbTJUeFUzVkZkMmJXbApFMy9tb3FuTDlXcVM3TXFHNjdmUyttVGc3SHpib1F0bHdRRUV4My9yTjF3WVliYWkvNGwvRWJKZkVYM0lHVTVtCmhPQk1lQTI4bXpsQW1zem5Xemd2Z1FLQmdRQ2tlZTJwM1B2SUVJWkxLK1dTYlZ0YXk3WFpoeE9uc01OdktPZUMKaC9xSittOGExNVcrZ3dRYmJnbFdZVnhURUMrek54Y1hQSXdYbnAzOVVTNlhVVytuWkFsSEI1ODNuMG00SUswRgptVGk3MHBxRlhyWmNtU2o2UVhKSUpvT21HMkJFeHh4S0tlVDJMaVpzdjViUEUzQnVzQk9GR1UyREduaDljOWlTCnhKdXhpUUtCZ1FDRHZkNHJpRnpaY0c4Wjltb3ArMmZRdW1PUGgyeExiZ2gzMmViWWFYMlNGNit4azlIVFBWUW4KU2UyZVYvWnpyV284R1JXck9qa1VCNVJyOXZEZjd2ZFF5VjNMZzV6Z1MvQWJIeWNyYStqT29yZzQrOTh4Ujl4Zgp6WmV6bjM4Vkd4S2kvb0k0UEQvc0FiVExVNnkvUGcxY2Y4WkExT1ZHN2F5SlN0ZlVVZFlyMUE9PQotLS0tLUVORCBSU0EgUFJJVkFURSBLRVktLS0tLQo=",
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "tunneled_reply": true,
+      "_id": "631fcd9fd6fd4403842b7554",
+      "key": "radius",
+      "configure_whole_network": true
+    },
+    {
+      "forward_unknown_mcast_router_ports": false,
+      "jumboframe_enabled": true,
+      "radiusprofile_id": "5dcadb08f8cd8804ddee7bb2",
+      "switch_exclusions": [],
+      "stp_version": "rstp",
+      "flowctrl_enabled": true,
+      "dot1x_fallback_networkconf_id": "",
+      "dot1x_portctrl_enabled": false,
+      "flood_known_protocols": true,
+      "dhcp_snoop": true,
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "acl_device_isolation": [],
+      "_id": "636a125619594106ad2a0970",
+      "acl_l3_isolation": [
+        {
+          "source_network": "60e79dc03facbc05247433ee",
+          "destination_networks": [
+            "5dcadb08f8cd8804ddee7ba9",
+            "60e7948c3facbc0524743318",
+            "60e79d0d3facbc05247433d2",
+            "697fbe8c80f34a2f85c25e09"
+          ]
+        }
+      ],
+      "key": "global_switch"
+    },
+    {
+      "cron_expr": "0 5 * * *",
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "63759b54168e2b04208e8520",
+      "key": "auto_speedtest",
+      "enabled": true
+    },
+    {
+      "public_key": "QVyaAB6Xspl/SxB5NDpxWwLxBDg6e3roZoc6vOIf+0Q=",
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "647843740eaa5f1632532679",
+      "enabled": true,
+      "key": "magic_site_to_site_vpn"
+    },
+    {
+      "server_names": [
+        "cloudflare",
+        "google"
+      ],
+      "custom_servers": [],
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "64f6d42ffd70a8763ab6e725",
+      "state": "auto",
+      "key": "doh"
+    },
+    {
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "656b634bd70fdb6a753ea0b7",
+      "key": "openvpn"
+    },
+    {
+      "network_defaults": [
+        {
+          "raw_color_hex": "0544ff",
+          "key": "5dcadb08f8cd8804ddee7ba9"
+        },
+        {
+          "raw_color_hex": "ff05ef",
+          "key": "60e7948c3facbc0524743318"
+        },
+        {
+          "raw_color_hex": "ff6c14",
+          "key": "60e79d0d3facbc05247433d2"
+        },
+        {
+          "raw_color_hex": "5eff14",
+          "key": "60e79dc03facbc05247433ee"
+        },
+        {
+          "raw_color_hex": "ffffff",
+          "key": "none"
+        },
+        {
+          "raw_color_hex": "14ffff",
+          "key": "697fbe8c80f34a2f85c25e09"
+        }
+      ],
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "network_overrides": [],
+      "_id": "657c09e84186a6665251a9f0",
+      "speed_defaults": [
+        {
+          "raw_color_hex": "FFC105",
+          "key": "10M"
+        },
+        {
+          "raw_color_hex": "FFC105",
+          "key": "FE"
+        },
+        {
+          "raw_color_hex": "FFFFFF",
+          "key": "GbE"
+        },
+        {
+          "raw_color_hex": "0515FF",
+          "key": "2.5GbE"
+        },
+        {
+          "raw_color_hex": "FF6305",
+          "key": "5GbE"
+        },
+        {
+          "raw_color_hex": "FFFFFF",
+          "key": "10GbE"
+        },
+        {
+          "raw_color_hex": "0572FF",
+          "key": "25GbE"
+        },
+        {
+          "raw_color_hex": "5305FF",
+          "key": "40GbE"
+        },
+        {
+          "raw_color_hex": "32FFD9",
+          "key": "100GbE"
+        }
+      ],
+      "speed_overrides": [],
+      "key": "ether_lighting"
+    },
+    {
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "psk": "iuaVnycB5epubLY2wWAAeZDEHVLAoBTM",
+      "_id": "66309869f37c664fbd0d3e66",
+      "ssid": "VTo3m5sQ0NlVDM3z6FtVVYacdwd0k9i7",
+      "key": "peer_to_peer"
+    },
+    {
+      "identity_certificate_groups": [],
+      "identity_certificate_users": [],
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "665ebced5ed8fa7e19f0d274",
+      "state": "off",
+      "identity_certificate_all_users": true,
+      "key": "ssl_inspection"
+    },
+    {
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "layout_preference": "manual",
+      "_id": "665ebcee5ed8fa7e19f0d276",
+      "widgets": [
+        {
+          "name": "cybersecure",
+          "enabled": true
+        },
+        {
+          "name": "most_active_apps_aps_clients",
+          "enabled": true
+        },
+        {
+          "name": "wifi_tx_retries",
+          "enabled": true
+        },
+        {
+          "name": "wifi_connectivity",
+          "enabled": true
+        },
+        {
+          "name": "ap_radio_density",
+          "enabled": true
+        },
+        {
+          "name": "traffic_identification",
+          "enabled": true
+        },
+        {
+          "name": "wifi_technology",
+          "enabled": true
+        }
+      ],
+      "key": "dashboard"
+    },
+    {
+      "mode": "auto",
+      "excluded_network_ids": [],
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "665ebceef37c664fbd0c3cf7",
+      "key": "global_nat"
+    },
+    {
+      "auto_engine_id_enabled": true,
+      "port": 2055,
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "refresh_rate": 20,
+      "_id": "6708d0b01b67a50750932e64",
+      "version": 10,
+      "key": "netflow",
+      "enabled": false,
+      "export_frequency": 5
+    },
+    {
+      "this_controller": false,
+      "log_all_contents": true,
+      "debug": false,
+      "netconsole_enabled": false,
+      "this_controller_encrypted_only": false,
+      "contents": [
+        "critical",
+        "device"
+      ],
+      "port": "514",
+      "ip": "192.168.2.222",
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "67e0c2ae50492d08c589deb5",
+      "key": "rsyslogd",
+      "enabled": false
+    },
+    {
+      "predefined_services": [],
+      "mode": "all",
+      "enabled_for_network_ids": [],
+      "custom_services": [],
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "enabled_for": "all",
+      "_id": "680c87f200cdd30992512794",
+      "key": "mdns"
+    },
+    {
+      "unifi_services_enabled": true,
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "unifi_device_management_enabled": false,
+      "_id": "680c87f3b0e721d4f5f2b938",
+      "enabled_allowed_traffic": false,
+      "gateway_dns_enabled": false,
+      "key": "traffic_flow"
+    },
+    {
+      "rssi": -75,
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "68492e2f46c41cb1ed92e116",
+      "key": "roaming_assistant",
+      "enabled": true
+    },
+    {
+      "supports_vlan_group": false,
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "68b2ab950dfd5148fe3f9b10",
+      "key": "ugw"
+    },
+    {
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "68f33ee3ee41cb24b352ed78",
+      "default_security_posture": "BLOCK_ALL",
+      "key": "global_network"
+    },
+    {
+      "querier_switches": [
+        "28:70:4e:74:93:73",
+        "d8:b3:70:8b:4e:8c"
+      ],
+      "forward_unknown_mcast_router_ports": false,
+      "subscription_mode": "ALL",
+      "failover_querier": "",
+      "switches": [],
+      "querier_subscription_mode": "ALL",
+      "enabled": true,
+      "querier_addresses": [],
+      "fastleave_for_network_ids": [],
+      "flood_unknown_multicast_for_network_ids": [],
+      "querier_mode": "CUSTOM",
+      "flood_known_protocols": true,
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "69cf72d9b552a5cb91843b5a",
+      "primary_querier": "",
+      "key": "igmp_snooping",
+      "network_ids": [
+        "5dcadb08f8cd8804ddee7ba9",
+        "60e7948c3facbc0524743318",
+        "60e79d0d3facbc05247433d2",
+        "60e79dc03facbc05247433ee"
+      ]
+    },
+    {
+      "alerts": [],
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "69cf72dab552a5cb91843b5b",
+      "whitelist": [],
+      "key": "ips_suppression"
+    },
+    {
+      "ip_filtering": {
+        "action": "allow",
+        "countries": "NL,AT,AU,BE,CA,CH,DE,DK,FI,FR,GB,GR,IE,IL,IN,IS,IT,JP,KR,NO,NZ,PL,SE,TH,US,ZA,SG",
+        "enabled": true,
+        "traffic_direction": "both"
+      },
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "_id": "69cf72dab552a5cb91843b5c",
+      "key": "usg_geo"
+    },
+    {
+      "site_id": "5dcadb04f8cd8804ddee7b9b",
+      "ikev2_reauthentication_method": "make-before-break",
+      "_id": "69eb1a5250ef29bd2cb53d24",
+      "key": "ipsec"
+    }
+  ]
+}

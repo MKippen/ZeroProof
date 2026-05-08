@@ -207,6 +207,14 @@ model UniFiConnection {
 
   syncHistory   UniFiSyncHistory[]
   configChanges UniFiConfigChange[]
+  flowEvents    FirewallFlowEvent[]
+  threatEvents  FirewallThreatEvent[]
+
+  // High-water-mark cursors for incremental polling.
+  flowsHighWater     DateTime?
+  threatsHighWater   DateTime?
+  // Retention window for flow + threat rows.
+  flowRetentionDays  Int @default(7)
 }
 
 model AdGuardConnection {
@@ -247,6 +255,110 @@ enum DnsAttributionStatus {
   HEALTHY
   DEGRADED
   UNKNOWN
+}
+
+// -------------------- UniFi firewall telemetry --------------------
+
+// Per-flow rows from UniFi's "Traffic & Flow" view. The controller exposes
+// these via POST /v2/api/site/{site}/traffic-flows. UniFi only surfaces
+// blocked flows here (allow flows are aggregated into DPI stats elsewhere),
+// so every row's `action` is "blocked".
+model FirewallFlowEvent {
+  id                String   @id @default(cuid())
+  // UniFi's stable id — used for deduplication across polls.
+  unifiId           String   @unique
+  occurredAt        DateTime
+  flowStartAt       DateTime?
+  flowEndAt         DateTime?
+  durationMs        Int?
+  action            String
+  count             Int      @default(1)
+  protocol          String?
+  service           String?
+  risk              String?
+  direction         String?
+  bytesTotal        BigInt?
+  packetsTotal      Int?
+
+  // Source side
+  srcMac            String?
+  srcIp             String?
+  srcPort           Int?
+  srcClientName     String?
+  srcHostName       String?
+  srcOui            String?
+  srcNetworkId      String?
+  srcNetworkName    String?
+  srcZoneName       String?
+  srcSubnet         String?
+
+  // Destination side
+  dstMac            String?
+  dstIp             String?
+  dstPort           Int?
+  dstClientName     String?
+  dstHostName       String?
+  dstNetworkId     String?
+  dstNetworkName   String?
+  dstZoneName       String?
+  // Country code from GeoIP, e.g. "US", "CN".
+  dstRegion         String?
+  // Resolved domains (when DPI/FQDN lookup succeeds). Stored as JSON array.
+  dstDomains        Json?
+
+  // Routing context
+  inNetworkId       String?
+  inNetworkName     String?
+  outNetworkId      String?
+  outNetworkName    String?
+
+  // Policies that fired (multi). Denormalized primaryPolicyName for indexing.
+  policies          Json
+  primaryPolicyName String?
+
+  connectionId      String
+  connection        UniFiConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime @default(now())
+
+  @@index([connectionId, occurredAt])
+  @@index([connectionId, srcMac])
+  @@index([connectionId, primaryPolicyName])
+  @@index([connectionId, dstRegion])
+}
+
+// IPS / honeypot detections from POST /v2/api/site/{site}/system-log/threat-alert.
+// Distinct stream from FirewallFlowEvent — when an IPS signature fires inline,
+// you typically see one row here AND one row in FirewallFlowEvent with the
+// matching policy entry.
+model FirewallThreatEvent {
+  id          String   @id @default(cuid())
+  unifiId     String   @unique
+  occurredAt  DateTime
+  category    String?
+  subcategory String?
+  event       String?
+  key         String?
+  severity    String?
+  status      String?
+  // Rendered message (e.g. "A network intrusion attempt from X to Y has been detected and blocked.")
+  message     String?
+  type        String?
+
+  srcIp       String?
+  dstIp       String?
+  deviceMac   String?
+  deviceModel String?
+
+  rawJson     Json?
+
+  connectionId String
+  connection   UniFiConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+
+  @@index([connectionId, occurredAt])
+  @@index([connectionId, severity])
 }
 
 enum SyncStatus {

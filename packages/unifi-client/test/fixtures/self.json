@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "rc": "ok"
+  },
+  "data": [
+    {
+      "admin_id": "6975888080f34a2f85bc2520",
+      "device_id": "60223296066D0000000006C1F5F50000000007C6D47000000000642B5203:1258022766",
+      "email": "",
+      "email_alert_enabled": true,
+      "email_alert_grouping_delay": 60,
+      "email_alert_grouping_enabled": true,
+      "first_name": "UGuard",
+      "html_email_enabled": true,
+      "is_owner": false,
+      "is_professional_installer": false,
+      "is_super": false,
+      "last_name": "",
+      "last_site_name": "default",
+      "name": "UGuard",
+      "push_alert_enabled": true,
+      "requires_new_password": false,
+      "super_site_permissions": [],
+      "ubic_name": "",
+      "ubic_uuid": "",
+      "ui_settings": {},
+      "uid": "9465d7d4-32f0-4f81-930d-64d2e6145b2c",
+      "last_login_timestamp": 0,
+      "org_role": ""
+    }
+  ]
+}

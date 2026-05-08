@@ -24,8 +24,8 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     container_name: zeroproof-frontend
     environment:
       - VITE_API_URL=/api/v1
@@ -39,8 +39,8 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: zeroproof-backend
     volumes:
       - ./backend/firmware:/app/firmware:ro
@@ -105,8 +105,8 @@ services:
 
   scheduler:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: zeroproof-scheduler
     command: node dist/scheduler.js
     environment:

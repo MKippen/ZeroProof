@@ -21,6 +21,7 @@ const RulesPage = lazy(() => import('@/pages/RulesPage'));
 const TimelinePage = lazy(() => import('@/pages/TimelinePage').then((m) => ({ default: m.TimelinePage })));
 const ClientsPage = lazy(() => import('@/pages/ClientsPage').then((m) => ({ default: m.ClientsPage })));
 const DNSProxyPage = lazy(() => import('@/pages/DNSProxyPage').then((m) => ({ default: m.DNSProxyPage })));
+const TrafficPage = lazy(() => import('@/pages/TrafficPage').then((m) => ({ default: m.TrafficPage })));
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -117,6 +118,7 @@ function App() {
             <Route path="timeline" element={<TimelinePage />} />
             <Route path="clients" element={<ClientsPage />} />
             <Route path="dns-proxy" element={<DNSProxyPage />} />
+            <Route path="traffic" element={<TrafficPage />} />
           </Route>
         </Routes>
         </SetupGate>

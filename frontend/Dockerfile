@@ -1,27 +1,29 @@
+# Frontend image — built from the repo root so the build context can see the
+# workspace lockfile (and any future packages/* deps the frontend takes on).
 FROM node:20-alpine AS builder
 
-WORKDIR /app
+WORKDIR /repo
 
-# Install pnpm
 RUN npm install -g pnpm
 
-# Copy package files
-COPY package.json pnpm-lock.yaml* ./
+# Workspace manifests + lockfile first (cache-friendly install layer).
+COPY pnpm-workspace.yaml ./
+COPY pnpm-lock.yaml ./
+COPY frontend/package.json frontend/
 
-# Install dependencies
 RUN pnpm install --frozen-lockfile
 
-# Copy source
-COPY . .
+# Source for the frontend.
+COPY frontend/ frontend/
 
-# Build
+WORKDIR /repo/frontend
 RUN pnpm build
 
 # Production stage - just serve the files
 FROM nginx:alpine
 
 # Copy built files
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /repo/frontend/dist /usr/share/nginx/html
 
 # Copy nginx config for SPA routing and API proxy
 # Uses Docker DNS resolver (127.0.0.11) with a variable so nginx

@@ -13,6 +13,7 @@ import {
   History,
   Users,
   Network,
+  Activity,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ const navItems = [
   { to: '/intent', icon: Target, label: 'Intent' },
   { to: '/security', icon: ShieldCheck, label: 'Security' },
   { to: '/dns-proxy', icon: Network, label: 'DNS Proxy' },
+  { to: '/traffic', icon: Activity, label: 'Traffic & Flow' },
   { to: '/timeline', icon: History, label: 'Timeline' },
   { to: '/optimization', icon: Zap, label: 'Optimization' },
   { to: '/devices', icon: Cpu, label: 'Devices' },
