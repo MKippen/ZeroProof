@@ -21,6 +21,12 @@ COPY backend/prisma backend/prisma/
 COPY backend/tsconfig.json backend/tsconfig.json
 COPY backend/src backend/src/
 
+# CHANGELOG.md is the canonical source of the running version — the
+# system-update service reads the first `## [x.y.z]` heading to know what
+# we are right now. Copying it in (rather than baking via ARG) keeps the
+# version in lockstep with the release notes, no parallel tracking.
+COPY CHANGELOG.md ./CHANGELOG.md
+
 # Build lib first (backend imports its compiled output).
 RUN pnpm --filter @uguard/unifi-client build
 

@@ -23,6 +23,9 @@ backend/firmware/*.map
 # Docs / scratch — never needed at build time.
 **/*.md
 !**/README.md
+# CHANGELOG.md is the source of truth for the running version (read at
+# runtime by systemUpdateService). Must remain in the build context.
+!CHANGELOG.md
 
 # Build caches / sandboxes
 backend/tests/sandbox
