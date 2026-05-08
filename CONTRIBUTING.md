@@ -124,9 +124,13 @@ backend/
   src/
     analyzers/      # Intent analyzer
     api/routes/     # Express route handlers
+    detectors/      # Live event-driven detection engine (10 detectors + framework)
     scanners/       # Security analysis engine + config normalizer
-    services/       # Core services (UniFi client, rule loader, etc.)
-    scheduler.ts    # Background sync tasks
+    services/
+      detection/    # Detection persistence + analytics
+      threatIntel/  # IocEntry cache + feed adapters (URLhaus, ...)
+      ...           # UniFi client, rule loader, DNS proxy, etc.
+    scheduler.ts    # Background sync tasks (UniFi sync + detector runs + IOC refresh)
   tests/
     fixtures/       # Test config data
     unit/           # Unit tests
@@ -134,15 +138,18 @@ backend/
 
 frontend/
   src/
-    pages/          # React page components
+    pages/          # React page components (DetectionsPage, TrafficPage, ...)
     stores/         # Zustand state stores
     components/     # Reusable UI components
 
 rules/
-  security/         # YAML security rule definitions
+  security/         # YAML security rule definitions (config-time)
+  detection/        # YAML detector rule metadata (live, paired with detectors/)
   tests/            # YAML test definitions (ESP32)
   intents/          # YAML intent evaluation definitions
 ```
+
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for step-by-step recipes for adding a detector, adding a threat-intel feed, or wiring a new mutating API endpoint (CSRF-aware).
 
 ## Code of Conduct
 

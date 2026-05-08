@@ -24,6 +24,7 @@ Define your security intent, analyze your configuration, and validate with real-
 |---|---|
 | **Security Rules** | 39 rules across firewall, VLAN, WiFi, DNS, UPnP, IDS/IPS, VPN, ACL, version, and general hardening |
 | **Optimization Rules** | 8 WiFi/network performance recommendations |
+| **Live Detectors** | 10 event-driven detectors over UniFi flow / IDS / DNS data with threat-intel correlation |
 | **Hardware Tests** | 10 ESP32-backed validation workflows |
 | **Intent Profiles** | 9 intent evaluations for work, guest, IoT, camera, DNS, and NAS segmentation |
 | **Supported Controllers** | UniFi Network Application 10.x+ / UniFi OS 4.x+ |
@@ -39,6 +40,14 @@ Define your security intent, analyze your configuration, and validate with real-
 - **Severity Classification** — CRITICAL, HIGH, MEDIUM, LOW, INFO with actionable remediation
 - **Config Normalization** — handles UniFi API variations across controller versions
 - **8 Optimization Rules** for WiFi and network performance recommendations
+
+### Live Detection Engine
+- **10 cross-source detectors** correlate UniFi firewall flows, UniFi IDS threat events, and AdGuard / UniFi DNS query logs against rule windows on a 5-minute schedule
+- **Threat-intel cache** (`IocEntry` table) refreshed daily from external feeds — currently URLhaus (CC0-1.0). Detectors look up flow `dstIp` and DNS `domain` against the cache without ever hitting the network from inside a detector
+- **High-confidence findings**: `validated_compromise` fires only when the same device shows BOTH an IOC match AND a UniFi IDS hit; `honeypot_hit` is CRITICAL on a single touch
+- **Behavior detectors**: `internal_scanning`, `high_egress_volume`, `dns_tunneling`, `dns_bypass`, `admin_port_egress`, `high_risk_country_egress`, `repeating_threat`
+- **Per-rule YAML metadata** (`rules/detection/*.yaml`) — severity tiers, remediation, and references can evolve without a code deploy
+- **`/detections` page** with summary tiles, breakdowns, severity / status filters, and resolve / dismiss / reopen actions
 
 ### Network Intent Profiles
 - **Intent-Based Security** — define what your network should do (IoT isolation, guest network, work segmentation, DNS filtering, NAS access)
@@ -192,6 +201,10 @@ For manual setup, see [docs/ESP32_SETUP.md](docs/ESP32_SETUP.md).
 - **No Cloud Dependency** — self-hosted only
 - **Encrypted Storage** — credentials encrypted with AES-256-GCM
 - **Session-Based Auth** — no JWT tokens, server-side sessions only
+- **CSRF protection** — synchronizer-token validation on every mutating API request (`X-CSRF-Token` header bound to the session cookie)
+- **External-dependency policy** — every npm package and threat-intel data source is inventoried in [EXTERNALS.md](EXTERNALS.md); new deps require explicit review
+
+See [SECURITY.md](SECURITY.md) for the threat model, scope, and reporting policy.
 
 ## Tech Stack
 
