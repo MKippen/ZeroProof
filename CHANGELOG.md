@@ -4,6 +4,12 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.4] - 2026-05-08
+
+### Added
+- **In-app update notifications.** Settings → General now shows a Updates card with current version (read from CHANGELOG.md), latest available release, and an orange "vX.Y.Z available" banner with release-notes preview + "View on GitHub" link when an update exists. Notify-and-confirm by design — applying the update is still a CLI step (`./scripts/upgrade.sh`) until the sidecar updater lands. New backend `systemUpdateService` fetches GitHub releases over stdlib `node:https` (5-minute server cache, well under the 60/hr anonymous limit).
+- **Stable / Beta release channels.** Channel selector in the Updates card; persists in the existing `Setting` k/v table (no new migration). Stable shows only `prerelease: false` releases; Beta includes prereleases. Semver-descending sort means a Stable always supersedes a Beta of the same version, so beta-channel users still see stable releases.
+
 ## [1.1.3] - 2026-05-08
 
 ### Added
