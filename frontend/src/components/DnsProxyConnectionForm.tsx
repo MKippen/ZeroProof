@@ -27,26 +27,30 @@ const PRODUCT_LABEL: Record<DnsProxyCandidate['product'], string> = {
   pihole: 'Pi-hole',
 };
 
+// We keep numeric fields as strings in state so the user can clear and
+// retype freely. <input type="number"> coerces "" -> 0 and dredges up
+// awkward up/down spinner UI, plus it silently accepts "0443" and similar.
+// We parse at submit time below.
 interface DnsProxyFormState {
   host: string;
-  port: number;
+  port: string;
   useHttps: boolean;
   allowSelfSigned: boolean;
   username: string;
   password: string;
   pollingEnabled: boolean;
-  retentionDays: number;
+  retentionDays: string;
 }
 
 const defaultForm: DnsProxyFormState = {
   host: '',
-  port: 3000,
+  port: '3000',
   useHttps: false,
   allowSelfSigned: false,
   username: '',
   password: '',
   pollingEnabled: true,
-  retentionDays: 7,
+  retentionDays: '7',
 };
 
 function requireData<T>(response: ApiResponse<T>): T {
@@ -60,13 +64,13 @@ function settingsToForm(settings: DnsProxySettings | null): DnsProxyFormState {
   if (!settings) return defaultForm;
   return {
     host: settings.host,
-    port: settings.port,
+    port: String(settings.port),
     useHttps: settings.useHttps,
     allowSelfSigned: settings.allowSelfSigned,
     username: settings.username,
     password: '',
     pollingEnabled: settings.pollingEnabled,
-    retentionDays: settings.retentionDays,
+    retentionDays: String(settings.retentionDays),
   };
 }
 
@@ -105,14 +109,14 @@ export function DnsProxyConnectionForm() {
   const dismissibleCandidates = candidates.filter((c) => {
     // Hide a candidate once the user has typed it into the form so the banner
     // doesn't keep nagging them about something they've already accepted.
-    return !(form.host === c.host && Number(form.port) === c.port);
+    return !(form.host === c.host && form.port === String(c.port));
   });
 
   const applyCandidate = (candidate: DnsProxyCandidate) => {
     setForm((current) => ({
       ...current,
       host: candidate.host,
-      port: candidate.port,
+      port: String(candidate.port),
       // AdGuard's read-only /control/status doesn't require auth, but the
       // write-side endpoints we use for /test do. Leave creds blank — the
       // operator will fill them in if their AdGuard requires login.
@@ -128,13 +132,15 @@ export function DnsProxyConnectionForm() {
   const payload = useMemo(
     () => ({
       host: form.host.trim(),
-      port: Number(form.port),
+      // Fall back to defaults if the user has cleared the field. Backend
+      // zod schema also enforces min/max so a stray value can't escape.
+      port: Number(form.port) || 3000,
       useHttps: form.useHttps,
       allowSelfSigned: form.useHttps && form.allowSelfSigned,
       username: form.username.trim(),
       password: form.password || undefined,
       pollingEnabled: form.pollingEnabled,
-      retentionDays: Number(form.retentionDays),
+      retentionDays: Number(form.retentionDays) || 7,
     }),
     [form]
   );
@@ -304,11 +310,21 @@ export function DnsProxyConnectionForm() {
               <Label htmlFor="adguard-port">Port</Label>
               <Input
                 id="adguard-port"
-                type="number"
-                min={1}
-                max={65535}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={5}
                 value={form.port}
-                onChange={(event) => setForm((current) => ({ ...current, port: Number(event.target.value) }))}
+                placeholder="3000"
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    // Strip everything that isn't a digit so users can't end
+                    // up with "0443" or "abc" in a port field. Empty string
+                    // is allowed so the user can clear and retype.
+                    port: event.target.value.replace(/\D/g, ''),
+                  }))
+                }
               />
             </div>
           </div>
@@ -378,11 +394,18 @@ export function DnsProxyConnectionForm() {
             <Label htmlFor="retention-days">Raw query retention days</Label>
             <Input
               id="retention-days"
-              type="number"
-              min={1}
-              max={30}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={2}
               value={form.retentionDays}
-              onChange={(event) => setForm((current) => ({ ...current, retentionDays: Number(event.target.value) }))}
+              placeholder="7"
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  retentionDays: event.target.value.replace(/\D/g, ''),
+                }))
+              }
             />
             <p className="text-xs text-muted-foreground">
               Normalized query rows default to 7 days and are capped at 30 days. Campaign DNS signals are retained separately for 90 days.

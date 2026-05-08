@@ -19,8 +19,12 @@ import { promises as fs } from 'node:fs';
 
 const RESOLV_CONF_PATHS = ['/etc/resolv.conf'];
 
-/** Default ports we probe for each known product. */
-const ADGUARD_PORTS = [3000, 80, 8080];
+/**
+ * Default ports we probe for each known product. AdGuard's install default
+ * is 3000; 3001 is common when 3000 was already taken (Grafana, a second
+ * AdGuard instance, etc.). 80 is the post-setup default in many configs.
+ */
+const ADGUARD_PORTS = [3000, 3001, 80, 8080];
 const PIHOLE_PORTS = [80, 8080];
 
 /** Single discovered proxy candidate. */
