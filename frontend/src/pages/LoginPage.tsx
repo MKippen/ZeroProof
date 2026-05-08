@@ -29,6 +29,9 @@ export function LoginPage() {
     setLoading(false);
 
     if (response.success && response.data) {
+      // Session ID rotates after login — drop the cached CSRF token so the
+      // next mutating request lazily fetches a fresh one for the new session.
+      api.invalidateCsrfToken();
       setUser(response.data.user);
       setMustChangePassword(response.data.mustChangePassword);
 

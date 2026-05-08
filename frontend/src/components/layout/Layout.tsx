@@ -62,6 +62,7 @@ export function Layout() {
 
   const handleLogout = async () => {
     await api.post('/auth/logout');
+    api.invalidateCsrfToken();
     logout();
     navigate('/login');
   };
