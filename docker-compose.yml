@@ -1,10 +1,27 @@
+#
+# ZeroProof is a network security tool — backend and scheduler need to see
+# the *host's* LAN to auto-discover the UniFi gateway and DNS proxy from
+# DHCP-advertised sources. We run those services (and the public-facing
+# nginx) on the host network namespace so they see the real default
+# gateway and resolv.conf, not the Docker bridge equivalents.
+#
+# Stateful services (postgres, mosquitto) and the frontend SPA stay on the
+# default bridge network. Backend reaches them via 127.0.0.1:<port> because
+# their published ports are on the host. We bind those ports to 127.0.0.1
+# only so they aren't exposed to the LAN — except mosquitto, which has to
+# accept ESP32 sensor connections from elsewhere on the network.
+#
+# This pattern is standard for self-hosted security/network tools (Pi-hole,
+# AdGuard, Tailscale all do similar). It only works on Linux: Docker
+# Desktop on Mac/Windows uses a hidden VM, so "host" means the VM not
+# macOS/Windows. Production targets here are Linux (LXC, VPS, Pi); dev on
+# Mac uses docker-compose.dev.yml which keeps bridge networking.
+#
 services:
   nginx:
     image: nginx:alpine
     container_name: zeroproof-nginx
-    ports:
-      - "443:443"
-      - "80:80"
+    network_mode: host
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/ssl/private:ro
@@ -26,6 +43,10 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
     container_name: zeroproof-frontend
+    ports:
+      # Loopback-only — only the host's nginx (running on host net) needs
+      # to reach this. Not exposed to the LAN.
+      - "127.0.0.1:8080:80"
     environment:
       - VITE_API_URL=/api/v1
       - VITE_WS_URL=/ws
@@ -39,12 +60,16 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     container_name: zeroproof-backend
+    network_mode: host
     volumes:
       - ./backend/firmware:/app/firmware:ro
       - ./rules:/rules:ro
     environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/zeroproof
-      - MQTT_BROKER=mosquitto
+      # Backend is on the host network namespace, so it reaches stateful
+      # services via the host's loopback rather than docker-bridge service
+      # names. Postgres binds 127.0.0.1:5432, Mosquitto binds 1883 publicly.
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@localhost:5432/zeroproof
+      - MQTT_BROKER=localhost
       - MQTT_PORT=1883
       - MQTT_USERNAME=${MQTT_USERNAME:-auditor}
       - MQTT_PASSWORD=${MQTT_PASSWORD}
@@ -72,6 +97,10 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: zeroproof-postgres
+    ports:
+      # Loopback-only — only host-networked services (backend, scheduler)
+      # need to reach this. Not exposed to the LAN.
+      - "127.0.0.1:5432:5432"
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=zeroproof
@@ -107,12 +136,16 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     container_name: zeroproof-scheduler
+    network_mode: host
     command: node dist/scheduler.js
     volumes:
       - ./rules:/rules:ro
     environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/zeroproof
-      - MQTT_BROKER=mosquitto
+      # Same host-network reasoning as backend: scheduler runs sync jobs
+      # against UniFi/AdGuard on the LAN, so it needs to see the host's
+      # routing table and resolvers, not the Docker bridge.
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@localhost:5432/zeroproof
+      - MQTT_BROKER=localhost
       - MQTT_PORT=1883
       - MQTT_USERNAME=${MQTT_USERNAME:-auditor}
       - MQTT_PASSWORD=${MQTT_PASSWORD}

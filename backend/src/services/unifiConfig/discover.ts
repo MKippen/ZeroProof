@@ -2,9 +2,10 @@
  * UniFi gateway auto-discovery.
  *
  * Reads the host's default-route gateway from /proc/net/route and probes
- * it for UniFi OS / legacy Network Application HTTP fingerprints. The
- * frontend uses the result to offer "Looks like a UniFi gateway at
- * X.X.X.X — use this?" with one-click prefill.
+ * the UniFi-typical TCP ports (443 for UniFi OS, 8443 for legacy Network
+ * Application) for a listening service. The frontend uses the result to
+ * offer "Looks like a UniFi gateway at X.X.X.X — use this?" with one-
+ * click prefill.
  *
  * Design constraints (security tool — autoscan is a footgun):
  *   - We never sweep the LAN. The only IP we probe is the host's actual
@@ -13,11 +14,15 @@
  *     (UDM/UDR/UCG/CloudKey).
  *   - We always *show* what we found and let the operator confirm or
  *     edit; we never silently apply a discovered config.
- *   - All probes use stdlib `node:https` — no axios, no undici. UniFi
- *     ships self-signed certs by default, so we allow them for the
- *     probe only (no data is exchanged, no trust is established).
+ *   - We deliberately do NOT speak HTTPS during the probe. UniFi devices
+ *     ship self-signed certs by default, and disabling cert validation
+ *     for an HTTPS probe trips both static analyzers and the spirit of
+ *     the security policy. Instead we do a plain TCP listener check —
+ *     the actual fingerprint validation happens when the operator clicks
+ *     "Test" on the connection form, which is the path that needs auth
+ *     and full TLS verification.
  */
-import https from 'node:https';
+import net from 'node:net';
 import { promises as fs } from 'node:fs';
 
 const ROUTE_TABLE_PATH = '/proc/net/route';
@@ -144,22 +149,14 @@ async function defaultProbe(
   port: number,
   timeoutMs: number
 ): Promise<UniFiCandidate | null> {
-  const probe = await httpsHead(host, port, '/', timeoutMs);
-  if (!probe) return null;
+  const listening = await tcpListenerOpen(host, port, timeoutMs);
+  if (!listening) return null;
 
-  // Heuristic fingerprints. We accept either:
-  //   - status 200/302 with a Set-Cookie naming `unifises` or `TOKEN` (UniFi OS)
-  //   - X-Powered-By: UniFi anywhere in headers
-  //   - Server header containing "UniFi" or "Unifi"
-  // UniFi OS (UDM/UDR/UCG) almost always answers on 443 with these markers.
-  // Legacy CloudKey/Network on 8443 returns the classic Java login page.
-  const headerBlob = serializeHeaders(probe.headers).toLowerCase();
-  const looksLikeUniFi =
-    headerBlob.includes('unifi') ||
-    /set-cookie:[^\n]*(unifises|token)/i.test(headerBlob);
-
-  if (!looksLikeUniFi) return null;
-
+  // The candidate is "something is listening on a UniFi-typical port at
+  // the LAN's default gateway." We deliberately don't claim higher
+  // confidence — the operator's Test click is the real fingerprint
+  // (auth + TLS + UniFi API shape). Confidence='medium' tells the UI
+  // to phrase this as a suggestion, not a confirmed match.
   const product: UniFiCandidate['product'] =
     port === 8443 ? 'unifi_network_legacy' : 'unifi_os';
 
@@ -167,72 +164,31 @@ async function defaultProbe(
     product,
     host,
     port,
-    confidence: 'high',
-    details: {
-      statusCode: probe.statusCode,
-      server: probe.headers['server'],
-    },
+    confidence: 'medium',
   };
 }
 
-interface HttpsProbeResult {
-  statusCode: number;
-  headers: NodeJS.Dict<string | string[]>;
-}
-
-/** Plain-stdlib HTTPS HEAD with self-signed allowance. Returns null on any error. */
-function httpsHead(
+/**
+ * Plain TCP connect probe. No TLS, no HTTP — just "is something accepting
+ * connections on this port within timeoutMs." Returns false on any error,
+ * timeout, or refusal.
+ */
+function tcpListenerOpen(
   host: string,
   port: number,
-  path: string,
   timeoutMs: number
-): Promise<HttpsProbeResult | null> {
+): Promise<boolean> {
   return new Promise((resolve) => {
-    const req = https.request(
-      {
-        host,
-        port,
-        path,
-        method: 'GET',
-        timeout: timeoutMs,
-        // UniFi devices ship self-signed certs out of the box. We disable
-        // verification for the probe only — no credentials, no body, just
-        // headers. The discovered candidate still has to be confirmed by
-        // the operator before any auth handshake happens.
-        rejectUnauthorized: false,
-        headers: {
-          'User-Agent': 'ZeroProof-Discovery/1.0',
-          Accept: 'text/html, */*',
-        },
-      },
-      (res) => {
-        // We only need headers + status; abort the body.
-        const result: HttpsProbeResult = {
-          statusCode: res.statusCode ?? 0,
-          headers: res.headers,
-        };
-        res.resume();
-        res.on('end', () => resolve(result));
-        res.on('error', () => resolve(result));
-      }
-    );
-    req.on('timeout', () => {
-      req.destroy();
-      resolve(null);
-    });
-    req.on('error', () => resolve(null));
-    req.end();
+    const socket = net.connect({ host, port });
+    let settled = false;
+    const finish = (result: boolean) => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      resolve(result);
+    };
+    socket.setTimeout(timeoutMs, () => finish(false));
+    socket.once('connect', () => finish(true));
+    socket.once('error', () => finish(false));
   });
-}
-
-function serializeHeaders(headers: NodeJS.Dict<string | string[]>): string {
-  const out: string[] = [];
-  for (const [k, v] of Object.entries(headers)) {
-    if (Array.isArray(v)) {
-      for (const item of v) out.push(`${k}: ${item}`);
-    } else if (v !== undefined) {
-      out.push(`${k}: ${v}`);
-    }
-  }
-  return out.join('\n');
 }
