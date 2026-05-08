@@ -330,6 +330,23 @@ router.post('/setup', setupLimiter, async (req: Request, res: Response) => {
 
     logger.info(`First-run setup completed; created admin user "${user.username}"`);
 
+    // Auto-login the just-created admin: stamp the session and persist it
+    // before responding so the frontend can route straight to the dashboard
+    // instead of bouncing through the login page.
+    const sessionUser: SessionUser = { id: user.id, username: user.username };
+    req.session.userId = user.id;
+    req.session.user = sessionUser;
+    await new Promise<void>((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) {
+          logger.error('Session save error during /setup auto-login:', err);
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
+
     const response: ApiResponse<{ user: { id: number; username: string } }> = {
       success: true,
       data: { user },

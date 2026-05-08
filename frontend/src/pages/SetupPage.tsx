@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/useToast';
+import { useAuthStore } from '@/stores/authStore';
 import api from '@/api/client';
 
 const MIN_PASSWORD_LENGTH = 12;
@@ -22,6 +23,7 @@ export function SetupPage() {
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { setUser, setMustChangePassword } = useAuthStore();
 
   const passwordTooShort = password.length > 0 && password.length < MIN_PASSWORD_LENGTH;
   const passwordsMismatch =
@@ -66,11 +68,17 @@ export function SetupPage() {
     setSubmitting(false);
 
     if (response.success && response.data) {
+      // The backend stamped the session on a successful /setup, so we're
+      // already logged in. Drop the cached CSRF token (session id rotated)
+      // and route straight to the dashboard — no /login bounce.
+      api.invalidateCsrfToken();
+      setUser(response.data.user);
+      setMustChangePassword(false);
       toast({
         title: 'Admin account created',
-        description: `Welcome, ${response.data.user.username}. Sign in to get started.`,
+        description: `Welcome, ${response.data.user.username}.`,
       });
-      navigate('/login');
+      navigate('/dashboard');
     } else if (response.error?.code === 'ALREADY_INITIALIZED') {
       toast({
         title: 'Already set up',
