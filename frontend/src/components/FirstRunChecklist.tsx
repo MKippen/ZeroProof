@@ -27,6 +27,14 @@ export function FirstRunChecklist() {
     },
   });
 
+  const { data: dnsProxyData, isLoading: loadingDnsProxy } = useQuery({
+    queryKey: ['dns-proxy', 'settings'],
+    queryFn: async () => {
+      const response = await api.get<{ configured: boolean }>('/dns-proxy/settings');
+      return response.data;
+    },
+  });
+
   const { data: intentData, isLoading: loadingIntent } = useQuery({
     queryKey: ['intent', 'profile'],
     queryFn: async () => {
@@ -35,7 +43,7 @@ export function FirstRunChecklist() {
     },
   });
 
-  if (loadingUnifi || loadingIntent) return null;
+  if (loadingUnifi || loadingDnsProxy || loadingIntent) return null;
 
   const steps: ChecklistStep[] = [
     {
@@ -46,6 +54,15 @@ export function FirstRunChecklist() {
       cta: 'Connect UniFi',
       href: '/config',
       done: !!unifiData?.configured,
+    },
+    {
+      id: 'dns-proxy',
+      title: 'Hook up your DNS proxy',
+      description:
+        'Point ZeroProof at AdGuard Home (or another supported resolver) so detectors see the DNS query stream — required for dns_bypass, dns_tunneling, and IOC domain matching to work.',
+      cta: 'Connect DNS proxy',
+      href: '/dns-proxy',
+      done: !!dnsProxyData?.configured,
     },
     {
       id: 'intent',

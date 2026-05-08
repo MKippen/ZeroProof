@@ -99,6 +99,30 @@ The installer generates `.env`, the Mosquitto password file, and a local self-si
 ./scripts/smoke-test.sh
 ```
 
+### Upgrading
+
+When a new release lands, upgrade in place:
+
+```bash
+./scripts/upgrade.sh                # latest published tag
+./scripts/upgrade.sh v1.2.0         # specific tag / branch / SHA
+./scripts/upgrade.sh --check        # show the plan without applying
+./scripts/upgrade.sh --rollback     # undo the last upgrade
+```
+
+The script captures your current commit SHA before applying, fetches the target ref, rebuilds containers (`prisma migrate deploy` runs automatically on backend boot), and waits for `/health` to come back. If health doesn't recover within 90 seconds, it surfaces the rollback command. Safe to re-run; if you're already on the target it exits cleanly.
+
+For the very first upgrade from v1.1.0 / v1.1.1 (which pre-date this script), do it manually once:
+
+```bash
+git fetch --tags
+git checkout v1.1.2
+docker-compose down -v   # only if v1.1.0 migrations are stuck
+./scripts/install.sh
+```
+
+From v1.1.2 onwards, `./scripts/upgrade.sh` handles it.
+
 ### Get the ESP32 firmware
 
 ZeroProof serves prebuilt ESP32 firmware from `backend/firmware/`, but prebuilt binaries are not committed to the repo. `./scripts/install.sh` and `./scripts/dev-setup.sh` download the latest firmware release automatically. You can also rerun the firmware download manually:

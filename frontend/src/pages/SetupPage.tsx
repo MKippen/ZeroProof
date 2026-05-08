@@ -5,18 +5,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/useToast';
+import { useAuthStore } from '@/stores/authStore';
 import api from '@/api/client';
 
 const MIN_PASSWORD_LENGTH = 12;
 
 export function SetupPage() {
-  const [username, setUsername] = useState('');
+  // Default to "admin" so the form is immediately submittable once both
+  // password fields are filled. Users who want a different username can
+  // still edit the field; defaulting matches what 99% of installs end up
+  // with anyway and avoids the dead-button trap when "admin" looks
+  // pre-filled (it was just a placeholder before).
+  const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { setUser, setMustChangePassword } = useAuthStore();
 
   const passwordTooShort = password.length > 0 && password.length < MIN_PASSWORD_LENGTH;
   const passwordsMismatch =
@@ -30,6 +37,22 @@ export function SetupPage() {
     password.length >= MIN_PASSWORD_LENGTH &&
     password === confirmPassword &&
     !submitting;
+
+  // What's blocking submit, in priority order. Surfaced beneath the button
+  // when it's disabled so the user isn't left guessing which field is wrong.
+  const submitBlocker = !username
+    ? 'Enter a username to continue.'
+    : usernameInvalid
+      ? '3–64 characters: letters, numbers, dot, underscore, hyphen.'
+      : password.length === 0
+        ? 'Choose a password.'
+        : passwordTooShort
+          ? `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
+          : confirmPassword.length === 0
+            ? 'Confirm your password.'
+            : passwordsMismatch
+              ? 'Passwords do not match.'
+              : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,11 +68,17 @@ export function SetupPage() {
     setSubmitting(false);
 
     if (response.success && response.data) {
+      // The backend stamped the session on a successful /setup, so we're
+      // already logged in. Drop the cached CSRF token (session id rotated)
+      // and route straight to the dashboard — no /login bounce.
+      api.invalidateCsrfToken();
+      setUser(response.data.user);
+      setMustChangePassword(false);
       toast({
         title: 'Admin account created',
-        description: `Welcome, ${response.data.user.username}. Sign in to get started.`,
+        description: `Welcome, ${response.data.user.username}.`,
       });
-      navigate('/login');
+      navigate('/dashboard');
     } else if (response.error?.code === 'ALREADY_INITIALIZED') {
       toast({
         title: 'Already set up',
@@ -176,6 +205,14 @@ export function SetupPage() {
             <UserPlus className="h-4 w-4 mr-2" />
             {submitting ? 'Creating account…' : 'Create administrator account'}
           </Button>
+          {submitBlocker && (
+            <p
+              className="text-xs text-muted-foreground text-center"
+              aria-live="polite"
+            >
+              {submitBlocker}
+            </p>
+          )}
         </form>
       </div>
     </div>

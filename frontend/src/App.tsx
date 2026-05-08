@@ -40,6 +40,10 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
 function SetupGate({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<'loading' | 'initialized' | 'needs-setup'>('loading');
   const location = useLocation();
+  // If the auth store says we're logged in, setup is by definition done.
+  // Used to avoid bouncing the user back to /setup right after a successful
+  // /setup call, when the cached probe still says "needs-setup".
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,16 +67,23 @@ function SetupGate({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  if (status === 'loading') {
+  // Authenticated users are post-setup by definition; treat the gate as
+  // satisfied even if the cached probe is stale (the case after /setup
+  // succeeds and the auth store flips before we'd normally re-probe).
+  const effectiveStatus = isAuthenticated ? 'initialized' : status;
+
+  if (effectiveStatus === 'loading') {
     return <RouteFallback />;
   }
 
-  if (status === 'needs-setup' && location.pathname !== '/setup') {
+  if (effectiveStatus === 'needs-setup' && location.pathname !== '/setup') {
     return <Navigate to="/setup" replace />;
   }
 
-  if (status === 'initialized' && location.pathname === '/setup') {
-    return <Navigate to="/login" replace />;
+  if (effectiveStatus === 'initialized' && location.pathname === '/setup') {
+    // Authenticated users go to the dashboard; unauthenticated users that
+    // somehow land on /setup after init go to /login as before.
+    return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;
   }
 
   return <>{children}</>;
