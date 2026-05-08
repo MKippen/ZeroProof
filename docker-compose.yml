@@ -8,7 +8,6 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/ssl/private:ro
-      - frontend_build:/usr/share/nginx/html:ro
     depends_on:
       - frontend
       - backend
@@ -30,8 +29,6 @@ services:
     environment:
       - VITE_API_URL=/api/v1
       - VITE_WS_URL=/ws
-    volumes:
-      - frontend_build:/app/dist
     restart: unless-stopped
     labels:
       - "app=zeroproof"
@@ -44,6 +41,7 @@ services:
     container_name: zeroproof-backend
     volumes:
       - ./backend/firmware:/app/firmware:ro
+      - ./rules:/rules:ro
     environment:
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/zeroproof
       - MQTT_BROKER=mosquitto
@@ -53,7 +51,8 @@ services:
       - NODE_ENV=production
       - SESSION_SECRET=${SESSION_SECRET}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
-      - DEFAULT_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD}
+      - DEFAULT_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD:-}
+      - RULES_DIR=/rules
       - PORT=3000
     depends_on:
       postgres:
@@ -109,6 +108,8 @@ services:
       dockerfile: backend/Dockerfile
     container_name: zeroproof-scheduler
     command: node dist/scheduler.js
+    volumes:
+      - ./rules:/rules:ro
     environment:
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/zeroproof
       - MQTT_BROKER=mosquitto
@@ -118,6 +119,7 @@ services:
       - NODE_ENV=production
       - SESSION_SECRET=${SESSION_SECRET}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - RULES_DIR=/rules
     depends_on:
       postgres:
         condition: service_healthy
@@ -132,4 +134,3 @@ volumes:
   postgres_data:
   mosquitto_data:
   mosquitto_log:
-  frontend_build:
