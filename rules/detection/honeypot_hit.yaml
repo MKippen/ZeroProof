@@ -1,0 +1,21 @@
+id: honeypot_hit
+description: |
+  An internal device contacted a honeypot resource. Honeypots have no
+  legitimate users by definition, so a single touch is high-confidence
+  evidence that the source device is doing something it shouldn't —
+  reconnaissance, lateral movement, or already-compromised callback.
+
+  Configure honeypot resources via env vars (CSV):
+    - HONEYPOT_IPS  — IP addresses
+    - HONEYPOT_MACS — MAC addresses
+severity:
+  base: CRITICAL
+remediation: |
+  1. Treat as a confirmed compromise until proven otherwise.
+  2. Capture full packet logs from the source device for the past 24h.
+  3. Quarantine the device (block its egress / move to an isolated VLAN).
+  4. Identify the user / owner and walk through what triggered the contact.
+references:
+  - https://attack.mitre.org/tactics/TA0008/
+  - https://en.wikipedia.org/wiki/Honeypot_(computing)
+retention_days: 60

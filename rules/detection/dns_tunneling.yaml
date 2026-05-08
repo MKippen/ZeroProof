@@ -1,0 +1,28 @@
+id: dns_tunneling
+description: |
+  Repeated long, high-entropy DNS queries from a single client to one
+  parent domain. Classic signature of DNS-tunneling exfiltration: malware
+  encodes payload bytes into the labels of a query and sends them to an
+  attacker-controlled domain that decodes them.
+
+  Tunables (env vars):
+    - DNS_TUNNEL_MIN_LENGTH  (default 50 chars)
+    - DNS_TUNNEL_MIN_ENTROPY (default 3.5 bits/char)
+    - DNS_TUNNEL_MIN_HITS    (default 5 queries)
+severity:
+  base: MEDIUM
+  escalate_to: HIGH
+  when:
+    - "queryCount:>=2x"
+remediation: |
+  1. Identify the client and the parent domain. Confirm whether the parent
+     is a known-good service that legitimately uses long-label DNS (rare —
+     a few TXT-based DRM services, some CDN cache busters).
+  2. If unrecognized, treat the client as suspect: capture process + connection
+     state if possible, and isolate.
+  3. Block the parent domain at the DNS layer (AdGuard / Pi-hole rule) to
+     stop the exfiltration channel while you investigate.
+references:
+  - https://attack.mitre.org/techniques/T1071/004/
+  - https://attack.mitre.org/techniques/T1048/
+retention_days: 30

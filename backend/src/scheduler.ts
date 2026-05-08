@@ -16,6 +16,13 @@ import {
 } from './services/firewall/flowSync';
 import { registerBaselineDnsIndicators } from './services/dnsIndicators';
 import { registerBuiltinDnsProxyConfigAdapters } from './services/dnsProxyConfig';
+import { bootstrapDetectors } from './detectors';
+import { runAllDetectors } from './detectors/runner';
+import { cleanupExpiredDetections } from './services/detection/detectionService';
+import {
+  bootstrapThreatIntel,
+  refreshAllFeeds,
+} from './services/threatIntel';
 
 const INTERVALS = {
   DEVICE_CLEANUP: 5 * 60 * 1000, // 5 minutes
@@ -27,7 +34,16 @@ const INTERVALS = {
   FIREWALL_TELEMETRY_POLL: 60 * 1000, // 1 minute
   VLAN_VALIDATION: 4 * 60 * 60 * 1000, // 4 hours
   SERVER_HEARTBEAT: 60 * 1000, // 1 minute - keep server-local device online
+  DETECTOR_RUN: detectorRunIntervalMs(),
+  IOC_FEED_REFRESH: 24 * 60 * 60 * 1000, // 24 hours
 };
+
+function detectorRunIntervalMs(): number {
+  const raw = process.env.DETECTOR_RUN_INTERVAL_MS;
+  if (!raw) return 5 * 60 * 1000; // default: every 5 minutes
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 30_000 ? n : 5 * 60 * 1000;
+}
 
 async function cleanupOfflineDevices(): Promise<void> {
   try {
@@ -172,8 +188,44 @@ async function cleanupOldData(): Promise<void> {
         `Deleted ${firewall.flowsDeleted} expired firewall flow rows, ${firewall.threatsDeleted} threat rows`
       );
     }
+
+    const detectionsDeleted = await cleanupExpiredDetections();
+    if (detectionsDeleted > 0) {
+      logger.info(`Deleted ${detectionsDeleted} expired detection rows`);
+    }
   } catch (error) {
     logger.error('Old data cleanup error:', error);
+  }
+}
+
+/**
+ * Periodic detector run. All registered detectors evaluate over their
+ * default windows; results land in the Detection table via the dedupe
+ * upsert path.
+ */
+async function runDetectors(): Promise<void> {
+  try {
+    await runAllDetectors();
+  } catch (error) {
+    logger.error(`runDetectors error: ${(error as Error).message}`);
+  }
+}
+
+/**
+ * Refresh the IOC cache from external feeds. Failure of any individual
+ * feed is logged inside the service and does not stop the others.
+ */
+async function refreshIocFeeds(): Promise<void> {
+  try {
+    const outcome = await refreshAllFeeds();
+    const totalUpserted = outcome.feeds.reduce((sum, f) => sum + f.upserted, 0);
+    if (totalUpserted > 0) {
+      logger.info(
+        `IOC feed refresh: ${outcome.feeds.length} feed(s), ${totalUpserted} entries upserted, ${outcome.prunedStale} stale removed`
+      );
+    }
+  } catch (error) {
+    logger.error(`refreshIocFeeds error: ${(error as Error).message}`);
   }
 }
 
@@ -618,6 +670,11 @@ async function main(): Promise<void> {
     // Register built-in DNS proxy config adapters (AdGuard Home today; more later)
     registerBuiltinDnsProxyConfigAdapters();
 
+    // Wire up the detection engine (detectors + their YAML rule metadata)
+    // and the threat-intel feed registry. Both are idempotent.
+    bootstrapDetectors();
+    bootstrapThreatIntel();
+
     try {
       await mqttClient.connect();
     } catch {
@@ -638,8 +695,14 @@ async function main(): Promise<void> {
     setInterval(pollFirewallTelemetry, INTERVALS.FIREWALL_TELEMETRY_POLL);
     setInterval(runScheduledVlanValidation, INTERVALS.VLAN_VALIDATION);
     setInterval(serverHeartbeat, INTERVALS.SERVER_HEARTBEAT);
+    setInterval(runDetectors, INTERVALS.DETECTOR_RUN);
+    setInterval(refreshIocFeeds, INTERVALS.IOC_FEED_REFRESH);
 
-    logger.info('Scheduler running with UniFi auto-sync, DNS proxy polling, VLAN validation, and server heartbeat enabled');
+    // Refresh IOC feeds on boot so detectors have a populated cache before
+    // their first run; do not block startup if it fails.
+    void refreshIocFeeds();
+
+    logger.info('Scheduler running with UniFi auto-sync, DNS proxy polling, VLAN validation, server heartbeat, and detection engine enabled');
 
     // Graceful shutdown
     const shutdown = async (signal: string) => {

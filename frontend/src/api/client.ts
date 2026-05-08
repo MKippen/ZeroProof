@@ -2,8 +2,45 @@ import type { ApiResponse } from '@/types';
 import { useAuthStore } from '@/stores/authStore';
 
 const API_BASE = '/api/v1';
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 class ApiClient {
+  // Per-tab CSRF token. Synchronizer-token bound to the session cookie —
+  // fetched lazily on the first mutating request and refreshed on 403
+  // (e.g., session rotated after login).
+  private csrfToken: string | null = null;
+  private csrfInflight: Promise<string | null> | null = null;
+
+  private async getCsrfToken(): Promise<string | null> {
+    if (this.csrfToken) return this.csrfToken;
+    if (this.csrfInflight) return this.csrfInflight;
+    this.csrfInflight = (async () => {
+      try {
+        const response = await fetch(`${API_BASE}/auth/csrf`, {
+          credentials: 'include',
+          cache: 'no-store',
+        });
+        if (!response.ok) return null;
+        const body = (await response.json()) as ApiResponse<{ csrfToken: string }>;
+        if (body.success && body.data) {
+          this.csrfToken = body.data.csrfToken;
+          return this.csrfToken;
+        }
+        return null;
+      } catch {
+        return null;
+      } finally {
+        this.csrfInflight = null;
+      }
+    })();
+    return this.csrfInflight;
+  }
+
+  /** Force a refresh — call after login/logout flips the session. */
+  invalidateCsrfToken(): void {
+    this.csrfToken = null;
+  }
+
   private async parseResponse<T>(response: Response): Promise<Partial<ApiResponse<T>>> {
     const body = await response.text();
     if (!body) {
@@ -23,19 +60,35 @@ class ApiClient {
     }
   }
 
+  private async buildHeaders(
+    method: string,
+    extra?: HeadersInit,
+    isRetry = false
+  ): Promise<HeadersInit> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(extra as Record<string, string> | undefined),
+    };
+    if (!SAFE_METHODS.has(method.toUpperCase())) {
+      if (isRetry) this.invalidateCsrfToken();
+      const token = await this.getCsrfToken();
+      if (token) headers['X-CSRF-Token'] = token;
+    }
+    return headers;
+  }
+
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    isRetry = false
   ): Promise<ApiResponse<T>> {
     const url = `${API_BASE}${endpoint}`;
+    const method = (options.method ?? 'GET').toUpperCase();
 
     const config: RequestInit = {
       cache: 'no-store',
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers: await this.buildHeaders(method, options.headers, isRetry),
       credentials: 'include',
     };
 
@@ -51,6 +104,17 @@ class ApiClient {
         if (!window.location.pathname.includes('/login')) {
           window.location.href = '/login';
         }
+      }
+
+      // CSRF token mismatch — most often after a login rotates the session
+      // mid-tab. Invalidate the cached token, refetch, and retry once.
+      if (
+        response.status === 403 &&
+        !isRetry &&
+        data.error?.code === 'CSRF_TOKEN_INVALID'
+      ) {
+        this.invalidateCsrfToken();
+        return this.request<T>(endpoint, options, true);
       }
 
       if (!response.ok) {
@@ -112,6 +176,9 @@ class ApiClient {
 
   async upload<T>(endpoint: string, formData: FormData): Promise<ApiResponse<T>> {
     const url = `${API_BASE}${endpoint}`;
+    const csrfHeaders: Record<string, string> = {};
+    const token = await this.getCsrfToken();
+    if (token) csrfHeaders['X-CSRF-Token'] = token;
 
     try {
       const response = await fetch(url, {
@@ -119,6 +186,7 @@ class ApiClient {
         body: formData,
         credentials: 'include',
         cache: 'no-store',
+        headers: csrfHeaders,
       });
       const data = await this.parseResponse<T>(response);
 

@@ -1,0 +1,23 @@
+id: ioc_match
+description: |
+  A device on the network contacted an indicator (IP or domain) that appears
+  in an external threat-intel feed (URLhaus, etc.). One match against a
+  curated feed is enough to raise a high-confidence alert.
+severity:
+  base: HIGH
+  escalate_to: CRITICAL
+  when:
+    - "category:malware-c2"
+    - "category:cryptominer"
+remediation: |
+  1. Identify the device by MAC / hostname in the finding.
+  2. Isolate it from internet egress while you investigate (UniFi traffic rule
+     or VLAN move).
+  3. Inspect the device for unfamiliar processes, browser extensions, or
+     recently installed software.
+  4. If the device is IoT and cannot be inspected, factory-reset and update
+     firmware before re-attaching.
+references:
+  - https://urlhaus.abuse.ch/
+  - https://attack.mitre.org/tactics/TA0011/
+retention_days: 30

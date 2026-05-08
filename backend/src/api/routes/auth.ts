@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import rateLimit from 'express-rate-limit';
 import prisma from '../../services/database';
 import { requireAuth } from '../middleware/auth';
+import { ensureCsrfToken } from '../middleware/csrf';
 import { validate } from '../middleware/validate';
 import { LoginSchema, ChangePasswordSchema, ApiResponse, SessionUser } from '../../types';
 import { isProd } from '../../config';
@@ -164,6 +165,18 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
     };
     res.status(500).json(response);
   }
+});
+
+// GET /api/v1/auth/csrf — returns the per-session CSRF token. The frontend
+// fetches this once on boot (and again after login) and replays it as the
+// X-CSRF-Token header on every mutating request. No auth required: the
+// token is bound to the session, which is in turn bound to the (httpOnly,
+// SameSite=Strict) cookie, so an unauthenticated session still gets a token
+// it can use after login.
+router.get('/csrf', (req: Request, res: Response) => {
+  const csrfToken = ensureCsrfToken(req);
+  const response: ApiResponse = { success: true, data: { csrfToken } };
+  res.json(response);
 });
 
 // POST /api/v1/auth/change-password

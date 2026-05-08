@@ -98,6 +98,16 @@ Standard dev tooling: `typescript`, `tsx`, `nodemon`, `jest`, `ts-jest`, `eslint
 
 `vite`, `vitest`, `@vitejs/plugin-react`, `tailwindcss`, `postcss`, `autoprefixer`, `typescript`, `eslint`, `@testing-library/react`.
 
+## External data sources (threat-intel feeds, OUI lists, etc.)
+
+These aren't npm packages, but they widen our supply chain in a different way: we ingest their data and act on it. Treat additions like dep additions — Mike approves new feeds.
+
+| Source | URL | License | Used by | Refresh | Notes |
+|---|---|---|---|---|---|
+| abuse.ch URLhaus | https://urlhaus.abuse.ch/api/ | CC0-1.0 | `IocEntry` cache (detectors look up flow `dstIp` / DNS `domain` against this) | Daily, full pull of `json_recent` (last 30d) | Public, free, no API key. Maintained by abuse.ch (Swiss research org). High-confidence malware-distribution URLs. We extract host + classify into `malware-c2` / `phishing` / `cryptominer` / `malware-distribution`. Fetched via `node:https` (no axios). |
+
+When adding a feed: wire it under `backend/src/services/threatIntel/feeds/`, register in `backend/src/services/threatIntel/index.ts`, document the license + refresh cadence here.
+
 ## Process for adding a new dep
 
 1. **Open a PR (or comment on the relevant one)** stating the package, version, purpose, and a one-paragraph "why now" justification. Include the npm page, GitHub link, last release date, and any CVE history.

@@ -7,6 +7,7 @@ import expressWs from 'express-ws';
 import type { WebsocketRequestHandler } from 'express-ws';
 import config, { isDev } from './config';
 import routes from './api/routes';
+import { csrfProtection } from './api/middleware/csrf';
 import { errorHandler, notFoundHandler } from './api/middleware/error';
 import { mqttClient } from './mqtt';
 import logger from './utils/logger';
@@ -88,6 +89,10 @@ export function createServer(): Express {
     res.setHeader('Expires', '0');
     next();
   });
+  // CSRF guard — same-origin synchronizer-token, applied AFTER the session
+  // middleware (so we can read req.session.csrfToken) and BEFORE route
+  // handlers. Bypasses safe methods, ESP32 device endpoints, and tests.
+  app.use('/api/v1', csrfProtection);
   app.use('/api/v1', routes);
 
   // WebSocket endpoint

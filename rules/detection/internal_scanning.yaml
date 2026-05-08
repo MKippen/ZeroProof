@@ -1,0 +1,25 @@
+id: internal_scanning
+description: |
+  A single internal device contacted an unusually large number of distinct
+  internal IPs in the window. Strong signal of host-based reconnaissance —
+  worm propagation, compromised host doing lateral discovery, or
+  misconfigured monitoring tool.
+
+  Tunable: INTERNAL_SCAN_THRESHOLD distinct destinations (default 25).
+severity:
+  base: MEDIUM
+  escalate_to: HIGH
+  when:
+    - "distinctTargets:>=2x"
+remediation: |
+  1. Confirm whether the source is a legitimate scanner (Nessus, internal
+     monitoring, asset-discovery tool). If so, add it to the operator's
+     known-scanners list.
+  2. If unexpected, isolate the source device from the rest of the LAN and
+     investigate as a possible compromise.
+  3. Walk the destination IPs — anything answer? Anything respond from a
+     port the source shouldn't know about?
+references:
+  - https://attack.mitre.org/techniques/T1018/
+  - https://attack.mitre.org/techniques/T1046/
+retention_days: 30
