@@ -4,6 +4,18 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.2] - 2026-05-08
+
+### Added
+- **`scripts/upgrade.sh`** — single-command upgrade flow (`./scripts/upgrade.sh` for the latest tag, `./scripts/upgrade.sh v1.2.0` for a specific ref, `--check` to preview, `--rollback` to undo). Records the current commit SHA, fetches the target ref, rebuilds containers, waits for `/health`, and surfaces a rollback command if health doesn't recover within 90 seconds. Replaces the manual `git pull && docker-compose up -d --build` dance for everyone on v1.1.2+.
+- **DNS proxy as step 2 of the first-run checklist on the dashboard.** The detection engine reads from three data pillars (UniFi flows, UniFi IDS threats, DNS query stream); without DNS, `dns_bypass` / `dns_tunneling` / IOC-domain matching all run dry. New ordering: 1) Connect UniFi → 2) Hook up DNS proxy → 3) Define intent.
+
+### Fixed
+- **Mosquitto password file shipped at mode `0600`** so the in-container mosquitto user (UID 1883) couldn't read it and the container crash-looped with `Unable to open pwfile`. `install.sh` and `dev-setup.sh` now `chmod 644`. Contents are bcrypt-hashed credentials, not plaintext.
+- **`/setup` button stayed disabled when the form looked filled.** The username field was empty with `placeholder="admin"` styled to look pre-filled. Defaulted username to `admin` (editable). Also added a single-line hint beneath the disabled button explaining what's missing ("Enter a username", "Password must be at least 12 characters", "Passwords do not match", etc.).
+- **`/setup` redirected to `/login` instead of auto-logging-in the freshly created admin.** Backend `/auth/setup` now stamps the session before responding (matches the `/login` handler's pattern); frontend updates the auth store and navigates straight to `/dashboard`. The "you have to refresh" complaint is gone.
+- **`SetupGate` cached its `setup-status` probe forever** and bounced authenticated post-setup users back to `/setup`. Now short-circuits to `initialized` whenever the auth store says we're logged in.
+
 ## [1.1.1] - 2026-05-08
 
 ### Fixed
