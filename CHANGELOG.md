@@ -4,6 +4,36 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **Detection engine** — event-driven cross-source security findings layer that evaluates UniFi flow events, UniFi IDS threat events, and DNS query events against rule windows on a schedule. Findings land in a new `Detection` table with fingerprint dedupe, max-severity escalation (never silent downgrade), and per-rule retention.
+- **10 built-in detectors** with paired YAML rule metadata in `rules/detection/`:
+  - `ioc_match` — flow / DNS hits a known-bad IOC (HIGH / CRITICAL when category is `malware-c2` or `cryptominer`)
+  - `validated_compromise` — same device shows IOC match AND UniFi IDS hit (CRITICAL, near-zero FP rate)
+  - `honeypot_hit` — internal device touches a configured honeypot resource (CRITICAL)
+  - `repeating_threat` — single source IP triggers UniFi IDS many times in a window
+  - `high_risk_country_egress` — allowed flow to operator-defined high-risk region
+  - `dns_bypass` — internal device used an external DNS resolver outside the allowlist
+  - `admin_port_egress` — outbound to SSH / RDP / VNC / WinRM on the public internet
+  - `high_egress_volume` — single host crossed an outbound byte threshold
+  - `internal_scanning` — single host contacted many distinct internal IPs
+  - `dns_tunneling` — long, high-entropy DNS queries from one client
+- **Threat-intel cache** — new `IocEntry` table keyed by `(feed, kind, value)` with daily refresh and stale-prune. Detectors look up cached entries via `lookupIp()` / `lookupDomain()` (parent-zone walk so a parent IOC catches subdomains).
+- **URLhaus feed adapter** (CC0-1.0, abuse.ch) — first IOC source. Pure stdlib `node:https` (no axios). Categorizes entries into `malware-c2` / `phishing` / `cryptominer` / `malware-distribution`.
+- **`/detections` page** — summary tiles, top-detector and top-affected breakdowns, expandable findings table with severity / status filters and resolve / dismiss / reopen actions.
+- **Dashboard alert card** — surfaces only when there are open detections so quiet networks stay calm.
+- **Detection-engine API** — `GET /api/v1/detections{,/analytics,/:id}` and `POST /:id/{resolve,dismiss,reopen}`.
+- **Scheduler integration** — runs every detector every 5 minutes (`DETECTOR_RUN_INTERVAL_MS` to override) and refreshes IOC feeds daily (eager refresh on boot).
+- **External data sources section in `EXTERNALS.md`** — tracks the lineage and license of every threat-intel feed alongside npm dependencies.
+
+### Security
+- **Synchronizer-token CSRF protection** — new middleware mounted at `/api/v1/*` validates an `X-CSRF-Token` header against a per-session crypto-random token. Bypasses safe methods, ESP32 device endpoints (no browser session), and `NODE_ENV=test`. Closes pre-existing CodeQL `js/missing-token-validation` alert.
+- New `GET /api/v1/auth/csrf` endpoint returns the per-session token; the frontend client lazily fetches it, replays it on every mutating request, and auto-retries once on `CSRF_TOKEN_INVALID` to recover from session rotation.
+
+### Docs
+- New `rules/detection/*.yaml` — per-detector severity tiers, remediation guidance, and references that can evolve without code deploys.
+
 ## [1.0.0] - 2026-04-26
 
 ### Added

@@ -247,3 +247,28 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 1. Create page in `frontend/src/pages/`
 2. Add route in `frontend/src/App.tsx`
 3. Add navigation item in `frontend/src/components/layout/Layout.tsx`
+
+### Adding a new detector
+
+Detectors are pure functions — input (windowed events) → output (`DetectionResult[]`). The runner persists results, so detectors stay easy to test.
+
+1. Create the detector in `backend/src/detectors/<name>.ts`. Implement the `Detector` interface from `backend/src/detectors/framework.ts`.
+2. Add YAML rule metadata at `rules/detection/<id>.yaml` — `id`, `severity` (with optional `escalate_to` / `when`), `remediation`, `references`, optional `retention_days`. Severity, remediation, and references can evolve without a code deploy.
+3. Register the detector in `backend/src/detectors/index.ts` (both `BUILT_IN_DETECTORS` and the re-exports).
+4. Write unit tests at `backend/tests/unit/detectors/<name>.test.ts`. Mock the underlying Prisma calls; do NOT hit a real database. Cover threshold tiers, dedupe, and config-driven branches.
+5. Run `pnpm test --no-coverage --testPathPattern=<name>` to verify.
+
+Detectors must be **idempotent** — running twice over the same window must produce the same fingerprints. The runner relies on the unique-fingerprint constraint to dedupe.
+
+### Adding a new threat-intel feed
+
+1. Create the adapter in `backend/src/services/threatIntel/feeds/<id>.ts` exporting a `createXFeed()` factory that returns an `IocFeed`. Use stdlib `node:https` — **no axios / undici / fetch deps**.
+2. Register it in `backend/src/services/threatIntel/index.ts` inside `bootstrapThreatIntel()`.
+3. Add a row to the "External data sources" table in `EXTERNALS.md` (URL, license, refresh cadence, why it's trustworthy).
+4. Test with a sample fixture — never hit the upstream from inside a unit test.
+
+The orchestrator handles refresh, stale-pruning, and lookups. Adapters only convert the upstream feed shape into normalized `IocRecord` objects.
+
+### Modifying a mutating API endpoint
+
+All mutating routes (`POST`, `PUT`, `PATCH`, `DELETE`) on `/api/v1/*` are guarded by the synchronizer-token CSRF middleware (`backend/src/api/middleware/csrf.ts`). The frontend `ApiClient` injects `X-CSRF-Token` automatically on mutating calls, so you don't need to thread it through page code. CSRF is bypassed in tests (`NODE_ENV=test`) so existing route harnesses keep working.
