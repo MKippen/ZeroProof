@@ -4,7 +4,7 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.1.14]
+## [1.1.14] - 2026-05-09
 
 ### Fixed
 - **In-app upgrade hit `Conflict. The container name "/zeroproof-mqtt" is already in use`** because the updater sidecar invokes `docker compose` from `/repo` (its bind-mount of `/opt/zeroproof`), and Compose v1 derives the project name from the cwd → so the sidecar tried to create a parallel `repo` project alongside the existing `zeroproof` one and collided on the hardcoded `container_name:` values. `scripts/upgrade.sh` and `scripts/install.sh` now pin `COMPOSE_PROJECT_NAME=zeroproof`, so the project label is identical regardless of where the script runs from. Existing installs on `/opt/zeroproof` keep the same project name they had; new installs at any path get a stable label too.
