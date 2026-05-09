@@ -4,6 +4,18 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.6] - 2026-05-08
+
+### Fixed
+- **`502 Bad Gateway` on every page after the v1.1.5 host-networking switch.** The nginx config used a `set $upstream ...; proxy_pass $upstream;` pattern that forces nginx to do runtime DNS resolution. On the Docker bridge that auto-defaulted to `127.0.0.11` (Docker's embedded resolver); under `network_mode: host` no Docker resolver exists, so `localhost` failed to resolve and every proxied request 502'd. Replaced with literal `proxy_pass http://localhost:N;` — uses `/etc/hosts`, no DNS round-trip.
+- **`UPDATER_SECRET` missing on existing v1.1.x installs upgrading to v1.1.5+.** `install.sh` only generates the secret on fresh installs, so existing operators ended up with a sidecar that crashlooped on `FATAL: UPDATER_SECRET is required`. New env-merge step in `scripts/upgrade.sh`: scans `.env.example` for keys missing in `.env`, auto-generates values for `*_SECRET` / `*_PASSWORD` / `*_KEY` shaped keys, appends other missing keys blank for the operator. Operator-set values are never overwritten.
+
+### Added
+- **Dual version display.** Settings → General Updates card now shows backend and updater versions as separate rows, with a yellow drift warning if they don't match. Sidecar grows a `GET /version` endpoint that reads `CHANGELOG.md` (same source-of-truth pattern the backend uses), so the two version reports come from a single file stamped on release.
+
+### Legacy migration note
+- Anyone already running a broken v1.1.5 (sidecar crashlooping because `UPDATER_SECRET` is missing) needs that one secret added to `.env` before they can in-app upgrade to v1.1.6. v1.1.5's `upgrade.sh` doesn't have the new env-merge logic, so it can't self-heal. One-line fix: `echo "UPDATER_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 48)" >> .env && docker compose up -d updater`. From v1.1.6 forward it's fully appliance-style.
+
 ## [1.1.5] - 2026-05-08
 
 ### Added
