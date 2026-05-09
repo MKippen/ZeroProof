@@ -198,21 +198,45 @@ git checkout --quiet "$TARGET"
 # Releases sometimes add new required env vars (UPDATER_SECRET in v1.1.5,
 # for example). Existing operators upgraded their working tree but their
 # .env stayed frozen at the older shape, so containers crashloop on the
-# missing var. We merge new keys here:
-#   - For keys matching *_SECRET / *_PASSWORD / *_KEY we generate a
-#     value (so the user doesn't have to think about it).
-#   - For other missing keys we append them blank with a comment so the
-#     operator can fill them in. We never overwrite a key that already
-#     exists in .env — the operator's value wins.
-if [[ -f .env && -f .env.example ]]; then
+# missing var.
+#
+# We merge ONLY keys that docker-compose.yml actually interpolates via
+# ${KEY} syntax. .env.example carries some dev-reference defaults
+# (DATABASE_URL, MQTT_BROKER, etc.) that production compose hardcodes
+# in its own `environment:` blocks — appending those to .env was both
+# noisy and confusing.
+#
+# For each missing interpolated key:
+#   - *_SECRET / *_PASSWORD / *_KEY get an auto-generated value via
+#     /dev/urandom (no openssl dependency — the updater sidecar's
+#     Alpine image doesn't ship openssl, so the previous openssl-based
+#     generation crashed when the upgrade ran from inside the sidecar).
+#   - everything else is appended blank so the operator can fill in.
+#
+# Operator-set values are never overwritten — the existing-key check
+# always wins.
+if [[ -f .env && -f .env.example && -f docker-compose.yml ]]; then
+    # Extract `${KEY}` and `${KEY:-default}` references from compose into
+    # a sorted, deduplicated allowlist. This is the set of vars compose
+    # actually reads from .env.
+    INTERPOLATED_KEYS="$(
+        grep -oE '\$\{[A-Z_][A-Z0-9_]*' docker-compose.yml \
+            | sed 's/^\${//' \
+            | sort -u
+    )"
+
     NEW_KEYS=()
     while IFS= read -r line; do
         # Skip comments + blank lines + lines without =
         [[ "$line" =~ ^# || -z "$line" || ! "$line" =~ = ]] && continue
         key="${line%%=*}"
-        # Only consider non-VITE_ keys (frontend env is build-time, not runtime)
+        # Skip frontend build-time vars
         [[ "$key" =~ ^VITE_ ]] && continue
-        # Already present in .env (uncommented form)?
+        # Skip keys compose doesn't interpolate
+        if ! grep -qx -- "$key" <<< "$INTERPOLATED_KEYS"; then
+            continue
+        fi
+        # Already present in .env (uncommented)?
         if grep -qE "^[[:space:]]*${key}=" .env; then
             continue
         fi
@@ -226,9 +250,23 @@ if [[ -f .env && -f .env.example ]]; then
             echo ""
             echo "# Added automatically during upgrade to $TARGET"
         } >> .env
+        # Explicit allowlist of keys we auto-generate values for.
+        # Pattern-matching on *_SECRET / *_PASSWORD was too loose and
+        # would auto-generate DEFAULT_ADMIN_PASSWORD, which is supposed
+        # to stay unset by default (the /setup flow handles admin
+        # creation). When we add a new required secret, name it here.
+        case_auto_generate() {
+            case "$1" in
+                POSTGRES_PASSWORD|MQTT_PASSWORD|SESSION_SECRET|ENCRYPTION_KEY|UPDATER_SECRET)
+                    return 0 ;;
+                *) return 1 ;;
+            esac
+        }
         for key in "${NEW_KEYS[@]}"; do
-            if [[ "$key" =~ (_SECRET|_PASSWORD|_KEY)$ ]]; then
-                value="$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 48)"
+            if case_auto_generate "$key"; then
+                # /dev/urandom + base64 is portable across alpine, debian,
+                # and any minimal container without bringing in openssl.
+                value="$(head -c 64 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 48)"
                 echo "$key=$value" >> .env
                 echo "  + $key (generated)"
             else
