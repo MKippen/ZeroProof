@@ -4,6 +4,11 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.10] - 2026-05-09
+
+### Added
+- **Tier 2 e2e tests — critical-path API contract scenarios.** Extends the install-smoke workflow with 11 scenarios that exercise the running stack with the real auth flow (CSRF, /setup, session rotation, /auth/me, /system/update with dual versions, channel persistence, /unifi/discover, /dns-proxy/discover, /unifi/settings, /dns-proxy/settings). Catches contract drift between backend response shapes and frontend expectations — the kind of regression that would otherwise need a manual click-through to spot.
+
 ## [1.1.9] - 2026-05-08
 
 ### Fixed
