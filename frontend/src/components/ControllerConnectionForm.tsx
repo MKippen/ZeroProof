@@ -478,7 +478,16 @@ export function ControllerConnectionForm() {
                   )}
                 </div>
 
-                {connectionTested && (
+                {/* Sync settings used to be gated on `connectionTested` only,
+                 * which is local component state that resets to false on
+                 * every page reload and on every field edit. Once the
+                 * connection was saved the operator could never reach the
+                 * sync controls again without re-entering credentials they
+                 * didn't remember (saved password is masked). Now also show
+                 * the panel when isConfigured — the saved connection has
+                 * already been validated server-side, so the controls are
+                 * safe to expose. */}
+                {(connectionTested || isConfigured) && (
                   <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-4">
                     <div className="flex items-center gap-3">
                       <input
