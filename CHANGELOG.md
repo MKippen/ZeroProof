@@ -4,6 +4,11 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.13] - 2026-05-09
+
+### Changed
+- **Unified sync-settings UX across DNS Proxy and UniFi connection forms.** Both forms now render the same Sync card: "Enable automatic sync" toggle, pill-style interval picker when enabled, helper text. Default is hourly on both. DNS Proxy options: 1m / 5m / 15m / Hourly (was hardcoded "every 60 seconds" with no choice). UniFi options stay Hourly / Daily — different option lists per data source is intentional (DNS query logs and UniFi config snapshots have different natural cadences), but the visual shape and vocabulary now match. New backend support for `pollingIntervalSec` on the DNS proxy settings endpoint, clamped server-side to 30..3600.
+
 ## [1.1.12] - 2026-05-09
 
 ### Added
