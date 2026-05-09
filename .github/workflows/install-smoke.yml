@@ -334,9 +334,10 @@ jobs:
           node-version: '20'
 
       - name: Install pnpm
+        # Don't pin a version here — root package.json's `packageManager`
+        # field is the source of truth (pnpm@10.28.2). Specifying both
+        # trips the action's "multiple versions" guard.
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Install frontend deps for Playwright
         working-directory: ./frontend
