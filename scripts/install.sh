@@ -85,6 +85,10 @@ else
 fi
 echo -e "${GREEN}Docker Compose found${NC}"
 
+# Pin the compose project name so future upgrades (which may run from a
+# different cwd, e.g. the updater sidecar) target the same stack.
+export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-zeroproof}"
+
 # ---- Port conflict check ----
 echo ""
 echo "Checking for port conflicts..."

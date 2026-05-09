@@ -4,6 +4,20 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.14]
+
+### Fixed
+- **In-app upgrade hit `Conflict. The container name "/zeroproof-mqtt" is already in use`** because the updater sidecar invokes `docker compose` from `/repo` (its bind-mount of `/opt/zeroproof`), and Compose v1 derives the project name from the cwd → so the sidecar tried to create a parallel `repo` project alongside the existing `zeroproof` one and collided on the hardcoded `container_name:` values. `scripts/upgrade.sh` and `scripts/install.sh` now pin `COMPOSE_PROJECT_NAME=zeroproof`, so the project label is identical regardless of where the script runs from. Existing installs on `/opt/zeroproof` keep the same project name they had; new installs at any path get a stable label too.
+- **A failed in-app upgrade left git ahead of the running containers**, and a retry exited "Already on $TARGET. Nothing to do." instead of finishing the job. Two layers of hardening:
+  - **Drift-aware short-circuit.** Before exiting "already on target", the upgrade script now compares the worktree's `CHANGELOG` version against the running backend container's `CHANGELOG` version. If they disagree (git checked out new code, but `compose up --build` hadn't run yet), it converges by re-running `compose up -d --build` instead of treating the run as a no-op.
+  - **Restore-on-failure trap.** Snapshots `CURRENT_SHA` before the `git checkout`, installs an `EXIT` trap that restores the worktree if the run exits non-zero before the post-`compose up` `UPGRADE_DONE=true` flag. Health-check failures *after* a successful `compose up` are still recoverable via `--rollback` and don't trigger the trap.
+
+### Changed
+- **Update log panel wraps long lines instead of horizontally scrolling.** The progress log in the Settings → Updates card was rendering with `whitespace-pre`, so a single long line (a stack trace, a docker compose path) forced the whole panel into a horizontal scrollbar that obscured the text underneath. Switched to `whitespace-pre-wrap break-all` with `overflow-x-hidden` — vertical scroll only, lines wrap at the panel edge.
+
+### Added
+- **Export log button on the update panel.** Installing/restarting, rolled-back, and failed states now include an "Export log" action that downloads the streamed progress lines as a text file (`zeroproof-upgrade-<target>-<timestamp>.log`). One-click handoff for support / debugging without copy-pasting from the scrolling panel.
+
 ## [1.1.13] - 2026-05-09
 
 ### Changed
