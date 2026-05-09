@@ -64,6 +64,14 @@ jobs:
         working-directory: .
         run: pnpm --filter @uguard/unifi-client build
 
+      - name: Type check UniFi client package
+        working-directory: .
+        run: pnpm --filter @uguard/unifi-client typecheck
+
+      - name: Test UniFi client package
+        working-directory: .
+        run: pnpm --filter @uguard/unifi-client test
+
       - name: Generate Prisma Client
         run: pnpm prisma generate
 
@@ -134,6 +142,31 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  updater:
+    name: Updater Sidecar
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./updater
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test -- --runInBand
+
+      - name: Build
+        run: npm run build
 
   # ESP32 firmware build check
   firmware:

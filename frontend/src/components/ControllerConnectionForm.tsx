@@ -63,7 +63,7 @@ export function ControllerConnectionForm() {
   const [unifiUsername, setUnifiUsername] = useState('admin');
   const [unifiPassword, setUnifiPassword] = useState('');
   const [showUnifiPassword, setShowUnifiPassword] = useState(false);
-  const [verifySsl, setVerifySsl] = useState(true);
+  const [verifySsl, setVerifySsl] = useState(false);
   const [autoSync, setAutoSync] = useState(false);
   const [syncInterval, setSyncInterval] = useState<'hourly' | 'daily' | 'manual'>('manual');
   const [selectedSite, setSelectedSite] = useState('default');

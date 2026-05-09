@@ -9,6 +9,7 @@ RUN npm install -g pnpm
 # Workspace manifests + lockfile first (cache-friendly install layer).
 COPY pnpm-workspace.yaml ./
 COPY pnpm-lock.yaml ./
+COPY package.json ./
 COPY frontend/package.json frontend/
 
 RUN pnpm install --frozen-lockfile

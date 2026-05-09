@@ -10,9 +10,9 @@
 FROM node:20-alpine AS build
 
 WORKDIR /build
-COPY updater/package.json updater/tsconfig.json ./
+COPY updater/package.json updater/package-lock.json updater/tsconfig.json ./
 COPY updater/src ./src
-RUN npm install --no-audit --no-fund && npx tsc
+RUN npm ci --no-audit --no-fund && npx tsc
 
 FROM node:20-alpine
 # bash:        upgrade.sh shebang

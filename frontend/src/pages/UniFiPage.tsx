@@ -34,6 +34,7 @@ interface UniFiConnection {
   lastSyncAt: string | null;
   lastSyncStatus: 'SUCCESS' | 'FAILED' | 'IN_PROGRESS' | null;
   lastSyncError: string | null;
+  allowSelfSigned: boolean;
   canWrite: boolean;
   createdAt: string;
   _count?: { syncHistory: number; configChanges: number };
@@ -412,6 +413,7 @@ function ConnectionForm({
     siteId: connection?.siteId || 'default',
     autoSync: connection?.autoSync || false,
     syncIntervalMin: connection?.syncIntervalMin || 60,
+    verifySsl: connection ? !connection.allowSelfSigned : false,
     canWrite: connection?.canWrite || false,
   });
   const { toast } = useToast();
@@ -544,6 +546,16 @@ function ConnectionForm({
                 />
               </div>
             )}
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.verifySsl}
+                onChange={(e) => setFormData({ ...formData, verifySsl: e.target.checked })}
+                className="rounded"
+              />
+              <span>Verify SSL certificate</span>
+            </label>
 
             <label className="flex items-center gap-2 cursor-pointer">
               <input

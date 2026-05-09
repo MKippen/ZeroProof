@@ -199,6 +199,10 @@ model UniFiConnection {
   lastSyncStatus SyncStatus?
   lastSyncError  String?
 
+  // UniFi controllers commonly use self-signed TLS certificates. Default
+  // true preserves legacy behavior; users can opt into strict verification.
+  allowSelfSigned Boolean @default(true)
+
   // Permissions
   canWrite Boolean @default(false) // Can push firewall rules
 

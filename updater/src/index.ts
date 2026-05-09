@@ -57,6 +57,7 @@ const PROGRESS_DIR = process.env.UPDATER_PROGRESS_DIR ?? '/var/run/zeroproof';
 const WORKTREE = process.env.UPDATER_WORKTREE ?? '/repo';
 const HEALTH_URL = process.env.UPDATER_HEALTH_URL ?? 'http://127.0.0.1:3000/health';
 const HEALTH_TIMEOUT_MS = Number(process.env.UPDATER_HEALTH_TIMEOUT_MS ?? 90_000);
+const MAX_BODY_BYTES = Number(process.env.UPDATER_MAX_BODY_BYTES ?? 16_384);
 
 interface ApplyRequest {
   /** Target ref (tag, branch, or SHA). Falls back to upgrade.sh's "latest tag" default if empty. */
@@ -86,7 +87,7 @@ const server = http.createServer(async (req, res) => {
   try {
     if (req.method === 'GET' && req.url === '/healthz') {
       res.writeHead(200, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ ok: true, active: !!active }));
+      res.end(JSON.stringify({ ok: true, configured: !!SECRET, active: !!active }));
       return;
     }
 
@@ -103,7 +104,23 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && req.url === '/apply') {
-      const body = await readBody(req);
+      if (!SECRET) {
+        res.writeHead(503, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ error: 'updater is not configured' }));
+        return;
+      }
+
+      let body: string;
+      try {
+        body = await readBody(req);
+      } catch (error) {
+        if (error instanceof RequestBodyTooLargeError) {
+          res.writeHead(413, { 'content-type': 'application/json' });
+          res.end(JSON.stringify({ error: 'request body too large' }));
+          return;
+        }
+        throw error;
+      }
       const sig = (req.headers['x-zp-signature'] as string) ?? '';
       if (!verifyHmac(body, sig, SECRET)) {
         log('rejected apply request: bad signature');
@@ -129,6 +146,11 @@ const server = http.createServer(async (req, res) => {
 
       const op = parsed.op === 'rollback' ? 'rollback' : 'apply';
       const target = op === 'rollback' ? null : parsed.target?.trim() || null;
+      if (target && !isValidTargetRef(target)) {
+        res.writeHead(400, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ error: 'invalid target ref' }));
+        return;
+      }
       const run = await startRun(op, target);
       res.writeHead(202, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ accepted: true, run }));
@@ -146,24 +168,35 @@ const server = http.createServer(async (req, res) => {
 
 if (require.main === module) {
   if (!SECRET) {
-    log('FATAL: UPDATER_SECRET is required; refusing to start');
-    process.exit(1);
+    log('UPDATER_SECRET is not set; updater is running in disabled mode');
   }
   server.listen(PORT, HOST, () => {
     log(`updater listening on ${HOST}:${PORT}`);
   });
 }
 
+class RequestBodyTooLargeError extends Error {}
+
 function readBody(req: http.IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
-    req.on('data', (c: Buffer) => chunks.push(c));
+    let total = 0;
+    req.on('data', (c: Buffer) => {
+      total += c.length;
+      if (total > MAX_BODY_BYTES) {
+        reject(new RequestBodyTooLargeError('request body too large'));
+        req.destroy();
+        return;
+      }
+      chunks.push(c);
+    });
     req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
     req.on('error', reject);
   });
 }
 
 export function verifyHmac(body: string, signature: string, secret: string): boolean {
+  if (!secret) return false;
   if (!signature) return false;
   const expected = crypto
     .createHmac('sha256', secret)
@@ -174,6 +207,20 @@ export function verifyHmac(body: string, signature: string, secret: string): boo
   return crypto.timingSafeEqual(
     Buffer.from(signature, 'utf8'),
     Buffer.from(expected, 'utf8')
+  );
+}
+
+export function isValidTargetRef(target: string): boolean {
+  const trimmed = target.trim();
+  return (
+    trimmed.length > 0 &&
+    trimmed.length <= 128 &&
+    /^[A-Za-z0-9][A-Za-z0-9._/@+-]*$/.test(trimmed) &&
+    !trimmed.includes('..') &&
+    !trimmed.includes('@{') &&
+    !trimmed.includes('//') &&
+    !trimmed.endsWith('/') &&
+    !trimmed.endsWith('.')
   );
 }
 
