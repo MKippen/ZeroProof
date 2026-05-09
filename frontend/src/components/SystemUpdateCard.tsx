@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CheckCircle2, Download, ExternalLink, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, ExternalLink, FileText, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import api from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -203,6 +203,20 @@ export function SystemUpdateCard() {
   const cancelInstall = () => setApplyState({ kind: 'idle' });
   const dismissDone = () => setApplyState({ kind: 'idle' });
 
+  const exportLog = (lines: string[], target?: string) => {
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const slug = target ? `-${target.replace(/[^A-Za-z0-9._-]/g, '_')}` : '';
+    const blob = new Blob([lines.join('\n') + '\n'], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `zeroproof-upgrade${slug}-${stamp}.log`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <Card className="border-border/50">
       <CardHeader>
@@ -299,10 +313,22 @@ export function SystemUpdateCard() {
             </div>
             <div
               ref={logRef}
-              className="mt-2 max-h-48 overflow-y-auto whitespace-pre rounded bg-background/40 p-2 font-mono text-xs leading-tight text-muted-foreground"
+              className="mt-2 max-h-48 overflow-x-hidden overflow-y-auto whitespace-pre-wrap break-all rounded bg-background/40 p-2 font-mono text-xs leading-tight text-muted-foreground"
             >
               {applyState.lines.join('\n') || 'Waiting for the updater to start…'}
             </div>
+            {applyState.lines.length > 0 && (
+              <div className="mt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => exportLog(applyState.lines, applyState.target)}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Export log
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
@@ -327,12 +353,24 @@ export function SystemUpdateCard() {
             <p className="mt-2 text-xs text-muted-foreground">
               You're back on the previous version. Check the log below for details.
             </p>
-            <div className="mt-2 max-h-48 overflow-y-auto whitespace-pre rounded bg-background/40 p-2 font-mono text-xs leading-tight text-muted-foreground">
+            <div className="mt-2 max-h-48 overflow-x-hidden overflow-y-auto whitespace-pre-wrap break-all rounded bg-background/40 p-2 font-mono text-xs leading-tight text-muted-foreground">
               {applyState.lines.join('\n')}
             </div>
-            <Button size="sm" variant="outline" className="mt-3" onClick={dismissDone}>
-              Dismiss
-            </Button>
+            <div className="mt-3 flex gap-2">
+              <Button size="sm" variant="outline" onClick={dismissDone}>
+                Dismiss
+              </Button>
+              {applyState.lines.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => exportLog(applyState.lines, applyState.target)}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Export log
+                </Button>
+              )}
+            </div>
           </div>
         )}
 
@@ -343,13 +381,25 @@ export function SystemUpdateCard() {
               Update failed: {applyState.reason}
             </div>
             {applyState.lines.length > 0 && (
-              <div className="mt-2 max-h-48 overflow-y-auto whitespace-pre rounded bg-background/40 p-2 font-mono text-xs leading-tight text-muted-foreground">
+              <div className="mt-2 max-h-48 overflow-x-hidden overflow-y-auto whitespace-pre-wrap break-all rounded bg-background/40 p-2 font-mono text-xs leading-tight text-muted-foreground">
                 {applyState.lines.join('\n')}
               </div>
             )}
-            <Button size="sm" variant="outline" className="mt-3" onClick={dismissDone}>
-              Dismiss
-            </Button>
+            <div className="mt-3 flex gap-2">
+              <Button size="sm" variant="outline" onClick={dismissDone}>
+                Dismiss
+              </Button>
+              {applyState.lines.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => exportLog(applyState.lines, applyState.target)}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Export log
+                </Button>
+              )}
+            </div>
           </div>
         )}
 
