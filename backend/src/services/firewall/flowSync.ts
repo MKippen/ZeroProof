@@ -58,7 +58,7 @@ function buildLibClient(conn: UniFiConnection): LibUnifiClient {
     username: decrypt(conn.usernameEnc),
     password: decrypt(conn.passwordEnc),
     siteId: conn.siteId,
-    allowSelfSigned: true,
+    allowSelfSigned: conn.allowSelfSigned,
     timeoutMs: 30_000,
     logger: {
       debug: (msg, meta) => logger.debug(msg, meta as object),

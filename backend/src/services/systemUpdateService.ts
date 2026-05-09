@@ -222,9 +222,8 @@ function fetchReleasesFromGithub(): Promise<GithubRelease[]> {
 /**
  * Compare two semver-shaped tags. Returns >0 if a > b, <0 if a < b, 0 if equal.
  * Tolerates leading "v" and standard semver pre-release suffixes (`-beta.1`).
- * Numeric majors/minors/patches are compared numerically; pre-release tags
- * compare lexicographically per semver spec (good enough for our purposes —
- * `beta.1 < beta.2 < rc.1 < (release)`).
+ * Numeric majors/minors/patches are compared numerically; pre-release
+ * identifiers follow semver ordering (`beta.2 < beta.10 < rc.1 < release`).
  */
 export function compareTags(a: string, b: string): number {
   const av = parseSemver(a);
@@ -240,7 +239,32 @@ export function compareTags(a: string, b: string): number {
   if (!av.pre && bv.pre) return 1;
   if (av.pre && !bv.pre) return -1;
   if (!av.pre && !bv.pre) return 0;
-  return (av.pre ?? '').localeCompare(bv.pre ?? '');
+  return comparePrerelease(av.pre ?? '', bv.pre ?? '');
+}
+
+function comparePrerelease(a: string, b: string): number {
+  const ai = a.split('.');
+  const bi = b.split('.');
+  const len = Math.max(ai.length, bi.length);
+
+  for (let i = 0; i < len; i++) {
+    const left = ai[i];
+    const right = bi[i];
+    if (left === undefined) return -1;
+    if (right === undefined) return 1;
+    if (left === right) continue;
+
+    const leftNumeric = /^\d+$/.test(left);
+    const rightNumeric = /^\d+$/.test(right);
+    if (leftNumeric && rightNumeric) {
+      return Number(left) - Number(right);
+    }
+    if (leftNumeric) return -1;
+    if (rightNumeric) return 1;
+    return left.localeCompare(right);
+  }
+
+  return 0;
 }
 
 function parseSemver(

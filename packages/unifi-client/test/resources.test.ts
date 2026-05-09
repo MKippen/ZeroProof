@@ -261,7 +261,7 @@ describe('traffic', () => {
     const transport = v2RawHandler(
       new MockTransport(),
       '/trafficrules',
-      loadFixture('traffic-rules').data ?? []
+      (loadFixture('traffic-rules') as { data?: unknown[] }).data ?? []
     );
     const c = await loggedIn(transport);
     const rules = await c.trafficRules.list();
@@ -272,7 +272,7 @@ describe('traffic', () => {
     const transport = v2RawHandler(
       new MockTransport(),
       '/trafficroutes',
-      loadFixture('traffic-routes').data ?? []
+      (loadFixture('traffic-routes') as { data?: unknown[] }).data ?? []
     );
     const c = await loggedIn(transport);
     const routes = await c.trafficRoutes.list();

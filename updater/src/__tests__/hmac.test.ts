@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { verifyHmac } from '../index';
+import { isValidTargetRef, verifyHmac } from '../index';
 
 describe('verifyHmac', () => {
   const secret = 'test-secret-do-not-use-in-prod';
@@ -35,4 +35,24 @@ describe('verifyHmac', () => {
   it('rejects a malformed (different-length) signature', () => {
     expect(verifyHmac('{}', 'abc', secret)).toBe(false);
   });
+
+  it('rejects an empty secret', () => {
+    expect(verifyHmac('{}', sign('{}'), '')).toBe(false);
+  });
+});
+
+describe('isValidTargetRef', () => {
+  it.each(['v1.2.3', 'v1.2.3-beta.10', 'release/v1.2.3', 'origin/main', 'abc123'])(
+    'accepts %s',
+    (target) => {
+      expect(isValidTargetRef(target)).toBe(true);
+    }
+  );
+
+  it.each(['', '-main', 'feature/thing;', 'feature//thing', 'v1..2', 'main@{1}', 'main.', 'main/'])(
+    'rejects %s',
+    (target) => {
+      expect(isValidTargetRef(target)).toBe(false);
+    }
+  );
 });

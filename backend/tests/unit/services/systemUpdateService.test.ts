@@ -54,6 +54,8 @@ describe('compareTags', () => {
     ['1.1.3', 'v1.1.3', 0],   // tolerates leading-v
     ['v1.2.0', 'v1.2.0-beta.1', 1], // release > prerelease
     ['v1.2.0-beta.2', 'v1.2.0-beta.1', 1],
+    ['v1.2.0-beta.10', 'v1.2.0-beta.2', 1],
+    ['v1.2.0-alpha.2', 'v1.2.0-alpha.10', -1],
     ['v1.2.0-rc.1', 'v1.2.0-beta.5', 1], // rc > beta lexically
   ])('compareTags(%s, %s) = %s', (a, b, expected) => {
     expect(Math.sign(compareTags(a, b))).toBe(Math.sign(expected));

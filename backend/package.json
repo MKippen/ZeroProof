@@ -70,26 +70,5 @@
   },
   "engines": {
     "node": ">=20.0.0"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "bcrypt",
-      "@prisma/client",
-      "@prisma/engines",
-      "prisma",
-      "esbuild"
-    ],
-    "overrides": {
-      "ajv@<7": "6.15.0",
-      "brace-expansion@<2": "1.1.14",
-      "brace-expansion@>=2 <3": "2.1.0",
-      "flatted": "3.4.2",
-      "follow-redirects": "1.16.0",
-      "minimatch@<4": "3.1.5",
-      "minimatch@>=9 <10": "9.0.9",
-      "path-to-regexp@<0.2": "0.1.13",
-      "picomatch@<3": "2.3.2",
-      "qs": "6.15.1"
-    }
   }
 }

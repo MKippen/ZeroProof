@@ -79,10 +79,10 @@ const tailing = new Set<string>();
 function startTailing(progressPath: string, op: 'apply' | 'rollback'): void {
   // Sidecar writes progress files in /var/run/zeroproof inside its
   // container; backend mounts the same volume read-only at the same path.
-  // If the path looks bogus, fall back to PROGRESS_DIR + basename.
-  const localPath = progressPath.startsWith(PROGRESS_DIR)
-    ? progressPath
-    : path.join(PROGRESS_DIR, path.basename(progressPath));
+  // Clamp the sidecar-provided path to that shared directory. The sidecar is
+  // local and HMAC-protected, but this keeps a spoofed local service from
+  // convincing the backend to tail arbitrary host files.
+  const localPath = resolveProgressPath(progressPath);
 
   if (tailing.has(localPath)) return;
   tailing.add(localPath);
@@ -155,6 +155,23 @@ function startTailing(progressPath: string, op: 'apply' | 'rollback'): void {
       }
     }
   }, 1000);
+}
+
+function resolveProgressPath(progressPath: string): string {
+  const base = path.resolve(PROGRESS_DIR);
+  const safeName = path.basename(progressPath) || 'upgrade.log';
+  const candidate = path.resolve(
+    progressPath.startsWith(PROGRESS_DIR)
+      ? progressPath
+      : path.join(base, safeName)
+  );
+  const relative = path.relative(base, candidate);
+
+  if (relative && !relative.startsWith('..') && !path.isAbsolute(relative)) {
+    return candidate;
+  }
+
+  return path.join(base, safeName);
 }
 
 function httpJson(

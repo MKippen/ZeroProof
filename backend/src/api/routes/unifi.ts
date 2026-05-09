@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import prisma from '../../services/database';
 import { requireAuth } from '../middleware/auth';
 import { ApiResponse } from '../../types';
@@ -15,6 +16,89 @@ import logger from '../../utils/logger';
 import { discoverUniFiGateways } from '../../services/unifiConfig';
 
 const router = Router();
+
+const PortSchema = z.coerce.number().int().min(1).max(65535).default(443);
+const HostSchema = z.string().trim().min(1).max(255);
+const UsernameSchema = z.string().trim().min(1).max(255);
+const SiteSchema = z.string().trim().min(1).max(128).default('default');
+const SyncIntervalSchema = z.enum(['hourly', 'daily', 'manual']).default('manual');
+
+const TlsSchema = z.object({
+  verifySsl: z.boolean().optional(),
+  allowSelfSigned: z.boolean().optional(),
+});
+
+const LegacyConnectionTestSchema = TlsSchema.extend({
+  host: HostSchema,
+  port: PortSchema,
+  username: UsernameSchema,
+  password: z.string().optional(),
+});
+
+const LegacySettingsSchema = TlsSchema.extend({
+  host: HostSchema,
+  port: PortSchema,
+  username: UsernameSchema,
+  password: z.string().optional(),
+  autoSync: z.boolean().default(false),
+  syncInterval: SyncIntervalSchema,
+  selectedSite: SiteSchema,
+});
+
+const ConnectionCreateSchema = TlsSchema.extend({
+  name: z.string().trim().min(1).max(255),
+  host: HostSchema,
+  port: PortSchema,
+  username: UsernameSchema,
+  password: z.string().min(1),
+  siteId: SiteSchema,
+  autoSync: z.boolean().default(false),
+  syncIntervalMin: z.coerce.number().int().min(5).max(1440).default(1440),
+  canWrite: z.boolean().default(false),
+});
+
+const ConnectionPatchSchema = TlsSchema.extend({
+  name: z.string().trim().min(1).max(255).optional(),
+  host: HostSchema.optional(),
+  port: PortSchema.optional(),
+  username: UsernameSchema.optional(),
+  password: z.string().min(1).optional(),
+  siteId: z.string().trim().min(1).max(128).optional(),
+  autoSync: z.boolean().optional(),
+  syncIntervalMin: z.coerce.number().int().min(5).max(1440).optional(),
+  canWrite: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+});
+
+function resolveAllowSelfSigned(
+  input: { allowSelfSigned?: boolean; verifySsl?: boolean },
+  fallback: boolean
+): boolean {
+  if (input.allowSelfSigned !== undefined) return input.allowSelfSigned;
+  if (input.verifySsl !== undefined) return !input.verifySsl;
+  return fallback;
+}
+
+const SENSITIVE_KEY_PATTERN = /(password|passwd|passphrase|secret|token|api[_-]?key|psk|x_passphrase|radius_secret)/i;
+
+function redactSensitive(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map((item) => redactSensitive(item));
+  if (!value || typeof value !== 'object') return value;
+
+  const redacted: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+    redacted[key] = SENSITIVE_KEY_PATTERN.test(key) ? '[REDACTED]' : redactSensitive(item);
+  }
+  return redacted;
+}
+
+function sendValidationError(res: Response, message = 'Invalid UniFi request'): void {
+  const response: ApiResponse = {
+    success: false,
+    error: { code: 'VALIDATION_ERROR', message },
+  };
+  res.status(400).json(response);
+}
 
 function buildConfigForAnalysis(fullConfig: any, connectionName: string): Record<string, unknown> {
   return {
@@ -152,7 +236,7 @@ router.get('/settings', requireAuth, async (_req: Request, res: Response) => {
           port: connection.port,
           username,
           hasPassword: !!connection.passwordEnc,
-          verifySsl: true, // Not stored, default to true
+          verifySsl: !connection.allowSelfSigned,
           autoSync: connection.autoSync,
           syncInterval: connection.syncIntervalMin === 60 ? 'hourly' : connection.syncIntervalMin === 1440 ? 'daily' : 'manual',
           selectedSite: connection.siteId,
@@ -197,7 +281,8 @@ router.get('/discover', requireAuth, async (_req: Request, res: Response) => {
 // POST /api/v1/unifi/test - Test connection with provided credentials
 router.post('/test', requireAuth, async (req: Request, res: Response) => {
   try {
-    const { host, port, username, password } = req.body;
+    const parsed = LegacyConnectionTestSchema.parse(req.body);
+    const { host, port, username, password } = parsed;
 
     if (!host || !username) {
       const response: ApiResponse = {
@@ -230,10 +315,11 @@ router.post('/test', requireAuth, async (req: Request, res: Response) => {
 
     const credentials: UniFiCredentials = {
       host,
-      port: port || 443,
+      port,
       username,
       password: testPassword,
       siteId: 'default',
+      allowSelfSigned: resolveAllowSelfSigned(parsed, true),
     };
 
     const client = new UniFiClient(credentials);
@@ -265,7 +351,8 @@ router.post('/test', requireAuth, async (req: Request, res: Response) => {
 // POST /api/v1/unifi/settings - Save UniFi settings (create or update connection)
 router.post('/settings', requireAuth, async (req: Request, res: Response) => {
   try {
-    const { host, port, username, password, autoSync, syncInterval, selectedSite } = req.body;
+    const parsed = LegacySettingsSchema.parse(req.body);
+    const { host, port, username, password, autoSync, syncInterval, selectedSite } = parsed;
 
     if (!host || !username) {
       const response: ApiResponse = {
@@ -287,11 +374,12 @@ router.post('/settings', requireAuth, async (req: Request, res: Response) => {
       // Update existing connection
       const updateData: any = {
         host,
-        port: port || 443,
+        port,
         usernameEnc: encrypt(username),
         siteId: selectedSite || 'default',
         autoSync: autoSync || false,
         syncIntervalMin,
+        allowSelfSigned: resolveAllowSelfSigned(parsed, existing.allowSelfSigned),
       };
 
       if (password) {
@@ -317,13 +405,14 @@ router.post('/settings', requireAuth, async (req: Request, res: Response) => {
         data: {
           name: `UniFi Controller (${host})`,
           host,
-          port: port || 443,
+          port,
           usernameEnc: encrypt(username),
           passwordEnc: encrypt(password),
           siteId: selectedSite || 'default',
           isActive: true,
           autoSync: autoSync || false,
           syncIntervalMin,
+          allowSelfSigned: resolveAllowSelfSigned(parsed, true),
           canWrite: false,
         },
       });
@@ -335,6 +424,10 @@ router.post('/settings', requireAuth, async (req: Request, res: Response) => {
     };
     res.json(response);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      sendValidationError(res, 'Host, username, and a valid port are required');
+      return;
+    }
     logger.error('Save UniFi settings error:', error);
     const response: ApiResponse = {
       success: false,
@@ -372,6 +465,7 @@ router.post('/sync', requireAuth, async (req: Request, res: Response) => {
       username,
       password,
       siteId: site || connection.siteId,
+      allowSelfSigned: connection.allowSelfSigned,
     };
 
     // Create sync history record
@@ -624,6 +718,7 @@ router.get('/connections', requireAuth, async (_req: Request, res: Response) => 
         lastSyncAt: true,
         lastSyncStatus: true,
         lastSyncError: true,
+        allowSelfSigned: true,
         canWrite: true,
         createdAt: true,
         _count: { select: { syncHistory: true, configChanges: true } },
@@ -648,7 +743,8 @@ router.get('/connections', requireAuth, async (_req: Request, res: Response) => 
 // POST /api/v1/unifi/connections - Create new connection
 router.post('/connections', requireAuth, async (req: Request, res: Response) => {
   try {
-    const { name, host, port, username, password, siteId, autoSync, syncIntervalMin, canWrite } = req.body;
+    const parsed = ConnectionCreateSchema.parse(req.body);
+    const { name, host, port, username, password, siteId, autoSync, syncIntervalMin, canWrite } = parsed;
 
     if (!name || !host || !username || !password) {
       const response: ApiResponse = {
@@ -667,12 +763,13 @@ router.post('/connections', requireAuth, async (req: Request, res: Response) => 
       data: {
         name,
         host,
-        port: port || 443,
+        port,
         usernameEnc,
         passwordEnc,
         siteId: siteId || 'default',
         autoSync: autoSync || false,
-        syncIntervalMin: syncIntervalMin || 1440,
+        syncIntervalMin,
+        allowSelfSigned: resolveAllowSelfSigned(parsed, true),
         canWrite: canWrite || false,
       },
     });
@@ -701,12 +798,17 @@ router.post('/connections', requireAuth, async (req: Request, res: Response) => 
           isActive: connection.isActive,
           autoSync: connection.autoSync,
           syncIntervalMin: connection.syncIntervalMin,
+          allowSelfSigned: connection.allowSelfSigned,
           canWrite: connection.canWrite,
         },
       },
     };
     res.status(201).json(response);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      sendValidationError(res, 'Name, host, username, password, and a valid port are required');
+      return;
+    }
     logger.error('Create UniFi connection error:', error);
     const response: ApiResponse = {
       success: false,
@@ -739,6 +841,7 @@ router.post('/connections/:id/test', requireAuth, async (req: Request, res: Resp
       username: decrypt(connection.usernameEnc),
       password: decrypt(connection.passwordEnc),
       siteId: connection.siteId,
+      allowSelfSigned: connection.allowSelfSigned,
     };
 
     const client = new UniFiClient(credentials);
@@ -796,6 +899,7 @@ router.post('/connections/:id/sync', requireAuth, async (req: Request, res: Resp
       username: decrypt(connection.usernameEnc),
       password: decrypt(connection.passwordEnc),
       siteId: connection.siteId,
+      allowSelfSigned: connection.allowSelfSigned,
     };
 
     let client: UniFiClient | null = null;
@@ -1069,7 +1173,8 @@ router.get('/connections/:id/changes', requireAuth, async (req: Request, res: Re
 // PATCH /api/v1/unifi/connections/:id - Update connection
 router.patch('/connections/:id', requireAuth, async (req: Request, res: Response) => {
   try {
-    const { name, host, port, username, password, siteId, autoSync, syncIntervalMin, canWrite, isActive } = req.body;
+    const parsed = ConnectionPatchSchema.parse(req.body);
+    const { name, host, port, username, password, siteId, autoSync, syncIntervalMin, canWrite, isActive } = parsed;
 
     const updateData: any = {};
 
@@ -1081,6 +1186,9 @@ router.patch('/connections/:id', requireAuth, async (req: Request, res: Response
     if (syncIntervalMin !== undefined) updateData.syncIntervalMin = syncIntervalMin;
     if (canWrite !== undefined) updateData.canWrite = canWrite;
     if (isActive !== undefined) updateData.isActive = isActive;
+    if (parsed.allowSelfSigned !== undefined || parsed.verifySsl !== undefined) {
+      updateData.allowSelfSigned = resolveAllowSelfSigned(parsed, true);
+    }
 
     if (username) updateData.usernameEnc = encrypt(username);
     if (password) updateData.passwordEnc = encrypt(password);
@@ -1112,12 +1220,17 @@ router.patch('/connections/:id', requireAuth, async (req: Request, res: Response
           isActive: connection.isActive,
           autoSync: connection.autoSync,
           syncIntervalMin: connection.syncIntervalMin,
+          allowSelfSigned: connection.allowSelfSigned,
           canWrite: connection.canWrite,
         },
       },
     };
     res.json(response);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      sendValidationError(res, 'Invalid connection update');
+      return;
+    }
     logger.error('Update UniFi connection error:', error);
     const response: ApiResponse = {
       success: false,
@@ -1198,6 +1311,7 @@ router.post('/connections/:id/apply-rule', requireAuth, async (req: Request, res
       username: decrypt(connection.usernameEnc),
       password: decrypt(connection.passwordEnc),
       siteId: connection.siteId,
+      allowSelfSigned: connection.allowSelfSigned,
     };
 
     const client = new UniFiClient(credentials);
@@ -1294,6 +1408,7 @@ router.get('/debug/network-config', requireAuth, async (_req: Request, res: Resp
       username: decrypt(connection.usernameEnc),
       password: decrypt(connection.passwordEnc),
       siteId: connection.siteId,
+      allowSelfSigned: connection.allowSelfSigned,
     };
 
     const client = new UniFiClient(credentials);
@@ -1336,8 +1451,8 @@ router.get('/debug/network-config', requireAuth, async (_req: Request, res: Resp
         allNetworkConfigKeys: Array.from(allKeys).sort(),
         isolationRelatedFields,
         aclRulesCount: aclRules.length,
-        aclRules: aclRules.slice(0, 10), // First 10 ACL rules
-        sampleNetworkConfig: rawNetworkConfig[0], // Full sample for one network
+        aclRules: redactSensitive(aclRules.slice(0, 10)), // First 10 ACL rules
+        sampleNetworkConfig: redactSensitive(rawNetworkConfig[0]), // Full sample for one network
       },
     };
     res.json(response);

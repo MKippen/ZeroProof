@@ -17,8 +17,20 @@ const ChannelSchema = z.object({
   channel: z.enum(['stable', 'beta']),
 });
 
+const TargetRefSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(128)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9._/@+-]*$/)
+  .refine((value) => !value.includes('..'))
+  .refine((value) => !value.includes('@{'))
+  .refine((value) => !value.includes('//'))
+  .refine((value) => !value.endsWith('/'))
+  .refine((value) => !value.endsWith('.'));
+
 const ApplySchema = z.object({
-  target: z.string().trim().min(1).max(64).optional(),
+  target: TargetRefSchema.optional(),
   op: z.enum(['apply', 'rollback']).optional(),
 });
 

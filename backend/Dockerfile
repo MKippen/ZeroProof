@@ -10,6 +10,7 @@ RUN npm install -g pnpm
 # Workspace manifests + lockfile first (for cache-friendly install layer).
 COPY pnpm-workspace.yaml ./
 COPY pnpm-lock.yaml ./
+COPY package.json ./
 COPY backend/package.json backend/
 COPY packages/unifi-client/package.json packages/unifi-client/
 

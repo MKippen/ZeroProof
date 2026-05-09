@@ -63,22 +63,5 @@
     "vite": "^6.4.2",
     "vite-tsconfig-paths": "^6.0.5",
     "vitest": "^4.1.5"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ],
-    "overrides": {
-      "ajv@<7": "6.15.0",
-      "brace-expansion@<2": "1.1.14",
-      "brace-expansion@>=2 <3": "2.1.0",
-      "flatted": "3.4.2",
-      "lodash": "4.18.1",
-      "minimatch@<4": "3.1.5",
-      "minimatch@>=9 <10": "9.0.9",
-      "picomatch@<3": "2.3.2",
-      "picomatch@>=4 <5": "4.0.4",
-      "rollup": "4.60.2"
-    }
   }
 }
