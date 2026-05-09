@@ -16,6 +16,11 @@ dist/
 build/
 .next/
 
+# Playwright artefacts (HTML report, traces, screenshots, videos)
+frontend/playwright-report/
+frontend/test-results/
+frontend/playwright/.cache/
+
 # Logs
 *.log
 logs/

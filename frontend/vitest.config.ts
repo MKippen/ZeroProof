@@ -9,7 +9,10 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],
     include: ['**/*.{test,spec}.{ts,tsx}'],
-    exclude: ['node_modules', 'dist'],
+    // tests/e2e/* is the Playwright suite and uses @playwright/test, not
+    // vitest. Excluding here so `pnpm test` doesn't pick them up and try
+    // to run them in jsdom.
+    exclude: ['node_modules', 'dist', 'tests/e2e/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],
