@@ -4,6 +4,17 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.5] - 2026-05-08
+
+### Added
+- **One-click in-app upgrades.** Settings → General "Install update" button now drives the whole upgrade through the existing `scripts/upgrade.sh` path — no SSH required. New `updater/` sidecar service (privileged container with Docker socket access, `network_mode: host`) receives HMAC-SHA256 signed apply requests from the backend on `127.0.0.1:9090`, shells `bash scripts/upgrade.sh <target>`, streams stdout/stderr to a shared progress file the backend tails and forwards over the existing `/ws` WebSocket as `updater_progress` events. Single source of truth for upgrade orchestration: every protection in `upgrade.sh` (annotated-tag SHA dereference, bootstrap untracked-file pre-flight, `--rollback`, health polling) applies to the UI path too.
+- **Auto-rollback on failed health check.** After `upgrade.sh` exits 0, the sidecar re-polls `/health` for 90 seconds. If health doesn't recover, it triggers `scripts/upgrade.sh --rollback` automatically and broadcasts `rolledBack: true` to the UI. Same pattern as Home Assistant's recovery mode.
+- **`UPDATER_SECRET` env var.** Shared HMAC key between backend (signer) and updater (verifier). `install.sh` generates a 48-char secret on fresh installs; `.env.example` documents it; blank secret disables in-app updates entirely (CLI `scripts/upgrade.sh` remains the unconditional fallback).
+- **Frontend "Restarting…" UX.** WebSocket disconnect during an apply triggers the same UX pattern HA Supervisor uses: card transitions to "Server is restarting…", waits for the WebSocket to reconnect, refetches `/system/update`, then either lands in `done` (version moved) or `failed` (version did not move). State machine in `SystemUpdateCard`: `idle → confirming → installing → restarting → done | rolledback | failed`.
+
+### Known limitations
+- When an upgrade includes a new updater image, the sidecar gets recreated mid-run and the in-progress apply may be interrupted. The progress file is on a shared volume so the backend can still read final state after the sidecar restarts, and CLI `scripts/upgrade.sh` always works as a fallback. Throwaway-container pattern (Portainer-style) for self-update of the updater is queued for v1.1.6.
+
 ## [1.1.4] - 2026-05-08
 
 ### Added
