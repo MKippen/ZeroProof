@@ -41,6 +41,20 @@ export async function getUpdaterStatus(): Promise<unknown> {
   return httpJson('GET', '/status');
 }
 
+/**
+ * Get the running sidecar's reported version. Returns null if the sidecar
+ * isn't reachable (not configured, crashed, or pre-v1.1.6 without /version).
+ * Caller surfaces this so the UI can flag a backend/updater version mismatch.
+ */
+export async function getUpdaterVersion(): Promise<string | null> {
+  try {
+    const res = (await httpJson('GET', '/version')) as { version?: string };
+    return typeof res?.version === 'string' ? res.version : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function postApply(
   target: string | null,
   op: 'apply' | 'rollback' = 'apply'

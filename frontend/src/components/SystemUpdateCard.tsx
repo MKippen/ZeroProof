@@ -20,6 +20,10 @@ interface SystemUpdateStatus {
   notes: string | null;
   publishedAt: string | null;
   applyEnabled?: boolean;
+  versions?: {
+    backend: string;
+    updater: string | null;
+  };
   error?: string;
 }
 
@@ -234,9 +238,27 @@ export function SystemUpdateCard() {
         {/* Version + channel meta */}
         <div className="grid gap-2 text-sm">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">Current version</span>
-            <span className="font-mono">{status?.current ?? '…'}</span>
+            <span className="text-muted-foreground">Backend</span>
+            <span className="font-mono">
+              {status?.versions?.backend ?? status?.current ?? '…'}
+            </span>
           </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">Updater</span>
+            <span className="font-mono">
+              {status?.versions?.updater ?? (status?.applyEnabled ? '…' : 'not running')}
+            </span>
+          </div>
+          {status?.versions?.updater &&
+            status?.versions?.backend &&
+            status.versions.updater !== status.versions.backend && (
+              <div className="rounded-md border border-yellow-500/30 bg-yellow-500/10 p-2 text-xs text-muted-foreground">
+                <AlertTriangle className="mr-1 inline h-3 w-3 text-yellow-400" />
+                Backend and updater versions differ. The updater may have been
+                killed mid-upgrade. Re-running the upgrade should bring it back
+                in sync.
+              </div>
+            )}
           <div className="flex items-center justify-between gap-3">
             <span className="text-muted-foreground">Latest available</span>
             <span className="font-mono">
