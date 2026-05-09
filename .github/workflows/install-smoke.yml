@@ -204,3 +204,126 @@ jobs:
           # upgrade flow itself — exactly the openssl-not-found bug
           # that triggered this whole PR.
           bash scripts/upgrade.sh --check
+
+      - name: Critical-path API contract scenarios
+        run: |
+          # Tier 2 of the test strategy: hit the real running stack with
+          # the real auth flow and assert each critical route answers
+          # with the shape the frontend expects. This is what would have
+          # caught the "/system/update returns 401 to logged-in users"
+          # kind of regression.
+          set -e
+
+          BASE="https://localhost"
+          COOKIE_JAR=/tmp/zp-test-cookies
+          USERNAME="ci-admin"
+          PASSWORD="ci-test-password-32+chars-required"
+          rm -f "$COOKIE_JAR"
+
+          # Helper: extract a field from a JSON body via jq, fail loudly
+          # if missing. Usage: assert_field "$body" .data.versions.backend
+          assert_field() {
+            local body="$1"
+            local path="$2"
+            local label="$3"
+            local value
+            value=$(echo "$body" | jq -r "$path" 2>/dev/null || echo "JQ_ERROR")
+            if [ "$value" = "null" ] || [ "$value" = "JQ_ERROR" ] || [ -z "$value" ]; then
+              echo "FAIL: $label — expected $path in response, got:"
+              echo "$body" | head -c 500
+              exit 1
+            fi
+            echo "OK: $label = $value"
+          }
+
+          echo "=== 1. Setup status (unauth) ==="
+          body=$(curl -sk "$BASE/api/v1/auth/setup-status")
+          assert_field "$body" .data.initialized "setup-status responds"
+
+          echo "=== 2. Get CSRF (unauth, sets session cookie) ==="
+          body=$(curl -sk -c "$COOKIE_JAR" -b "$COOKIE_JAR" "$BASE/api/v1/auth/csrf")
+          CSRF=$(echo "$body" | jq -r .data.csrfToken)
+          [ -n "$CSRF" ] && [ "$CSRF" != "null" ] || { echo "FAIL: no CSRF token"; echo "$body"; exit 1; }
+          echo "OK: csrf token acquired"
+
+          echo "=== 3. Create admin via /setup ==="
+          body=$(curl -sk -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
+            -X POST "$BASE/api/v1/auth/setup" \
+            -H "Content-Type: application/json" \
+            -H "X-CSRF-Token: $CSRF" \
+            -d "{\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\"}")
+          assert_field "$body" .data.user.username "admin created"
+
+          echo "=== 4. Re-acquire CSRF post-setup (session rotated) ==="
+          body=$(curl -sk -c "$COOKIE_JAR" -b "$COOKIE_JAR" "$BASE/api/v1/auth/csrf")
+          CSRF=$(echo "$body" | jq -r .data.csrfToken)
+          [ -n "$CSRF" ] && [ "$CSRF" != "null" ] || { echo "FAIL: no post-setup CSRF"; exit 1; }
+
+          echo "=== 5. /auth/me confirms session is authenticated ==="
+          body=$(curl -sk -b "$COOKIE_JAR" "$BASE/api/v1/auth/me")
+          assert_field "$body" .data.user.username "authenticated as user"
+
+          echo "=== 6. /system/update returns dual-version + applyEnabled ==="
+          body=$(curl -sk -b "$COOKIE_JAR" "$BASE/api/v1/system/update")
+          assert_field "$body" .data.current "system update has current version"
+          assert_field "$body" .data.versions.backend "system update has backend version"
+          # updater version may be null if sidecar isn't reachable, but the
+          # field MUST exist (not undefined).
+          if ! echo "$body" | jq -e 'has("data") and (.data | has("versions") and (.versions | has("updater")))' >/dev/null; then
+            echo "FAIL: /system/update missing data.versions.updater field"
+            echo "$body" | head -c 500
+            exit 1
+          fi
+          echo "OK: /system/update has versions.updater field (value: $(echo "$body" | jq -r .data.versions.updater))"
+          assert_field "$body" .data.applyEnabled "applyEnabled present"
+          assert_field "$body" .data.channel "release channel reported"
+
+          echo "=== 7. PUT /system/update/channel persists Beta selection ==="
+          body=$(curl -sk -b "$COOKIE_JAR" \
+            -X PUT "$BASE/api/v1/system/update/channel" \
+            -H "Content-Type: application/json" \
+            -H "X-CSRF-Token: $CSRF" \
+            -d '{"channel":"beta"}')
+          channel=$(echo "$body" | jq -r .data.channel)
+          [ "$channel" = "beta" ] || { echo "FAIL: channel did not flip to beta, got: $channel"; echo "$body"; exit 1; }
+          echo "OK: channel switched to beta"
+
+          # Reset to stable so subsequent tests aren't sticky.
+          curl -sk -b "$COOKIE_JAR" \
+            -X PUT "$BASE/api/v1/system/update/channel" \
+            -H "Content-Type: application/json" \
+            -H "X-CSRF-Token: $CSRF" \
+            -d '{"channel":"stable"}' >/dev/null
+
+          echo "=== 8. /unifi/discover responds with candidates array ==="
+          body=$(curl -sk -b "$COOKIE_JAR" "$BASE/api/v1/unifi/discover")
+          if ! echo "$body" | jq -e '.data.candidates | type == "array"' >/dev/null; then
+            echo "FAIL: /unifi/discover did not return candidates array"
+            echo "$body" | head -c 500
+            exit 1
+          fi
+          echo "OK: /unifi/discover returns candidates array"
+
+          echo "=== 9. /dns-proxy/discover responds with candidates array ==="
+          body=$(curl -sk -b "$COOKIE_JAR" "$BASE/api/v1/dns-proxy/discover")
+          if ! echo "$body" | jq -e '.data.candidates | type == "array"' >/dev/null; then
+            echo "FAIL: /dns-proxy/discover did not return candidates array"
+            echo "$body" | head -c 500
+            exit 1
+          fi
+          echo "OK: /dns-proxy/discover returns candidates array"
+
+          echo "=== 10. /unifi/settings on a fresh install reports unconfigured ==="
+          body=$(curl -sk -b "$COOKIE_JAR" "$BASE/api/v1/unifi/settings")
+          configured=$(echo "$body" | jq -r .data.configured)
+          [ "$configured" = "false" ] || { echo "FAIL: fresh install reports configured=$configured"; echo "$body"; exit 1; }
+          echo "OK: /unifi/settings reports unconfigured"
+
+          echo "=== 11. /dns-proxy/settings on a fresh install reports unconfigured ==="
+          body=$(curl -sk -b "$COOKIE_JAR" "$BASE/api/v1/dns-proxy/settings")
+          configured=$(echo "$body" | jq -r .data.configured)
+          [ "$configured" = "false" ] || { echo "FAIL: fresh install reports configured=$configured"; echo "$body"; exit 1; }
+          echo "OK: /dns-proxy/settings reports unconfigured"
+
+          echo ""
+          echo "All 11 critical-path API scenarios passed."
