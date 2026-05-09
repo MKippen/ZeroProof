@@ -498,17 +498,27 @@ jobs:
             sleep 5
           done
 
-      - name: Verify the upgrade actually moved the version
+      - name: Verify the upgrade landed on the PR commit
         if: steps.baseline.outputs.baseline != ''
         run: |
           set -e
+          # Compare commit SHAs, not CHANGELOG versions — most PRs don't
+          # bump CHANGELOG (only the release-stamp PRs do), so a "version
+          # must move" check would false-positive on every feature PR.
+          # The real signal is: did upgrade.sh leave the worktree on the
+          # commit we asked for?
+          current_sha=$(git rev-parse HEAD)
+          target_sha="${{ steps.baseline.outputs.pr_sha }}"
           new_v=$(grep -m1 -oE '## \[[0-9]+\.[0-9]+\.[0-9]+[^]]*\]' CHANGELOG.md | sed -E 's/## \[(.*)\]/v\1/')
-          echo "Upgraded reports: $new_v"
-          echo "Was on:           ${{ steps.baseline_version.outputs.baseline_version }}"
-          if [ "$new_v" = "${{ steps.baseline_version.outputs.baseline_version }}" ]; then
-            echo "Version did not move — upgrade.sh likely no-op'd or short-circuited incorrectly."
+          echo "After upgrade — commit: $current_sha"
+          echo "                version: $new_v"
+          echo "Asked for:      commit: $target_sha"
+          echo "Was on (commit): $(git rev-parse "${{ steps.baseline.outputs.baseline }}^{commit}")"
+          if [ "$current_sha" != "$target_sha" ]; then
+            echo "Worktree did not land on target commit — upgrade.sh failed silently or short-circuited."
             exit 1
           fi
+          echo "Worktree is on the requested PR commit."
 
       - name: Verify upgraded /health still answers
         if: steps.baseline.outputs.baseline != ''
