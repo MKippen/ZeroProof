@@ -27,6 +27,13 @@ export interface DnsProxySettingsInput {
   username?: string;
   password?: string;
   pollingEnabled: boolean;
+  /**
+   * How often to poll AdGuard's query log when pollingEnabled is true.
+   * Range 30..3600. Falls back to DEFAULT_POLLING_INTERVAL_SEC if unset
+   * or out of range. Stored as seconds in the DB so the scheduler can
+   * use the value verbatim.
+   */
+  pollingIntervalSec?: number;
   retentionDays: number;
 }
 
@@ -379,6 +386,14 @@ export async function saveDnsProxySettings(input: DnsProxySettingsInput): Promis
   }
 
   const retentionDays = Math.min(MAX_RETENTION_DAYS, Math.max(1, input.retentionDays || DEFAULT_RETENTION_DAYS));
+  // Clamp polling interval to a sane range. 30s is the floor (anything
+  // below that hammers AdGuard); 1 hour (3600s) is the ceiling for the
+  // dropdown — operators who want longer can set retention higher and
+  // accept the staleness, but we don't want the picker to imply "weekly"
+  // is a reasonable choice.
+  const requestedInterval = input.pollingIntervalSec ?? DEFAULT_POLLING_INTERVAL_SEC;
+  const pollingIntervalSec = Math.min(3600, Math.max(30, Math.floor(requestedInterval)));
+
   const data = {
     host: input.host.trim(),
     port: input.port,
@@ -387,7 +402,7 @@ export async function saveDnsProxySettings(input: DnsProxySettingsInput): Promis
     usernameEnc: encrypt(username),
     passwordEnc: passwordEnc || encrypt(''),
     pollingEnabled: input.pollingEnabled,
-    pollingIntervalSec: DEFAULT_POLLING_INTERVAL_SEC,
+    pollingIntervalSec,
     retentionDays,
     isActive: true,
   };

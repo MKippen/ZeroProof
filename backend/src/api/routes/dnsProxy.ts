@@ -34,6 +34,10 @@ const SettingsSchema = z.object({
   username: z.string().trim().max(255).optional().default(''),
   password: z.string().optional(),
   pollingEnabled: z.boolean().default(false),
+  // Sync interval in seconds. Backend clamps to 30..3600. Frontend
+  // exposes a fixed picker (1m, 5m, 15m, hourly), but other clients
+  // can pass arbitrary values.
+  pollingIntervalSec: z.coerce.number().int().min(30).max(3600).optional(),
   retentionDays: z.coerce.number().int().min(1).max(30).default(7),
 });
 

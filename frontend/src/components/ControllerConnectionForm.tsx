@@ -65,7 +65,11 @@ export function ControllerConnectionForm() {
   const [showUnifiPassword, setShowUnifiPassword] = useState(false);
   const [verifySsl, setVerifySsl] = useState(false);
   const [autoSync, setAutoSync] = useState(false);
-  const [syncInterval, setSyncInterval] = useState<'hourly' | 'daily' | 'manual'>('manual');
+  // Default to hourly to match the DNS proxy form. Unified default
+  // across the dashboard — operators can pick daily if they prefer
+  // less-frequent sync, but they don't get a "manual" no-op state by
+  // accident the way the old default did.
+  const [syncInterval, setSyncInterval] = useState<'hourly' | 'daily' | 'manual'>('hourly');
   const [selectedSite, setSelectedSite] = useState('default');
   const [availableSites, setAvailableSites] = useState<UniFiSite[]>([]);
   const [connectionTested, setConnectionTested] = useState(false);
@@ -503,8 +507,8 @@ export function ControllerConnectionForm() {
                     </div>
                     {autoSync && (
                       <div className="space-y-2 pl-7">
-                        <Label>Sync Interval</Label>
-                        <div className="flex gap-2">
+                        <Label>Sync interval</Label>
+                        <div className="flex flex-wrap gap-2">
                           {(['hourly', 'daily'] as const).map((interval) => (
                             <Button
                               key={interval}
@@ -516,10 +520,13 @@ export function ControllerConnectionForm() {
                                 syncInterval === interval && 'bg-orange-600 hover:bg-orange-500'
                               )}
                             >
-                              {interval.charAt(0).toUpperCase() + interval.slice(1)}
+                              {interval === 'hourly' ? 'Hourly' : 'Daily'}
                             </Button>
                           ))}
                         </div>
+                        <p className="text-xs text-muted-foreground">
+                          Hourly is the default. UniFi configuration changes are slow-moving — daily is fine for most homelabs.
+                        </p>
                       </div>
                     )}
                   </div>
