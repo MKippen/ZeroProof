@@ -463,24 +463,25 @@ jobs:
           echo "baseline_version=$baseline_v" >> "$GITHUB_OUTPUT"
           echo "Baseline reports: $baseline_v"
 
-      - name: Return to PR HEAD (the upgrade.sh from the new code will fetch + apply)
+      - name: Make the PR commit reachable for upgrade.sh
         if: steps.baseline.outputs.baseline != ''
         run: |
-          # Fetch fully so upgrade.sh can resolve the PR SHA
+          # The baseline's `git fetch --tags` only knows about released
+          # tags; it doesn't see this PR's HEAD. Fetch it explicitly so
+          # `git checkout PR_SHA` inside upgrade.sh succeeds.
           git fetch origin "${{ steps.baseline.outputs.pr_sha }}" --no-tags
-          # Don't checkout yet — that's what upgrade.sh will do. But we
-          # need the new upgrade.sh on disk to run it. Pull just that
-          # file from the PR head.
-          git show "${{ steps.baseline.outputs.pr_sha }}:scripts/upgrade.sh" > /tmp/upgrade-from-pr.sh
-          chmod +x /tmp/upgrade-from-pr.sh
 
-      - name: Run the PR's upgrade.sh against the live baseline
+      - name: Run the baseline's upgrade.sh against the PR HEAD
         if: steps.baseline.outputs.baseline != ''
         run: |
           set -e
-          # Use the upgrade.sh from the PR (not from the baseline tag),
-          # since that's the exact script we want to validate.
-          bash /tmp/upgrade-from-pr.sh "${{ steps.baseline.outputs.pr_sha }}"
+          # Note: this runs the BASELINE version's upgrade.sh (not the
+          # PR's), targeting the PR commit. This mirrors the real user
+          # flow: when an upgrade lands, the on-disk script is whatever
+          # version they're already on. The PR's upgrade.sh changes get
+          # tested in the *next* release's Tier 4 (when this PR's
+          # version becomes the baseline).
+          bash scripts/upgrade.sh "${{ steps.baseline.outputs.pr_sha }}"
 
       - name: Wait for the upgraded stack to come back
         if: steps.baseline.outputs.baseline != ''
