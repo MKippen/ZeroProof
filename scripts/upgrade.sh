@@ -40,6 +40,12 @@ cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
 PREV_FILE="$ROOT/.zeroproof-prev-version"
 
+# Pin the compose project name so upgrades target the same stack regardless
+# of which directory this script is invoked from. Without this, running from
+# the updater sidecar (cwd /repo) creates a parallel "repo" project and
+# conflicts with the existing "zeroproof" containers by name.
+export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-zeroproof}"
+
 CHECK_ONLY=false
 ROLLBACK=false
 TARGET=""
@@ -122,6 +128,22 @@ TARGET_SHA="$(git rev-parse "$TARGET^{commit}")"
 TARGET_DESC="$(git describe --tags --always "$TARGET_SHA" 2>/dev/null || echo "$TARGET_SHA")"
 
 if [[ "$CURRENT_SHA" == "$TARGET_SHA" ]]; then
+    # Drift check: a previous upgrade run may have completed `git checkout`
+    # but failed during `docker compose up` (network/port conflicts, image
+    # build error, etc.). In that state git points at the new version while
+    # the running containers still serve the old one — and a naive retry
+    # short-circuits here as "already done", leaving the user stuck.
+    # If we can read the running backend's CHANGELOG and it doesn't match
+    # what's checked out, converge by re-running `compose up` instead.
+    WORKTREE_VERSION="$(grep -m1 -E '^## \[[^]]+\]' CHANGELOG.md 2>/dev/null | sed -E 's/^## \[([^]]+)\].*/\1/' || true)"
+    RUNNING_VERSION="$(docker exec zeroproof-backend grep -m1 -E '^## \[[^]]+\]' /repo/CHANGELOG.md 2>/dev/null | sed -E 's/^## \[([^]]+)\].*/\1/' || true)"
+    if [[ -n "$WORKTREE_VERSION" && -n "$RUNNING_VERSION" && "$WORKTREE_VERSION" != "$RUNNING_VERSION" ]]; then
+        echo -e "${YELLOW}Worktree is at $TARGET_DESC ($WORKTREE_VERSION) but running stack reports $RUNNING_VERSION.${NC}"
+        echo "Converging containers to match the worktree..."
+        $COMPOSE up -d --build
+        echo -e "${GREEN}${BOLD}Converged to $TARGET_DESC.${NC}"
+        exit 0
+    fi
     echo -e "${GREEN}Already on $TARGET_DESC. Nothing to do.${NC}"
     exit 0
 fi
@@ -152,6 +174,26 @@ if [[ -t 0 ]]; then
 fi
 
 echo "$CURRENT_SHA" > "$PREV_FILE"
+
+# Restore-on-failure: if anything between the upcoming `git checkout` and
+# a successful `compose up` exits non-zero, restore the worktree to where
+# we started. Without this, a partial failure leaves git ahead of the
+# running stack and a naive retry short-circuits as "already on target"
+# (the drift check above is a backstop, not a substitute).
+UPGRADE_DONE=false
+restore_on_failure() {
+    local code=$?
+    if [[ $code -ne 0 && "$UPGRADE_DONE" != "true" ]]; then
+        local current
+        current="$(git rev-parse HEAD 2>/dev/null || echo '')"
+        if [[ -n "$current" && "$current" != "$CURRENT_SHA" ]]; then
+            echo ""
+            echo -e "${YELLOW}Upgrade failed — restoring worktree to $CURRENT_DESC so a retry can proceed.${NC}"
+            git checkout --quiet "$CURRENT_SHA" 2>/dev/null || true
+        fi
+    fi
+}
+trap restore_on_failure EXIT
 
 # Pre-flight: untracked files that also exist in $TARGET will make
 # `git checkout` abort with "untracked working tree files would be
@@ -279,6 +321,10 @@ fi
 
 echo "Rebuilding + restarting containers (this may take a few minutes)..."
 $COMPOSE up -d --build
+# Past the dangerous window: containers are now serving the new version.
+# A health-check failure below is recoverable with --rollback; we don't
+# want the EXIT trap to clobber the worktree on top of that.
+UPGRADE_DONE=true
 
 echo ""
 echo "Waiting for backend health (timeout 90s)..."
