@@ -4,6 +4,21 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.8] - 2026-05-08
+
+### Added
+- **UniFi `allowSelfSigned` is now a first-class config field.** New `UniFiConnection.allowSelfSigned` column (idempotent migration `20260509000100_add_unifi_allow_self_signed`) defaults `true` to preserve current behavior. UI grows a "Verify SSL certificate" checkbox in both the legacy Settings → UniFi Configuration form and the new multi-connection form, defaults to unchecked (matches DB).
+- **Sidecar hardening.** `POST /apply` returns `503` when `UPDATER_SECRET` is unset (instead of silently failing the empty-secret HMAC check). Request body capped at 16KB by default (`UPDATER_MAX_BODY_BYTES` env), `413` on overflow. Target ref allowlist (`isValidTargetRef`) rejects shell-meaningful strings before they reach `upgrade.sh`'s args. `/healthz` reports `configured: !!SECRET` for diagnostics. Sidecar test suite expanded from 5 to 19 tests.
+- **Backend `updaterService` hardening.** New `resolveProgressPath()` clamps the sidecar-reported progress file path under `PROGRESS_DIR` so even a spoofed sidecar can't trick the backend into tailing arbitrary host files.
+- **Dedicated CI job for the updater sidecar.** Sidecar tests now run on every PR. `@uguard/unifi-client` typecheck + test added to the main CI job.
+
+### Fixed
+- **`compareTags()` semver pre-release ordering was lexicographic.** `beta.10` was sorting before `beta.2`. Now follows proper semver: numeric-vs-numeric is numeric, mixed prefers numeric, otherwise lexicographic. Pinned by new unit tests.
+- **`updater/package-lock.json` was being silently gitignored** by the workspace-level `package-lock.json` rule. Allowlisted via `!updater/package-lock.json` so `npm ci` works in CI.
+
+### Changed
+- **pnpm overrides consolidated into root `package.json`.** Per-project overrides previously duplicated in `backend/package.json` and `frontend/package.json` are now in a single workspace root file. Fewer drift opportunities.
+
 ## [1.1.7] - 2026-05-08
 
 ### Fixed
