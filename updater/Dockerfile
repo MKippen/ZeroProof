@@ -25,6 +25,10 @@ RUN apk add --no-cache bash git curl docker-cli docker-cli-compose
 WORKDIR /app
 COPY --from=build /build/dist ./dist
 COPY --from=build /build/package.json ./package.json
+# Same source-of-truth pattern as the backend image: copy CHANGELOG.md
+# in so /version reads the running release from the same file the
+# backend reads, no parallel version tracking.
+COPY CHANGELOG.md ./CHANGELOG.md
 
 # Run as root inside the container — we need to talk to the Docker socket
 # and write into /var/run/zeroproof. The socket itself is the privilege

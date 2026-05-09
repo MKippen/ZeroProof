@@ -194,6 +194,51 @@ echo ""
 echo "Checking out $TARGET..."
 git checkout --quiet "$TARGET"
 
+# Sync .env with any new keys introduced by the target version.
+# Releases sometimes add new required env vars (UPDATER_SECRET in v1.1.5,
+# for example). Existing operators upgraded their working tree but their
+# .env stayed frozen at the older shape, so containers crashloop on the
+# missing var. We merge new keys here:
+#   - For keys matching *_SECRET / *_PASSWORD / *_KEY we generate a
+#     value (so the user doesn't have to think about it).
+#   - For other missing keys we append them blank with a comment so the
+#     operator can fill them in. We never overwrite a key that already
+#     exists in .env — the operator's value wins.
+if [[ -f .env && -f .env.example ]]; then
+    NEW_KEYS=()
+    while IFS= read -r line; do
+        # Skip comments + blank lines + lines without =
+        [[ "$line" =~ ^# || -z "$line" || ! "$line" =~ = ]] && continue
+        key="${line%%=*}"
+        # Only consider non-VITE_ keys (frontend env is build-time, not runtime)
+        [[ "$key" =~ ^VITE_ ]] && continue
+        # Already present in .env (uncommented form)?
+        if grep -qE "^[[:space:]]*${key}=" .env; then
+            continue
+        fi
+        NEW_KEYS+=("$key")
+    done < .env.example
+
+    if (( ${#NEW_KEYS[@]} > 0 )); then
+        echo ""
+        echo "New env vars introduced by $TARGET — appending to .env:"
+        {
+            echo ""
+            echo "# Added automatically during upgrade to $TARGET"
+        } >> .env
+        for key in "${NEW_KEYS[@]}"; do
+            if [[ "$key" =~ (_SECRET|_PASSWORD|_KEY)$ ]]; then
+                value="$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 48)"
+                echo "$key=$value" >> .env
+                echo "  + $key (generated)"
+            else
+                echo "$key=" >> .env
+                echo "  + $key (blank — set manually if needed)"
+            fi
+        done
+    fi
+fi
+
 echo "Rebuilding + restarting containers (this may take a few minutes)..."
 $COMPOSE up -d --build
 

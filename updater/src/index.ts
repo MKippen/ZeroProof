@@ -25,9 +25,30 @@
  */
 import http from 'node:http';
 import { spawn } from 'node:child_process';
-import { promises as fs, createWriteStream } from 'node:fs';
+import { promises as fs, createWriteStream, readFileSync } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+
+// Read the running version from CHANGELOG.md (same source of truth as
+// the backend) so a single CHANGELOG entry stamps both components on
+// release. The Dockerfile copies CHANGELOG.md into /app/CHANGELOG.md.
+// We resolve eagerly so /version is a hot endpoint with no fs hits.
+const SIDECAR_VERSION: string = (() => {
+  for (const candidate of [
+    path.join(__dirname, '..', 'CHANGELOG.md'),
+    '/app/CHANGELOG.md',
+    '/repo/CHANGELOG.md',
+  ]) {
+    try {
+      const text = readFileSync(candidate, 'utf8');
+      const m = text.match(/^##\s*\[(\d+\.\d+\.\d+(?:[-+][\w.]+)?)\]/m);
+      if (m) return `v${m[1]}`;
+    } catch {
+      // try next candidate
+    }
+  }
+  return 'unknown';
+})();
 
 const PORT = Number(process.env.UPDATER_PORT ?? 9090);
 const HOST = process.env.UPDATER_HOST ?? '127.0.0.1';
@@ -66,6 +87,12 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && req.url === '/healthz') {
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ ok: true, active: !!active }));
+      return;
+    }
+
+    if (req.method === 'GET' && req.url === '/version') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ version: SIDECAR_VERSION }));
       return;
     }
 

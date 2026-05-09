@@ -9,7 +9,7 @@ import {
   setReleaseChannel,
   type ReleaseChannel,
 } from '../../services/systemUpdateService';
-import { isUpdaterConfigured, postApply } from '../../services/updaterService';
+import { getUpdaterVersion, isUpdaterConfigured, postApply } from '../../services/updaterService';
 
 const router = Router();
 
@@ -28,10 +28,25 @@ const ApplySchema = z.object({
 // the body so the UI can show "couldn't check" without throwing.
 router.get('/update', requireAuth, async (_req: Request, res: Response) => {
   try {
-    const status = await getUpdateStatus();
+    const [status, updaterVersion] = await Promise.all([
+      getUpdateStatus(),
+      isUpdaterConfigured() ? getUpdaterVersion() : Promise.resolve(null),
+    ]);
     const response: ApiResponse = {
       success: true,
-      data: { ...status, applyEnabled: isUpdaterConfigured() },
+      data: {
+        ...status,
+        applyEnabled: isUpdaterConfigured(),
+        // Surface both versions so the UI can flag drift. They should
+        // always match in a healthy install — the sidecar reads the same
+        // CHANGELOG.md as the backend at build time. A mismatch usually
+        // means the sidecar was killed mid-upgrade and stayed on the
+        // old image (the v1.1.5 known limitation we're fixing in v1.1.7).
+        versions: {
+          backend: status.current,
+          updater: updaterVersion,
+        },
+      },
     };
     res.json(response);
   } catch (error) {
