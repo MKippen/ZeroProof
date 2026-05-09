@@ -4,6 +4,11 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.7] - 2026-05-08
+
+### Fixed
+- **UniFi auto-sync settings were trapped after initial save.** The auto-sync controls in Settings → UniFi Configuration were gated on local-only `connectionTested` state that resets to `false` on every page reload and on every field edit. Once a connection was saved, getting back to the sync toggle required a fresh successful test — but since the saved password is masked (`(saved)` placeholder), re-testing meant re-entering credentials the operator didn't remember anymore. Fix: also expose the panel when `isConfigured`. The saved connection has been validated server-side, so the controls are safe.
+
 ## [1.1.6] - 2026-05-08
 
 ### Fixed
