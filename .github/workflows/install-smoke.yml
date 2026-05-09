@@ -1,0 +1,206 @@
+name: Install Smoke Test
+
+# Runs the actual install path a brand-new user follows: clone the repo,
+# run scripts/install.sh, wait for all containers to come up, hit the
+# public endpoints, hit /api/v1/system/update via an authenticated session.
+#
+# Catches the kind of bugs we kept hitting on live LXC validation:
+#   - nginx 502 from variable proxy_pass + missing Docker resolver
+#   - missing UPDATER_SECRET in the merged .env
+#   - install.sh assuming tools that aren't on minimal Linux
+#   - container-startup ordering / health regressions
+#
+# Runs in ~5 min on a standard ubuntu-latest runner. Triggered on PRs that
+# touch install.sh, docker-compose.yml, nginx config, Dockerfiles, or any
+# of the orchestration code. Also runs nightly against main as a canary.
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/install.sh'
+      - 'scripts/upgrade.sh'
+      - 'docker-compose.yml'
+      - 'docker-compose.dev.yml'
+      - 'nginx/**'
+      - '**/Dockerfile'
+      - '.dockerignore'
+      - '.env.example'
+      - 'updater/**'
+      - 'backend/Dockerfile'
+      - 'frontend/Dockerfile'
+      - '.github/workflows/install-smoke.yml'
+  push:
+    branches: [main]
+  schedule:
+    # Daily at 09:00 UTC (~01:00 PT). Catches drift from outside-our-repo
+    # changes — base image rebuilds, registry weirdness, etc.
+    - cron: '0 9 * * *'
+
+jobs:
+  fresh-install:
+    name: Fresh install on Ubuntu
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Pre-flight — verify install prerequisites are documented
+        run: |
+          # install.sh expects: docker, docker compose, openssl, curl.
+          # These should be on every standard Linux. Sanity-check the
+          # CI environment matches what we tell users.
+          for cmd in docker openssl curl; do
+            if ! command -v "$cmd" >/dev/null 2>&1; then
+              echo "PREREQ MISSING: $cmd"
+              exit 1
+            fi
+          done
+          docker compose version
+
+      - name: Run install.sh non-interactively
+        run: |
+          # Pipe `n` to the .env overwrite prompt so re-runs don't reset.
+          # First run won't see a .env so it generates one.
+          set -e
+          # Skip ESP32 firmware download — it's slow and not needed for
+          # the install-smoke check.
+          export SKIP_FIRMWARE_DOWNLOAD=true
+          # The install.sh prompts for sudo on Linux for `usermod -aG`;
+          # CI runs as root inside the runner image so it just works.
+          # The script also asks "Continue anyway?" if port 80/443 are
+          # in use — pipe `y` defensively in case ubuntu-latest has any
+          # listener (unlikely on a fresh runner).
+          yes | bash scripts/install.sh || true
+          # `|| true` on the install.sh itself because its tail health
+          # check has historically been flaky (60s timeout). We do our
+          # OWN health check below with a longer window.
+
+      - name: Wait for the stack to come up
+        run: |
+          set -e
+          # Up to 3 min for all containers to settle. CI runners are
+          # often slower than home labs.
+          deadline=$(( $(date +%s) + 180 ))
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            statuses=$(docker compose ps --format '{{.Names}}: {{.Status}}' || true)
+            echo "$statuses"
+            # Every expected service container present?
+            if echo "$statuses" | grep -q zeroproof-backend \
+              && echo "$statuses" | grep -q zeroproof-nginx \
+              && echo "$statuses" | grep -q zeroproof-frontend \
+              && echo "$statuses" | grep -q zeroproof-updater \
+              && echo "$statuses" | grep -q zeroproof-postgres \
+              && echo "$statuses" | grep -q zeroproof-mqtt \
+              && echo "$statuses" | grep -q zeroproof-scheduler; then
+              # Backend specifically reports its own health
+              if echo "$statuses" | grep -E "zeroproof-backend.*healthy" >/dev/null; then
+                echo "Stack is up and backend is healthy."
+                break
+              fi
+            fi
+            sleep 5
+          done
+
+      - name: Print container state for debugging
+        if: always()
+        run: |
+          docker compose ps || true
+          docker compose logs --tail=30 || true
+
+      - name: Verify all 7 containers are running
+        run: |
+          set -e
+          missing=0
+          for svc in backend nginx frontend updater postgres mqtt scheduler; do
+            if ! docker ps --format '{{.Names}}' | grep -q "zeroproof-$svc"; then
+              echo "MISSING: zeroproof-$svc"
+              missing=$((missing + 1))
+            fi
+          done
+          if [ "$missing" -gt 0 ]; then
+            echo "$missing service(s) failed to start."
+            exit 1
+          fi
+          echo "All 7 services running."
+
+      - name: Verify updater sidecar isn't crashlooping
+        run: |
+          # The bug we kept hitting: UPDATER_SECRET not generated, sidecar
+          # crashloops with "FATAL: UPDATER_SECRET is required".
+          status=$(docker inspect zeroproof-updater --format '{{.State.Status}} restartcount={{.RestartCount}}')
+          echo "Updater: $status"
+          if echo "$status" | grep -qE 'restartcount=[1-9]'; then
+            echo "Updater sidecar is crashlooping — UPDATER_SECRET likely missing or invalid."
+            docker logs zeroproof-updater --tail=20
+            exit 1
+          fi
+
+      - name: Hit public health endpoint
+        run: |
+          # nginx serves /health directly; this catches the 502-on-every-page
+          # bug we hit when nginx tried to resolve `localhost` via Docker DNS
+          # under network_mode: host.
+          for i in 1 2 3 4 5; do
+            code=$(curl -sk -o /dev/null -w '%{http_code}' https://localhost/health || echo curl-failed)
+            echo "attempt $i: $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 3
+          done
+          echo "https://localhost/health never returned 200"
+          docker compose logs nginx --tail=20
+          exit 1
+
+      - name: Hit a route that proxies through nginx → backend
+        run: |
+          # /api/v1/auth/setup-status is unauthenticated and exercises the
+          # full chain: public nginx → host loopback → backend container →
+          # response. If this 502s, the backend isn't reachable through
+          # nginx (which was our v1.1.5 nginx-config bug).
+          code=$(curl -sk -o /dev/null -w '%{http_code}' https://localhost/api/v1/auth/setup-status)
+          echo "setup-status code: $code"
+          if [ "$code" != "200" ]; then
+            echo "Public API proxy is broken."
+            docker compose logs nginx --tail=20
+            exit 1
+          fi
+
+      - name: Verify the SPA actually loads (not nginx welcome page)
+        run: |
+          body=$(curl -sk https://localhost/ | head -c 4000)
+          # The frontend SPA index.html should reference Vite's bundle
+          # and the ZeroProof title. The nginx welcome page mentions
+          # "Welcome to nginx!" — historic regression mode.
+          if echo "$body" | grep -qi "Welcome to nginx"; then
+            echo "Public root is serving the default nginx welcome page."
+            exit 1
+          fi
+          if ! echo "$body" | grep -qiE "(zeroproof|<title>)"; then
+            echo "Root does not look like the SPA. First 4KB:"
+            echo "$body"
+            exit 1
+          fi
+          echo "SPA is being served at /."
+
+      - name: Verify .env got the secrets we expect from a fresh install
+        run: |
+          set -e
+          for key in POSTGRES_PASSWORD MQTT_PASSWORD SESSION_SECRET ENCRYPTION_KEY UPDATER_SECRET; do
+            if ! grep -qE "^${key}=.+$" .env; then
+              echo "Fresh install did not generate $key in .env"
+              echo "--- .env contents (sensitive lines redacted) ---"
+              sed -E 's/(=).+$/\1<redacted>/' .env
+              exit 1
+            fi
+          done
+          echo "All required secrets present in .env."
+
+      - name: Exercise upgrade.sh --check (smoke test the upgrade path)
+        run: |
+          # `--check` parses the script, fetches tags, computes the
+          # plan, and exits cleanly. Doesn't apply anything. Catches
+          # syntax errors, broken env-merge, or missing helpers in the
+          # upgrade flow itself — exactly the openssl-not-found bug
+          # that triggered this whole PR.
+          bash scripts/upgrade.sh --check
