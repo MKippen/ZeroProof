@@ -4,6 +4,14 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.11] - 2026-05-09
+
+### Added
+- **Tier 3 e2e tests — Playwright baseline.** New `@playwright/test` dev dep, `frontend/playwright.config.ts`, and the first browser-driven test: `fresh install setup flow`. Drives a real browser through `/` → `/setup` redirect → admin form fill → `/dashboard` auto-login. That single test exercises SPA serving, SetupGate routing, SetupPage form validation, CSRF, session-stamping auto-login, and the dashboard render — all paths that have regressed before. Wired into the existing `Install Smoke Test` workflow as the final step, sharing the install-smoke fixture. HTML report + traces uploaded as a 14-day artifact on test failure.
+
+### Fixed
+- **`pnpm/action-setup` failed in CI** with "Multiple versions of pnpm specified" because both the root `package.json` `packageManager: pnpm@10.28.2` field and an explicit `version: 10` in the action were set. Dropped the explicit version; the action now reads from `packageManager`.
+
 ## [1.1.10] - 2026-05-09
 
 ### Added
