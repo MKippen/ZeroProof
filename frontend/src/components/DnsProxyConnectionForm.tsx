@@ -39,8 +39,23 @@ interface DnsProxyFormState {
   username: string;
   password: string;
   pollingEnabled: boolean;
+  /** Sync interval in seconds. UI exposes 60 / 300 / 900 / 3600. */
+  pollingIntervalSec: number;
   retentionDays: string;
 }
+
+// Shared interval options for both the DNS proxy and UniFi connection
+// forms — same vocabulary across the dashboard. DNS proxy needs faster
+// options than UniFi because the AdGuard query log rotates faster, but
+// both default to hourly and use the same pill-style picker.
+const DNS_PROXY_INTERVALS: Array<{ label: string; seconds: number }> = [
+  { label: 'Every 1 minute', seconds: 60 },
+  { label: 'Every 5 minutes', seconds: 300 },
+  { label: 'Every 15 minutes', seconds: 900 },
+  { label: 'Hourly', seconds: 3600 },
+];
+
+const DEFAULT_POLLING_INTERVAL_SEC = 3600; // hourly — matches UniFi default
 
 const defaultForm: DnsProxyFormState = {
   host: '',
@@ -50,6 +65,7 @@ const defaultForm: DnsProxyFormState = {
   username: '',
   password: '',
   pollingEnabled: true,
+  pollingIntervalSec: DEFAULT_POLLING_INTERVAL_SEC,
   retentionDays: '7',
 };
 
@@ -70,6 +86,9 @@ function settingsToForm(settings: DnsProxySettings | null): DnsProxyFormState {
     username: settings.username,
     password: '',
     pollingEnabled: settings.pollingEnabled,
+    // If the saved value isn't one of our presets (e.g. legacy 60s
+    // installs), the picker still highlights the closest match below.
+    pollingIntervalSec: settings.pollingIntervalSec || DEFAULT_POLLING_INTERVAL_SEC,
     retentionDays: String(settings.retentionDays),
   };
 }
@@ -140,6 +159,7 @@ export function DnsProxyConnectionForm() {
       username: form.username.trim(),
       password: form.password || undefined,
       pollingEnabled: form.pollingEnabled,
+      pollingIntervalSec: form.pollingIntervalSec || DEFAULT_POLLING_INTERVAL_SEC,
       retentionDays: Number(form.retentionDays) || 7,
     }),
     [form]
@@ -351,7 +371,8 @@ export function DnsProxyConnectionForm() {
             </div>
           </div>
 
-          <div className="grid gap-3 rounded-md border border-border/60 p-3 sm:grid-cols-2">
+          {/* TLS options — separate from sync settings */}
+          <div className="grid gap-3 rounded-md border border-border/60 p-3 sm:grid-cols-1">
             <label className="flex items-center gap-3 text-sm">
               <input
                 type="checkbox"
@@ -361,17 +382,8 @@ export function DnsProxyConnectionForm() {
               />
               Use HTTPS
             </label>
-            <label className="flex items-center gap-3 text-sm">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-border"
-                checked={form.pollingEnabled}
-                onChange={(event) => setForm((current) => ({ ...current, pollingEnabled: event.target.checked }))}
-              />
-              Poll every 60 seconds
-            </label>
             {form.useHttps && (
-              <label className="flex items-start gap-3 text-sm sm:col-span-2">
+              <label className="flex items-start gap-3 text-sm">
                 <input
                   type="checkbox"
                   className="mt-1 h-4 w-4 rounded border-border"
@@ -387,6 +399,48 @@ export function DnsProxyConnectionForm() {
                   </span>
                 </span>
               </label>
+            )}
+          </div>
+
+          {/* Sync settings — same shape as UniFi → Configuration */}
+          <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-4">
+            <label className="flex items-center gap-3 text-sm">
+              <input
+                type="checkbox"
+                id="dns-proxy-auto-sync"
+                checked={form.pollingEnabled}
+                onChange={(event) => setForm((current) => ({ ...current, pollingEnabled: event.target.checked }))}
+                className="h-4 w-4 rounded border-border bg-background"
+              />
+              <span className="font-normal cursor-pointer">Enable automatic sync</span>
+            </label>
+            {form.pollingEnabled && (
+              <div className="space-y-2 pl-7">
+                <Label>Sync interval</Label>
+                <div className="flex flex-wrap gap-2">
+                  {DNS_PROXY_INTERVALS.map((option) => (
+                    <Button
+                      key={option.seconds}
+                      type="button"
+                      size="sm"
+                      variant={form.pollingIntervalSec === option.seconds ? 'default' : 'outline'}
+                      onClick={() =>
+                        setForm((current) => ({ ...current, pollingIntervalSec: option.seconds }))
+                      }
+                      className={
+                        form.pollingIntervalSec === option.seconds
+                          ? 'bg-orange-600 hover:bg-orange-500'
+                          : ''
+                      }
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Hourly is the default. Pick a faster interval if your dashboard needs near-realtime DNS visibility — AdGuard's query log rotates, so very long intervals can miss queries.
+                </p>
+              </div>
             )}
           </div>
 
