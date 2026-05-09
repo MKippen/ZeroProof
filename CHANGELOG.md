@@ -4,6 +4,11 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.12] - 2026-05-09
+
+### Added
+- **Tier 4 e2e tests — cross-version upgrade.** New parallel CI job that installs the latest released tag, then runs the baseline's `scripts/upgrade.sh` targeting the PR HEAD commit. Asserts the upgrade left the worktree on the requested commit and `/health` still answers, and the updater sidecar didn't crashloop. Mirrors the actual user upgrade path: the on-disk script is whatever version they're already on. PR-introduced `upgrade.sh` changes get caught in the *next* release's Tier 4 cycle — so every release validates the previous release's upgrade path before its own changes ever ship. Completes the four-tier testing scaffolding (install smoke, API contracts, Playwright UI, cross-version upgrade).
+
 ## [1.1.11] - 2026-05-09
 
 ### Added
