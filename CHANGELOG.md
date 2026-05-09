@@ -4,6 +4,16 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.9] - 2026-05-08
+
+### Fixed
+- **In-app upgrade crashed inside the updater sidecar with `openssl: command not found`.** v1.1.6 added an env-merge step to `scripts/upgrade.sh` that called `openssl rand`, but the sidecar's Alpine image only has `bash git curl docker-cli docker-cli-compose` — no openssl. Replaced with `head -c 64 /dev/urandom | base64 | tr ... | head -c 48`. Pure POSIX, works in any minimal container.
+- **env-merge appended noise to `.env`** like `DATABASE_URL=`, `MQTT_BROKER=`, `MQTT_PORT=`, `PORT=` — keys that docker-compose hardcodes in its `environment:` blocks rather than reading from .env. Now scoped to keys docker-compose actually interpolates via `${KEY}` syntax.
+- **`DEFAULT_ADMIN_PASSWORD` would have been auto-generated** by the `*_PASSWORD$` regex match in env-merge — but it's intentionally optional (the `/setup` flow is the design). Replaced the regex with an explicit allowlist: `POSTGRES_PASSWORD`, `MQTT_PASSWORD`, `SESSION_SECRET`, `ENCRYPTION_KEY`, `UPDATER_SECRET`. Future required secrets opt in by name.
+
+### Added
+- **Install Smoke Test GitHub Action** that runs the actual brand-new-user install path on every PR touching orchestration code: `./scripts/install.sh` → wait for all 7 containers healthy → hit `/health` and `/api/v1/auth/setup-status` through nginx → confirm SPA loads (not the nginx welcome page) → confirm all required secrets generated → smoke `./scripts/upgrade.sh --check`. Catches the kind of bugs we kept hitting on live LXC validation: nginx 502, missing UPDATER_SECRET, container ordering, install.sh assuming missing tools. Also runs nightly against `main` as a canary.
+
 ## [1.1.8] - 2026-05-08
 
 ### Added
