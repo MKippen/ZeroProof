@@ -2,6 +2,9 @@
 node_modules/
 .pnpm-store/
 package-lock.json
+# Updater sidecar uses npm (not the pnpm workspace) so its lockfile is
+# the source of truth for `npm ci` in CI. Allowlist it back in.
+!updater/package-lock.json
 
 # Environment
 .env
