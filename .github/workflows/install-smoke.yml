@@ -28,6 +28,11 @@ on:
       - 'updater/**'
       - 'backend/Dockerfile'
       - 'frontend/Dockerfile'
+      # Prisma migrations are load-bearing for Tier 4: any schema change
+      # needs to survive a cross-version upgrade against a populated DB,
+      # not just `prisma migrate deploy` on an empty test fixture.
+      - 'backend/prisma/migrations/**'
+      - 'backend/prisma/schema.prisma'
       - '.github/workflows/install-smoke.yml'
   push:
     branches: [main]
