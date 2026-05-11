@@ -9,7 +9,6 @@ import { useToast } from '@/hooks/useToast';
 import api from '@/api/client';
 
 export function LoginPage() {
-  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -21,9 +20,9 @@ export function LoginPage() {
     e.preventDefault();
     setLoading(true);
 
-    const response = await api.post<{ user: { id: number; username: string }; mustChangePassword: boolean }>(
+    const response = await api.post<{ user: { id: number }; mustChangePassword: boolean }>(
       '/auth/login',
-      { username, password }
+      { password }
     );
 
     setLoading(false);
@@ -37,7 +36,7 @@ export function LoginPage() {
 
       toast({
         title: "It's fine. (We checked.)",
-        description: `Welcome back, ${response.data.user.username}`,
+        description: 'Welcome back.',
       });
 
       navigate('/dashboard');
@@ -45,7 +44,7 @@ export function LoginPage() {
       toast({
         variant: 'destructive',
         title: 'Access denied',
-        description: response.error?.message || 'Invalid credentials',
+        description: response.error?.message || 'Invalid password',
       });
     }
   };
@@ -152,24 +151,6 @@ export function LoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-sm font-medium flex items-center gap-2">
-                  <Shield className="h-3.5 w-3.5 text-orange-500" />
-                  Username
-                </Label>
-                <Input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter username"
-                  required
-                  autoComplete="username"
-                  autoFocus
-                  className="bg-background/50 border-border/50 focus:border-orange-500/50 focus:ring-orange-500/20 font-mono h-11"
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm font-medium flex items-center gap-2">
                   <Lock className="h-3.5 w-3.5 text-orange-500" />
                   Password
@@ -183,6 +164,7 @@ export function LoginPage() {
                     placeholder="Enter password"
                     required
                     autoComplete="current-password"
+                    autoFocus
                     className="bg-background/50 border-border/50 focus:border-orange-500/50 focus:ring-orange-500/20 font-mono pr-10 h-11"
                   />
                   <Button

@@ -31,20 +31,23 @@ const passwordChangeLimiter = rateLimit({
 });
 
 // POST /api/v1/auth/login
+//
+// ZeroProof is single-admin: setup is gated on an empty user table and the
+// UI never exposes a way to add a second user. We treat the User row as a
+// singleton and authenticate by password alone — no username to remember,
+// no username to type wrong, no username field to design around.
 router.post('/login', loginLimiter, validate(LoginSchema), async (req: Request, res: Response) => {
   try {
-    const { username, password } = req.body;
+    const { password } = req.body;
 
-    const user = await prisma.user.findUnique({
-      where: { username },
-    });
+    const user = await prisma.user.findFirst({ orderBy: { id: 'asc' } });
 
     if (!user) {
       const response: ApiResponse = {
         success: false,
-        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid username or password' },
+        error: { code: 'NOT_INITIALIZED', message: 'No admin account exists yet. Complete setup first.' },
       };
-      res.status(401).json(response);
+      res.status(409).json(response);
       return;
     }
 
@@ -52,7 +55,7 @@ router.post('/login', loginLimiter, validate(LoginSchema), async (req: Request, 
     if (!validPassword) {
       const response: ApiResponse = {
         success: false,
-        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid username or password' },
+        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid password' },
       };
       res.status(401).json(response);
       return;
@@ -65,7 +68,7 @@ router.post('/login', loginLimiter, validate(LoginSchema), async (req: Request, 
     });
 
     // Create session
-    const sessionUser: SessionUser = { id: user.id, username: user.username };
+    const sessionUser: SessionUser = { id: user.id };
     req.session.userId = user.id;
     req.session.user = sessionUser;
 
@@ -90,7 +93,7 @@ router.post('/login', loginLimiter, validate(LoginSchema), async (req: Request, 
       },
     });
 
-    logger.info(`User ${username} logged in`);
+    logger.info(`Admin logged in (user id ${user.id})`);
 
     const response: ApiResponse = {
       success: true,
@@ -143,7 +146,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.session.userId },
-      select: { id: true, username: true, mustChangePassword: true, lastLogin: true },
+      select: { id: true, mustChangePassword: true, lastLogin: true },
     });
 
     if (!user) {
@@ -227,7 +230,7 @@ router.post(
         },
       });
 
-      logger.info(`User ${user.username} changed password`);
+      logger.info(`Admin password changed (user id ${user.id})`);
 
       const response: ApiResponse = { success: true };
       res.json(response);
@@ -285,29 +288,7 @@ router.post('/setup', setupLimiter, async (req: Request, res: Response) => {
       return;
     }
 
-    const username = String(req.body?.username ?? '').trim();
     const password = String(req.body?.password ?? '');
-
-    if (!username || username.length < 3 || username.length > 64) {
-      const response: ApiResponse = {
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Username must be between 3 and 64 characters' },
-      };
-      res.status(400).json(response);
-      return;
-    }
-
-    if (!/^[A-Za-z0-9._-]+$/.test(username)) {
-      const response: ApiResponse = {
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Username may only contain letters, numbers, dot, underscore, or hyphen',
-        },
-      };
-      res.status(400).json(response);
-      return;
-    }
 
     if (!password || password.length < 12) {
       const response: ApiResponse = {
@@ -321,19 +302,18 @@ router.post('/setup', setupLimiter, async (req: Request, res: Response) => {
     const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     const user = await prisma.user.create({
       data: {
-        username,
         passwordHash: hash,
         mustChangePassword: false,
       },
-      select: { id: true, username: true },
+      select: { id: true },
     });
 
-    logger.info(`First-run setup completed; created admin user "${user.username}"`);
+    logger.info(`First-run setup completed; created admin (user id ${user.id})`);
 
     // Auto-login the just-created admin: stamp the session and persist it
     // before responding so the frontend can route straight to the dashboard
     // instead of bouncing through the login page.
-    const sessionUser: SessionUser = { id: user.id, username: user.username };
+    const sessionUser: SessionUser = { id: user.id };
     req.session.userId = user.id;
     req.session.user = sessionUser;
     await new Promise<void>((resolve, reject) => {
@@ -347,7 +327,7 @@ router.post('/setup', setupLimiter, async (req: Request, res: Response) => {
       });
     });
 
-    const response: ApiResponse<{ user: { id: number; username: string } }> = {
+    const response: ApiResponse<{ user: { id: number } }> = {
       success: true,
       data: { user },
     };
@@ -396,13 +376,12 @@ export async function initializeDefaultUser(): Promise<void> {
   const hash = await bcrypt.hash(seedPassword, BCRYPT_ROUNDS);
   await prisma.user.create({
     data: {
-      username: 'admin',
       passwordHash: hash,
       mustChangePassword: true,
     },
   });
 
-  logger.info('Created seed admin user from DEFAULT_ADMIN_PASSWORD (username: admin)');
+  logger.info('Created seed admin from DEFAULT_ADMIN_PASSWORD');
   logger.warn('⚠️  Change the seed admin password after first login.');
 }
 

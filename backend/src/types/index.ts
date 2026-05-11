@@ -16,25 +16,18 @@ export interface ApiError {
 // Auth types
 export interface SessionUser {
   id: number;
-  username: string;
 }
 
 // Express type augmentations are in types/express.d.ts
 
 // Zod Schemas for validation
 export const LoginSchema = z.object({
-  username: z.string().min(3).max(50),
   password: z.string().min(8).max(100),
 });
 
 export const ChangePasswordSchema = z.object({
   currentPassword: z.string().min(8),
   newPassword: z.string().min(8).max(100),
-});
-
-export const CreateUserSchema = z.object({
-  username: z.string().min(3).max(50),
-  password: z.string().min(8).max(100),
 });
 
 export const StartTestSchema = z.object({

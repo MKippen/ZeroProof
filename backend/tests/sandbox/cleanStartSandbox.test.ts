@@ -66,7 +66,6 @@ describe('Sandbox Clean-Start Harness', () => {
     expect(unauthRules.status).toBe(401);
 
     const login = await agent.post('/api/v1/auth/login').send({
-      username: 'admin',
       password: adminPassword,
     });
     expect(login.status).toBe(200);

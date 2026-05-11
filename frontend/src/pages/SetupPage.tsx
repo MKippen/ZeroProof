@@ -11,12 +11,6 @@ import api from '@/api/client';
 const MIN_PASSWORD_LENGTH = 12;
 
 export function SetupPage() {
-  // Default to "admin" so the form is immediately submittable once both
-  // password fields are filled. Users who want a different username can
-  // still edit the field; defaulting matches what 99% of installs end up
-  // with anyway and avoids the dead-button trap when "admin" looks
-  // pre-filled (it was just a placeholder before).
-  const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -28,31 +22,23 @@ export function SetupPage() {
   const passwordTooShort = password.length > 0 && password.length < MIN_PASSWORD_LENGTH;
   const passwordsMismatch =
     confirmPassword.length > 0 && password !== confirmPassword;
-  const usernameInvalid =
-    username.length > 0 && !/^[A-Za-z0-9._-]{3,64}$/.test(username);
 
   const canSubmit =
-    !!username &&
-    !usernameInvalid &&
     password.length >= MIN_PASSWORD_LENGTH &&
     password === confirmPassword &&
     !submitting;
 
   // What's blocking submit, in priority order. Surfaced beneath the button
   // when it's disabled so the user isn't left guessing which field is wrong.
-  const submitBlocker = !username
-    ? 'Enter a username to continue.'
-    : usernameInvalid
-      ? '3–64 characters: letters, numbers, dot, underscore, hyphen.'
-      : password.length === 0
-        ? 'Choose a password.'
-        : passwordTooShort
-          ? `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
-          : confirmPassword.length === 0
-            ? 'Confirm your password.'
-            : passwordsMismatch
-              ? 'Passwords do not match.'
-              : null;
+  const submitBlocker = password.length === 0
+    ? 'Choose a password.'
+    : passwordTooShort
+      ? `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
+      : confirmPassword.length === 0
+        ? 'Confirm your password.'
+        : passwordsMismatch
+          ? 'Passwords do not match.'
+          : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,9 +46,9 @@ export function SetupPage() {
 
     setSubmitting(true);
 
-    const response = await api.post<{ user: { id: number; username: string } }>(
+    const response = await api.post<{ user: { id: number } }>(
       '/auth/setup',
-      { username, password }
+      { password }
     );
 
     setSubmitting(false);
@@ -76,7 +62,7 @@ export function SetupPage() {
       setMustChangePassword(false);
       toast({
         title: 'Admin account created',
-        description: `Welcome, ${response.data.user.username}.`,
+        description: 'Welcome to ZeroProof.',
       });
       navigate('/dashboard');
     } else if (response.error?.code === 'ALREADY_INITIALIZED') {
@@ -125,28 +111,11 @@ export function SetupPage() {
           className="space-y-4 rounded-xl border border-border/50 bg-background/40 backdrop-blur-md p-6"
         >
           <div className="space-y-2">
-            <Label htmlFor="setup-username">Username</Label>
-            <Input
-              id="setup-username"
-              autoFocus
-              autoComplete="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="admin"
-              className="font-mono"
-            />
-            {usernameInvalid && (
-              <p className="text-xs text-red-400">
-                3-64 characters, letters/numbers/dot/underscore/hyphen only.
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="setup-password">Password</Label>
             <div className="relative">
               <Input
                 id="setup-password"
+                autoFocus
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="new-password"
                 value={password}

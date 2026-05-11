@@ -4,6 +4,14 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.15] - 2026-05-11
+
+### Changed
+- **Login and setup are now password-only.** ZeroProof is single-admin by design — `/auth/setup` is gated on an empty user table and there's no UI to add a second user — yet the login form asked for a username every time, and the setup form asked you to pick one up front. The username field was effectively dead UX (every install ended up with `admin`) and a small friction point on every login. Both forms are now password-only; the backend authenticates against the singleton `User` row by `id`. `/auth/login` returns `409 NOT_INITIALIZED` instead of `401` when called on a truly fresh install, so the frontend can route to `/setup` instead of showing a generic "invalid password" message.
+
+### Removed
+- **`username` column on the `User` table.** Dropped via migration `20260511000100_drop_user_username` (also drops the `User_username_key` unique index). Existing password hashes and audit-log foreign keys are preserved — only the username field goes away. `SessionUser`, `LoginSchema`, and the frontend `User` type all lose the field. Existing operators don't need to do anything; the migration runs as part of the in-app upgrade.
+
 ## [1.1.14] - 2026-05-09
 
 ### Fixed
