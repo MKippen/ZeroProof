@@ -3,7 +3,6 @@ import 'express-serve-static-core';
 
 interface SessionUser {
   id: number;
-  username: string;
 }
 
 declare module 'express-session' {

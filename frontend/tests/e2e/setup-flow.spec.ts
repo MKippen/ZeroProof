@@ -26,10 +26,9 @@ import { test, expect } from '@playwright/test';
  *   - In-app upgrade click → progress log → "Restarting..." UX
  */
 test.describe('fresh install setup flow', () => {
-  // Each Playwright run is currently scheduled against a dedicated
-  // install-smoke fixture. We pick a unique-but-valid admin per run so
-  // re-runs against the same stack don't collide with an existing user.
-  const username = `e2e-${Date.now()}`;
+  // As of v1.1.15 setup is password-only — ZeroProof is single-admin by
+  // design, so the username field is gone. Tier 2 may have created the
+  // admin first; if so this test skips cleanly (see /login fallback below).
   const password = 'playwright-e2e-setup-password-32+';
 
   test('redirects to /setup, creates admin, lands on /dashboard', async ({ page }) => {
@@ -45,12 +44,6 @@ test.describe('fresh install setup flow', () => {
     }
 
     await expect(page.getByRole('heading', { name: /Welcome to ZeroProof/i })).toBeVisible();
-
-    // Username defaults to "admin" per the v1.1.2 form-trap fix; clear
-    // and type our unique value.
-    const usernameInput = page.locator('#setup-username');
-    await usernameInput.click();
-    await usernameInput.fill(username);
 
     await page.locator('#setup-password').fill(password);
     await page.locator('#setup-password-confirm').fill(password);

@@ -24,7 +24,6 @@ async function resetDatabase(): Promise<void> {
 describe('Fresh Install Experience', () => {
   const app = createServer();
   const agent = request.agent(app);
-  const setupUsername = 'mike';
   const setupPassword = 'CorrectHorseBattery42!';
 
   beforeAll(async () => {
@@ -55,26 +54,18 @@ describe('Fresh Install Experience', () => {
 
   it('refuses login before setup has been completed', async () => {
     const login = await request(app).post('/api/v1/auth/login').send({
-      username: 'admin',
       password: 'admin123!',
     });
-    expect(login.status).toBe(401);
+    // No admin yet → 409 NOT_INITIALIZED so the frontend can route to /setup
+    // rather than show a generic "invalid password" message.
+    expect(login.status).toBe(409);
     expect(login.body.success).toBe(false);
+    expect(login.body.error.code).toBe('NOT_INITIALIZED');
   });
 
   it('rejects setup with weak password', async () => {
     const res = await request(app).post('/api/v1/auth/setup').send({
-      username: setupUsername,
       password: 'short',
-    });
-    expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('VALIDATION_ERROR');
-  });
-
-  it('rejects setup with invalid username characters', async () => {
-    const res = await request(app).post('/api/v1/auth/setup').send({
-      username: 'has spaces',
-      password: setupPassword,
     });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
@@ -82,12 +73,11 @@ describe('Fresh Install Experience', () => {
 
   it('completes setup and creates the admin user', async () => {
     const res = await request(app).post('/api/v1/auth/setup').send({
-      username: setupUsername,
       password: setupPassword,
     });
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.user.username).toBe(setupUsername);
+    expect(res.body.data.user.id).toBeGreaterThan(0);
   });
 
   it('reports initialized=true after setup', async () => {
@@ -98,7 +88,6 @@ describe('Fresh Install Experience', () => {
 
   it('refuses to run setup a second time', async () => {
     const res = await request(app).post('/api/v1/auth/setup').send({
-      username: 'someone-else',
       password: 'AnotherStrongP@ss123',
     });
     expect(res.status).toBe(409);
@@ -107,7 +96,6 @@ describe('Fresh Install Experience', () => {
 
   it('logs in with the credentials chosen during setup', async () => {
     const login = await agent.post('/api/v1/auth/login').send({
-      username: setupUsername,
       password: setupPassword,
     });
     expect(login.status).toBe(200);

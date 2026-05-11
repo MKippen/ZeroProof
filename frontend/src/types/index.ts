@@ -242,7 +242,6 @@ export interface DnsProxyAnalytics {
 
 export interface User {
   id: number;
-  username: string;
   mustChangePassword?: boolean;
   lastLogin?: string;
 }

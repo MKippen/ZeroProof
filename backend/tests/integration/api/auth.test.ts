@@ -9,20 +9,20 @@ const createTestApp = () => {
 
   // Mock auth routes for testing
   app.post('/api/v1/auth/login', (req, res) => {
-    const { username, password } = req.body;
+    const { password } = req.body;
 
-    if (!username || !password) {
+    if (!password) {
       return res.status(400).json({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Username and password required' },
+        error: { code: 'VALIDATION_ERROR', message: 'Password required' },
       });
     }
 
-    if (username === 'admin' && password === 'admin123!') {
+    if (password === 'admin123!') {
       return res.status(200).json({
         success: true,
         data: {
-          user: { id: 1, username: 'admin' },
+          user: { id: 1 },
           mustChangePassword: false,
         },
       });
@@ -30,7 +30,7 @@ const createTestApp = () => {
 
     return res.status(401).json({
       success: false,
-      error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' },
+      error: { code: 'UNAUTHORIZED', message: 'Invalid password' },
     });
   });
 
@@ -65,28 +65,28 @@ describeIntegration('Auth API', () => {
   });
 
   describe('POST /api/v1/auth/login', () => {
-    it('should login with valid credentials', async () => {
+    it('should login with valid password', async () => {
       const response = await request(server)
         .post('/api/v1/auth/login')
-        .send({ username: 'admin', password: 'admin123!' })
+        .send({ password: 'admin123!' })
         .expect('Content-Type', /json/)
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.user.username).toBe('admin');
+      expect(response.body.data.user.id).toBe(1);
     });
 
-    it('should reject invalid credentials', async () => {
+    it('should reject invalid password', async () => {
       const response = await request(server)
         .post('/api/v1/auth/login')
-        .send({ username: 'admin', password: 'wrongpassword' })
+        .send({ password: 'wrongpassword' })
         .expect(401);
 
       expect(response.body.success).toBe(false);
       expect(response.body.error.code).toBe('UNAUTHORIZED');
     });
 
-    it('should require username and password', async () => {
+    it('should require a password', async () => {
       const response = await request(server)
         .post('/api/v1/auth/login')
         .send({})
@@ -94,15 +94,6 @@ describeIntegration('Auth API', () => {
 
       expect(response.body.success).toBe(false);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
-    });
-
-    it('should reject missing password', async () => {
-      const response = await request(server)
-        .post('/api/v1/auth/login')
-        .send({ username: 'admin' })
-        .expect(400);
-
-      expect(response.body.success).toBe(false);
     });
   });
 

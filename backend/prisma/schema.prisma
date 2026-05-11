@@ -9,9 +9,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ZeroProof is single-admin by design — there's no UI for additional users
+// and /auth/setup is gated on an empty table. We keep this model as a
+// singleton row holding the password hash; identification is by `id` only.
 model User {
   id                 Int        @id @default(autoincrement())
-  username           String     @unique
   passwordHash       String
   mustChangePassword Boolean    @default(true)
   createdAt          DateTime   @default(now())
