@@ -4,6 +4,20 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.16] - 2026-05-13
+
+### Fixed
+- **Upgrade aborted with `Your local changes to scripts/upgrade.sh would be overwritten by checkout`** when a tracked file had been hot-patched on the host (via SCP, an editor, or anything that wrote bytes without committing). The bug was visible in the wild during the v1.1.15 rollout: the 2026-05-09 SCP'd `COMPOSE_PROJECT_NAME` fix left `scripts/upgrade.sh` dirty, and every subsequent `git checkout v1.1.X` bailed with git's raw stderr. New preflight in `scripts/upgrade.sh`:
+  - For each locally-modified tracked file, compare the working-tree bytes to what the target tag would install. **If equal** — the local edit is redundant — silently discard it (`git checkout HEAD -- <file>`) and continue. This is the SCP-hotfix shape and now auto-resolves.
+  - **If different** — refuse upgrade with each path named, plus the exact `git checkout HEAD -- <file>` command to discard each one, plus a mention of the new `--force-clean` flag.
+- **Upgrade aborted with `Conflict. The container name "/zeroproof-mqtt" is already in use`** when a stopped container from a *different* compose project (typically the legacy `repo_*` project from before `COMPOSE_PROJECT_NAME` was pinned) held one of our hardcoded `container_name:` values. The v1.1.14 fix only resolved the parallel-project case; orphans outliving a botched run still wedged every retry. `scripts/upgrade.sh` now scans `docker-compose.yml` for declared `container_name:` values before every `compose up` and removes any matching container whose `com.docker.compose.project` label is *not* ours. Containers with no compose-project label are surfaced as a warning, not auto-removed — those look operator-managed and silently nuking them would be a different class of bug.
+
+### Added
+- **`--force-clean` flag on `scripts/upgrade.sh`**: discards locally-modified tracked files that differ from the target instead of refusing. Documented in `--help` output. Intended for operators who've reviewed the diff and want to proceed.
+- **Two new CI jobs in `install-smoke.yml`** that prevent regression of both fixes above:
+  - `worktree-drift` — unit-style: three scenarios (refuse + named file, `--force-clean` succeeds, redundant edit auto-discards) executed against the PR's `upgrade.sh` in `--check` mode.
+  - `orphan-cleanup` — end-to-end: installs the previous release, seeds a stopped container labelled `com.docker.compose.project=ci-foreign-project` named `zeroproof-mqtt`, then runs the PR's `upgrade.sh` and asserts the orphan was removed transparently and `/health` still answers.
+
 ## [1.1.15] - 2026-05-11
 
 ### Changed

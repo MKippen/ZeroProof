@@ -557,3 +557,229 @@ jobs:
         run: |
           docker compose ps || true
           docker compose logs --tail=50 || true
+
+  worktree-drift:
+    name: upgrade.sh handles dirty worktree
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    # Unit-style test of the dirty-tracked-file preflight added after
+    # the May-2026 incident where a SCP'd hot-patch to scripts/upgrade.sh
+    # left the worktree dirty, and `git checkout <tag>` bailed with a
+    # raw stderr dump. Three scenarios:
+    #   1. Local edit matches target byte-for-byte → auto-discard.
+    #   2. Local edit genuinely differs → refuse with exit 2 + named file.
+    #   3. Same as (2) but with --force-clean → succeed.
+    # All three run against the PR's upgrade.sh (copied over the baseline
+    # tag's copy) in --check mode so we never reach docker compose.
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Pick a baseline tag and a file that differs from HEAD
+        id: pick
+        run: |
+          baseline=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)
+          if [ -z "$baseline" ]; then
+            echo "No release tags — skipping (first release of repo)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          # Prefer a small, predictable file. CHANGELOG.md always differs
+          # between releases.
+          file="CHANGELOG.md"
+          git diff --name-only "$baseline"..HEAD -- "$file" | grep -q "$file" \
+            || file=$(git diff --name-only "$baseline"..HEAD | head -n 1)
+          [ -n "$file" ] || { echo "PR has no file-level changes from baseline?"; exit 1; }
+          echo "baseline=$baseline" >> "$GITHUB_OUTPUT"
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+          echo "head=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "Will test against baseline=$baseline, file=$file"
+
+      - name: Stage baseline worktree with PR's upgrade.sh
+        if: steps.pick.outputs.skip != 'true'
+        run: |
+          # The PR's NEW upgrade.sh is the code under test. Copy it aside,
+          # check out baseline, swap PR's upgrade.sh back in. This matches
+          # how the hardening will reach users: through *this* release's
+          # upgrade.sh, run by the *previous* release's worktree state.
+          cp scripts/upgrade.sh /tmp/upgrade.sh.pr
+          git checkout --detach "${{ steps.pick.outputs.baseline }}"
+          cp /tmp/upgrade.sh.pr scripts/upgrade.sh
+          # Help upgrade.sh resolve the PR SHA without a network hop.
+          git fetch --no-tags origin "${{ steps.pick.outputs.head }}" 2>/dev/null || true
+
+      - name: Scenario 1 — refuse with named file on genuine local edit
+        if: steps.pick.outputs.skip != 'true'
+        run: |
+          set +e
+          echo "STRAY LOCAL EDIT — CI worktree-drift test" >> "${{ steps.pick.outputs.file }}"
+          output=$(bash scripts/upgrade.sh --check "${{ steps.pick.outputs.head }}" 2>&1)
+          code=$?
+          echo "$output"
+          if [ "$code" != "2" ]; then echo "FAIL: expected exit 2, got $code"; exit 1; fi
+          grep -qF "${{ steps.pick.outputs.file }}" <<< "$output" \
+            || { echo "FAIL: file not surfaced in refuse message"; exit 1; }
+          grep -qF "force-clean" <<< "$output" \
+            || { echo "FAIL: didn't mention --force-clean override"; exit 1; }
+          echo "OK: dirty-file refuse path works"
+          git checkout HEAD -- "${{ steps.pick.outputs.file }}"
+
+      - name: Scenario 2 — --force-clean discards and continues
+        if: steps.pick.outputs.skip != 'true'
+        run: |
+          set +e
+          echo "STRAY LOCAL EDIT — CI worktree-drift test" >> "${{ steps.pick.outputs.file }}"
+          output=$(bash scripts/upgrade.sh --check --force-clean "${{ steps.pick.outputs.head }}" 2>&1)
+          code=$?
+          echo "$output"
+          if [ "$code" != "0" ]; then echo "FAIL: expected exit 0 with --force-clean, got $code"; exit 1; fi
+          grep -qF "force-clean" <<< "$output" \
+            || { echo "FAIL: didn't log force-clean discard"; exit 1; }
+          echo "OK: --force-clean path works"
+          git checkout HEAD -- "${{ steps.pick.outputs.file }}" 2>/dev/null || true
+
+      - name: Scenario 3 — redundant local edit (matches target) auto-discarded
+        if: steps.pick.outputs.skip != 'true'
+        run: |
+          set +e
+          # Write target's bytes into the file at baseline — the local
+          # "edit" is now exactly what target would install. This is the
+          # SCP-hotfix shape the script was built for.
+          git show "${{ steps.pick.outputs.head }}:${{ steps.pick.outputs.file }}" \
+            > "${{ steps.pick.outputs.file }}"
+          output=$(bash scripts/upgrade.sh --check "${{ steps.pick.outputs.head }}" 2>&1)
+          code=$?
+          echo "$output"
+          if [ "$code" != "0" ]; then echo "FAIL: expected exit 0, got $code"; exit 1; fi
+          grep -qE "(Would )?[Dd]iscard.*${{ steps.pick.outputs.file }}.*redundant" <<< "$output" \
+            || { echo "FAIL: didn't recognize edit as redundant"; exit 1; }
+          echo "OK: redundant-edit auto-discard works"
+
+  orphan-cleanup:
+    name: upgrade.sh removes orphan containers before compose up
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    # Reproduces the May-2026 LXC failure where a leftover container named
+    # `zeroproof-mqtt` from an old compose project blocked every subsequent
+    # `compose up` with "container name already in use". We seed a fake
+    # foreign-project container with one of our hardcoded container_names
+    # and assert that upgrade.sh removes it transparently and the upgrade
+    # completes. Same shape as the cross-version-upgrade job, plus the
+    # orphan seeding.
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Pick baseline tag + PR SHA
+        id: baseline
+        run: |
+          tag=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)
+          if [ -z "$tag" ]; then
+            echo "No baseline tag — skipping."
+            echo "baseline=" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "baseline=$tag" >> "$GITHUB_OUTPUT"
+          echo "pr_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Pre-flight prereqs
+        if: steps.baseline.outputs.baseline != ''
+        run: |
+          for cmd in docker openssl curl jq; do
+            command -v "$cmd" >/dev/null 2>&1 || { echo "MISSING: $cmd"; exit 1; }
+          done
+          docker compose version
+
+      - name: Install at baseline
+        if: steps.baseline.outputs.baseline != ''
+        run: |
+          set -e
+          git checkout --detach "${{ steps.baseline.outputs.baseline }}"
+          export SKIP_FIRMWARE_DOWNLOAD=true
+          yes | bash scripts/install.sh || true
+
+      - name: Wait for baseline stack to be healthy
+        if: steps.baseline.outputs.baseline != ''
+        run: |
+          set -e
+          deadline=$(( $(date +%s) + 180 ))
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            if docker compose ps --format '{{.Names}}: {{.Status}}' | grep -qE "zeroproof-backend.*healthy"; then
+              echo "Baseline healthy."; break
+            fi
+            sleep 5
+          done
+
+      - name: Seed an orphan container with our hardcoded name
+        if: steps.baseline.outputs.baseline != ''
+        run: |
+          # Stop the real mqtt so we can grab the name, then create a fake
+          # foreign-project container that holds it. This is the exact
+          # state the LXC was in: a stopped zeroproof-mqtt owned by an
+          # old `repo` compose project.
+          docker stop zeroproof-mqtt >/dev/null
+          docker rm zeroproof-mqtt >/dev/null
+          docker create \
+            --name zeroproof-mqtt \
+            --label com.docker.compose.project=ci-foreign-project \
+            --label com.docker.compose.service=mqtt \
+            alpine:3 sh -c 'sleep 3600' >/dev/null
+          docker inspect zeroproof-mqtt --format \
+            'orphan in place — project={{index .Config.Labels "com.docker.compose.project"}}, status={{.State.Status}}'
+
+      - name: Make PR SHA reachable for upgrade.sh
+        if: steps.baseline.outputs.baseline != ''
+        run: |
+          git fetch origin "${{ steps.baseline.outputs.pr_sha }}" --no-tags
+
+      - name: Swap in PR's upgrade.sh and run upgrade
+        if: steps.baseline.outputs.baseline != ''
+        run: |
+          set -e
+          # Same as worktree-drift: test the *new* upgrade.sh, not the
+          # baseline's, since that's what users will run after this PR
+          # lands as the previous release.
+          git show "${{ steps.baseline.outputs.pr_sha }}:scripts/upgrade.sh" \
+            > /tmp/upgrade.sh.pr
+          cp /tmp/upgrade.sh.pr scripts/upgrade.sh
+          # The PR's upgrade.sh may already exist as a dirty tracked file
+          # relative to baseline — that itself exercises the redundant-edit
+          # path. Use --force-clean to keep the test focused on orphan
+          # cleanup rather than the dirty-file branch.
+          output=$(bash scripts/upgrade.sh --force-clean "${{ steps.baseline.outputs.pr_sha }}" 2>&1)
+          echo "$output"
+          grep -qF "Removing orphan containers" <<< "$output" \
+            || { echo "FAIL: didn't log orphan removal"; exit 1; }
+          grep -qF "zeroproof-mqtt" <<< "$output" \
+            || { echo "FAIL: didn't name the orphaned container"; exit 1; }
+
+      - name: Verify orphan is gone and live mqtt is owned by zeroproof
+        if: steps.baseline.outputs.baseline != ''
+        run: |
+          set -e
+          proj=$(docker inspect zeroproof-mqtt --format '{{index .Config.Labels "com.docker.compose.project"}}')
+          echo "Post-upgrade mqtt project label: $proj"
+          [ "$proj" = "zeroproof" ] || { echo "FAIL: mqtt not owned by zeroproof"; exit 1; }
+
+      - name: Verify upgraded /health still answers
+        if: steps.baseline.outputs.baseline != ''
+        run: |
+          for i in 1 2 3 4 5; do
+            code=$(curl -sk -o /dev/null -w '%{http_code}' https://localhost/health || echo 000)
+            echo "post-orphan-cleanup /health attempt $i: $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 3
+          done
+          echo "Upgrade made /health unreachable."
+          docker compose logs --tail=50
+          exit 1
+
+      - name: Container state on failure
+        if: failure() && steps.baseline.outputs.baseline != ''
+        run: |
+          docker ps -a || true
+          docker compose logs --tail=80 || true

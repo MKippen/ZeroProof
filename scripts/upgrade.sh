@@ -7,6 +7,9 @@
 #   ./scripts/upgrade.sh v1.1.3         Upgrade to a specific tag/branch/SHA.
 #   ./scripts/upgrade.sh --check        Show what would happen; don't apply.
 #   ./scripts/upgrade.sh --rollback     Roll back to the previous version.
+#   ./scripts/upgrade.sh --force-clean  Discard any locally-modified tracked
+#                                       files that differ from the target.
+#                                       Use after you've reviewed the diff.
 #   ./scripts/upgrade.sh -h             Print help.
 #
 # Behavior:
@@ -48,12 +51,14 @@ export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-zeroproof}"
 
 CHECK_ONLY=false
 ROLLBACK=false
+FORCE_CLEAN=false
 TARGET=""
 
 for arg in "$@"; do
     case "$arg" in
-        --check)    CHECK_ONLY=true ;;
-        --rollback) ROLLBACK=true ;;
+        --check)       CHECK_ONLY=true ;;
+        --rollback)    ROLLBACK=true ;;
+        --force-clean) FORCE_CLEAN=true ;;
         -h|--help)
             # Print the leading comment block as help text.
             sed -n '/^# Upgrade/,/^# Safe to re-run/p' "$0" | sed 's/^# \?//'
@@ -79,6 +84,58 @@ else
     exit 1
 fi
 
+# Remove containers that share our hardcoded `container_name:` values but
+# belong to a *different* compose project. They're the long-tail residue
+# of the SCP-deploy era when COMPOSE_PROJECT_NAME wasn't pinned: a parallel
+# project (e.g. `repo` from /opt/zeroproof's earlier bind-mount path) can
+# outlive a botched run, and `compose up` will then explode with:
+#   Error response from daemon: Conflict. The container name
+#   "/zeroproof-mqtt" is already in use by container "...".
+#
+# Same-project containers are left alone — `compose up` reconciles them.
+# Containers with no compose-project label at all are also left alone:
+# they look like operator-managed external state and silently nuking them
+# would be a different class of bug. Surface those with a warning so the
+# operator can decide.
+remove_orphan_containers() {
+    [[ -f docker-compose.yml ]] || return 0
+    local declared
+    declared=$(grep -E '^\s*container_name:\s*' docker-compose.yml | awk '{print $2}' | tr -d '"' | sort -u)
+    [[ -z "$declared" ]] && return 0
+
+    local orphans=() unowned=()
+    while IFS= read -r name; do
+        [[ -z "$name" ]] && continue
+        local cid proj
+        cid=$(docker ps -aq -f "name=^${name}$" 2>/dev/null || true)
+        [[ -z "$cid" ]] && continue
+        proj=$(docker inspect "$cid" --format '{{index .Config.Labels "com.docker.compose.project"}}' 2>/dev/null || echo "")
+        if [[ -n "$proj" && "$proj" != "$COMPOSE_PROJECT_NAME" ]]; then
+            orphans+=("$cid|$name|$proj")
+        elif [[ -z "$proj" ]]; then
+            unowned+=("$cid|$name")
+        fi
+    done <<< "$declared"
+
+    if (( ${#unowned[@]} > 0 )); then
+        echo -e "${YELLOW}Warning: containers with reserved names exist outside any compose project:${NC}"
+        for entry in "${unowned[@]}"; do
+            local cid="${entry%%|*}" name="${entry##*|}"
+            echo "  $name (id ${cid:0:12}) — not removing; run 'docker rm -f $name' if you want compose to own it."
+        done
+    fi
+
+    (( ${#orphans[@]} == 0 )) && return 0
+
+    echo -e "${YELLOW}Removing orphan containers from foreign compose projects:${NC}"
+    for entry in "${orphans[@]}"; do
+        local cid="${entry%%|*}" rest="${entry#*|}"
+        local name="${rest%%|*}" proj="${rest#*|}"
+        echo "  $name (id ${cid:0:12}, project '$proj')"
+        docker rm -f "$cid" >/dev/null
+    done
+}
+
 CURRENT_SHA="$(git rev-parse HEAD)"
 CURRENT_DESC="$(git describe --tags --always 2>/dev/null || echo "$CURRENT_SHA")"
 
@@ -93,6 +150,7 @@ if $ROLLBACK; then
     PREV_DESC="$(git describe --tags --always "$PREV_SHA" 2>/dev/null || echo "$PREV_SHA")"
     echo -e "${YELLOW}${BOLD}Rolling back: $CURRENT_DESC → $PREV_DESC${NC}"
     git checkout --quiet "$PREV_SHA"
+    remove_orphan_containers
     $COMPOSE up -d --build
     echo -e "${GREEN}Rolled back to $PREV_DESC. Verify with '$COMPOSE ps'.${NC}"
     rm -f "$PREV_FILE"
@@ -140,6 +198,7 @@ if [[ "$CURRENT_SHA" == "$TARGET_SHA" ]]; then
     if [[ -n "$WORKTREE_VERSION" && -n "$RUNNING_VERSION" && "$WORKTREE_VERSION" != "$RUNNING_VERSION" ]]; then
         echo -e "${YELLOW}Worktree is at $TARGET_DESC ($WORKTREE_VERSION) but running stack reports $RUNNING_VERSION.${NC}"
         echo "Converging containers to match the worktree..."
+        remove_orphan_containers
         $COMPOSE up -d --build
         echo -e "${GREEN}${BOLD}Converged to $TARGET_DESC.${NC}"
         exit 0
@@ -156,6 +215,123 @@ echo ""
 echo "  Changes:"
 git log --oneline "$CURRENT_SHA..$TARGET_SHA" 2>/dev/null | sed 's/^/    /' || \
     echo "    (could not compute commit range — divergent history)"
+echo ""
+
+# Pre-flight: locally-modified tracked files block `git checkout <tag>`
+# with "Your local changes ... would be overwritten by checkout". The
+# common path to that state is an in-place SCP hot-patch — a fix gets
+# copied onto the host between releases and lands upstream in the next
+# release, so the local edit is already redundant. Bailing with git's
+# raw stderr in that case leaves operators stuck on the previous version
+# until they remember which file they touched.
+#
+# For each modified tracked file:
+#   - If the working-tree bytes already equal what $TARGET would install,
+#     the local edit is redundant — discard it from worktree + index so
+#     `git checkout` can proceed.
+#   - Otherwise: the operator has a genuine local customization. Refuse
+#     the upgrade with the offending paths named, and surface
+#     `--force-clean` as the explicit override.
+#
+# --check mode is read-only: prints "Would discard" instead of mutating
+# so the operator can verify what the preflight will do.
+echo "Checking working tree for locally-modified tracked files..."
+DIRTY_FILES="$(git diff --name-only HEAD --)"
+DIRTY_BLOCKERS=()
+while IFS= read -r path; do
+    [[ -z "$path" ]] && continue
+    if ! git cat-file -e "$TARGET_SHA:$path" 2>/dev/null; then
+        DIRTY_BLOCKERS+=("$path (not in target)")
+        continue
+    fi
+    cur_hash="$(git hash-object -- "$path" 2>/dev/null || echo MISSING)"
+    target_hash="$(git rev-parse "$TARGET_SHA:$path")"
+    if [[ "$cur_hash" == "$target_hash" ]]; then
+        if $CHECK_ONLY; then
+            echo "  Would discard local edit to $path (already matches $TARGET — redundant)"
+        else
+            echo "  Discarding local edit to $path (already matches $TARGET — redundant)"
+            git checkout HEAD -- "$path"
+        fi
+    else
+        DIRTY_BLOCKERS+=("$path")
+    fi
+done <<< "$DIRTY_FILES"
+
+if (( ${#DIRTY_BLOCKERS[@]} > 0 )); then
+    if $FORCE_CLEAN; then
+        if $CHECK_ONLY; then
+            echo -e "${YELLOW}--force-clean: would discard local modifications to:${NC}"
+            for entry in "${DIRTY_BLOCKERS[@]}"; do
+                echo "  ${entry%% *}"
+            done
+        else
+            echo -e "${YELLOW}--force-clean: discarding local modifications to:${NC}"
+            for entry in "${DIRTY_BLOCKERS[@]}"; do
+                path="${entry%% *}"
+                echo "  $path"
+                git checkout HEAD -- "$path" 2>/dev/null || rm -f -- "$path"
+            done
+        fi
+    else
+        echo ""
+        echo -e "${RED}${BOLD}Cannot upgrade: tracked files have local modifications:${NC}"
+        for entry in "${DIRTY_BLOCKERS[@]}"; do
+            echo "  $entry"
+        done
+        echo ""
+        echo "These differ from what $TARGET would install. Resolve by either:"
+        echo "  - reviewing and committing them upstream, then re-running this script, or"
+        echo "  - discarding them locally:"
+        for entry in "${DIRTY_BLOCKERS[@]}"; do
+            path="${entry%% *}"
+            echo "      git -C $ROOT checkout HEAD -- $path"
+        done
+        echo "  - re-running with --force-clean to discard all of them automatically."
+        exit 2
+    fi
+fi
+
+# Pre-flight: untracked files that also exist in $TARGET will make
+# `git checkout` abort with "untracked working tree files would be
+# overwritten". The most common case is the bootstrap pattern: a user runs
+# this script before the version they're upgrading to had it tracked, so
+# `scripts/upgrade.sh` itself is untracked locally yet exists in the target.
+# When the local copy is byte-identical to the target's copy, just remove
+# it (checkout will reinstate it). Anything else: bail loudly so the user
+# decides what to do.
+echo ""
+echo "Checking working tree for untracked files that conflict with $TARGET..."
+TARGET_PATHS="$(git ls-tree -r --name-only "$TARGET_SHA")"
+UNTRACKED="$(git ls-files --others --exclude-standard)"
+BLOCKERS=()
+while IFS= read -r path; do
+    [[ -z "$path" ]] && continue
+    if grep -Fxq -- "$path" <<< "$TARGET_PATHS"; then
+        if git show "$TARGET_SHA:$path" 2>/dev/null | cmp -s - "$path"; then
+            if $CHECK_ONLY; then
+                echo "  Would remove untracked $path (identical to target — bootstrap reinstall)"
+            else
+                echo "  Removing untracked $path (identical to target — bootstrap reinstall)"
+                rm -f -- "$path"
+            fi
+        else
+            BLOCKERS+=("$path")
+        fi
+    fi
+done <<< "$UNTRACKED"
+
+if (( ${#BLOCKERS[@]} > 0 )); then
+    echo ""
+    echo -e "${RED}${BOLD}Untracked files would be overwritten by checkout:${NC}"
+    for path in "${BLOCKERS[@]}"; do
+        echo "  $path"
+    done
+    echo ""
+    echo "Move, delete, or commit these files, then re-run the upgrade."
+    exit 1
+fi
+
 echo ""
 
 if $CHECK_ONLY; then
@@ -195,44 +371,6 @@ restore_on_failure() {
 }
 trap restore_on_failure EXIT
 
-# Pre-flight: untracked files that also exist in $TARGET will make
-# `git checkout` abort with "untracked working tree files would be
-# overwritten". The most common case is the bootstrap pattern: a user runs
-# this script before the version they're upgrading to had it tracked, so
-# `scripts/upgrade.sh` itself is untracked locally yet exists in the target.
-# When the local copy is byte-identical to the target's copy, just remove
-# it (checkout will reinstate it). Anything else: bail loudly so the user
-# decides what to do.
-echo ""
-echo "Checking working tree for untracked files that conflict with $TARGET..."
-TARGET_PATHS="$(git ls-tree -r --name-only "$TARGET_SHA")"
-UNTRACKED="$(git ls-files --others --exclude-standard)"
-BLOCKERS=()
-while IFS= read -r path; do
-    [[ -z "$path" ]] && continue
-    if grep -Fxq -- "$path" <<< "$TARGET_PATHS"; then
-        if git show "$TARGET_SHA:$path" 2>/dev/null | cmp -s - "$path"; then
-            echo "  Removing untracked $path (identical to target — bootstrap reinstall)"
-            rm -f -- "$path"
-        else
-            BLOCKERS+=("$path")
-        fi
-    fi
-done <<< "$UNTRACKED"
-
-if (( ${#BLOCKERS[@]} > 0 )); then
-    echo ""
-    echo -e "${RED}${BOLD}Untracked files would be overwritten by checkout:${NC}"
-    for path in "${BLOCKERS[@]}"; do
-        echo "  $path"
-    done
-    echo ""
-    echo "Move, delete, or commit these files, then re-run the upgrade."
-    rm -f "$PREV_FILE"
-    exit 1
-fi
-
-echo ""
 echo "Checking out $TARGET..."
 git checkout --quiet "$TARGET"
 
@@ -320,6 +458,7 @@ if [[ -f .env && -f .env.example && -f docker-compose.yml ]]; then
 fi
 
 echo "Rebuilding + restarting containers (this may take a few minutes)..."
+remove_orphan_containers
 $COMPOSE up -d --build
 # Past the dangerous window: containers are now serving the new version.
 # A health-check failure below is recoverable with --rollback; we don't
