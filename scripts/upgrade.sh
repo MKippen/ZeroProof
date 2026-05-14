@@ -217,43 +217,6 @@ git log --oneline "$CURRENT_SHA..$TARGET_SHA" 2>/dev/null | sed 's/^/    /' || \
     echo "    (could not compute commit range — divergent history)"
 echo ""
 
-if $CHECK_ONLY; then
-    echo -e "${YELLOW}--check mode: no changes applied.${NC}"
-    echo "Re-run without --check to apply this upgrade."
-    exit 0
-fi
-
-# Best-effort confirm — skipped under non-interactive (CI / scripted).
-if [[ -t 0 ]]; then
-    read -r -p "Apply upgrade? [y/N] " confirm
-    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-        echo "Cancelled."
-        exit 0
-    fi
-fi
-
-echo "$CURRENT_SHA" > "$PREV_FILE"
-
-# Restore-on-failure: if anything between the upcoming `git checkout` and
-# a successful `compose up` exits non-zero, restore the worktree to where
-# we started. Without this, a partial failure leaves git ahead of the
-# running stack and a naive retry short-circuits as "already on target"
-# (the drift check above is a backstop, not a substitute).
-UPGRADE_DONE=false
-restore_on_failure() {
-    local code=$?
-    if [[ $code -ne 0 && "$UPGRADE_DONE" != "true" ]]; then
-        local current
-        current="$(git rev-parse HEAD 2>/dev/null || echo '')"
-        if [[ -n "$current" && "$current" != "$CURRENT_SHA" ]]; then
-            echo ""
-            echo -e "${YELLOW}Upgrade failed — restoring worktree to $CURRENT_DESC so a retry can proceed.${NC}"
-            git checkout --quiet "$CURRENT_SHA" 2>/dev/null || true
-        fi
-    fi
-}
-trap restore_on_failure EXIT
-
 # Pre-flight: locally-modified tracked files block `git checkout <tag>`
 # with "Your local changes ... would be overwritten by checkout". The
 # common path to that state is an in-place SCP hot-patch — a fix gets
@@ -269,16 +232,15 @@ trap restore_on_failure EXIT
 #   - Otherwise: the operator has a genuine local customization. Refuse
 #     the upgrade with the offending paths named, and surface
 #     `--force-clean` as the explicit override.
-echo ""
+#
+# --check mode is read-only: prints "Would discard" instead of mutating
+# so the operator can verify what the preflight will do.
 echo "Checking working tree for locally-modified tracked files..."
 DIRTY_FILES="$(git diff --name-only HEAD --)"
 DIRTY_BLOCKERS=()
 while IFS= read -r path; do
     [[ -z "$path" ]] && continue
     if ! git cat-file -e "$TARGET_SHA:$path" 2>/dev/null; then
-        # File is locally modified AND missing from the target tree.
-        # Can't auto-resolve — operator added or kept a file the target
-        # doesn't ship. Refuse unless --force-clean was passed.
         DIRTY_BLOCKERS+=("$path (not in target)")
         continue
     fi
@@ -289,8 +251,6 @@ while IFS= read -r path; do
             echo "  Would discard local edit to $path (already matches $TARGET — redundant)"
         else
             echo "  Discarding local edit to $path (already matches $TARGET — redundant)"
-            # Reset worktree + index from HEAD so any staged-but-not-committed
-            # variant is also cleared.
             git checkout HEAD -- "$path"
         fi
     else
@@ -328,7 +288,6 @@ if (( ${#DIRTY_BLOCKERS[@]} > 0 )); then
             echo "      git -C $ROOT checkout HEAD -- $path"
         done
         echo "  - re-running with --force-clean to discard all of them automatically."
-        rm -f "$PREV_FILE"
         exit 2
     fi
 fi
@@ -350,8 +309,12 @@ while IFS= read -r path; do
     [[ -z "$path" ]] && continue
     if grep -Fxq -- "$path" <<< "$TARGET_PATHS"; then
         if git show "$TARGET_SHA:$path" 2>/dev/null | cmp -s - "$path"; then
-            echo "  Removing untracked $path (identical to target — bootstrap reinstall)"
-            rm -f -- "$path"
+            if $CHECK_ONLY; then
+                echo "  Would remove untracked $path (identical to target — bootstrap reinstall)"
+            else
+                echo "  Removing untracked $path (identical to target — bootstrap reinstall)"
+                rm -f -- "$path"
+            fi
         else
             BLOCKERS+=("$path")
         fi
@@ -366,11 +329,48 @@ if (( ${#BLOCKERS[@]} > 0 )); then
     done
     echo ""
     echo "Move, delete, or commit these files, then re-run the upgrade."
-    rm -f "$PREV_FILE"
     exit 1
 fi
 
 echo ""
+
+if $CHECK_ONLY; then
+    echo -e "${YELLOW}--check mode: no changes applied.${NC}"
+    echo "Re-run without --check to apply this upgrade."
+    exit 0
+fi
+
+# Best-effort confirm — skipped under non-interactive (CI / scripted).
+if [[ -t 0 ]]; then
+    read -r -p "Apply upgrade? [y/N] " confirm
+    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+        echo "Cancelled."
+        exit 0
+    fi
+fi
+
+echo "$CURRENT_SHA" > "$PREV_FILE"
+
+# Restore-on-failure: if anything between the upcoming `git checkout` and
+# a successful `compose up` exits non-zero, restore the worktree to where
+# we started. Without this, a partial failure leaves git ahead of the
+# running stack and a naive retry short-circuits as "already on target"
+# (the drift check above is a backstop, not a substitute).
+UPGRADE_DONE=false
+restore_on_failure() {
+    local code=$?
+    if [[ $code -ne 0 && "$UPGRADE_DONE" != "true" ]]; then
+        local current
+        current="$(git rev-parse HEAD 2>/dev/null || echo '')"
+        if [[ -n "$current" && "$current" != "$CURRENT_SHA" ]]; then
+            echo ""
+            echo -e "${YELLOW}Upgrade failed — restoring worktree to $CURRENT_DESC so a retry can proceed.${NC}"
+            git checkout --quiet "$CURRENT_SHA" 2>/dev/null || true
+        fi
+    fi
+}
+trap restore_on_failure EXIT
+
 echo "Checking out $TARGET..."
 git checkout --quiet "$TARGET"
 
