@@ -4,7 +4,7 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.1.19] - Unreleased
+## [1.1.19] - 2026-05-25
 
 ### Fixed
 - **In-app "Apply Update" no longer kills itself mid-upgrade.** `scripts/upgrade.sh` was running inside the updater container and calling `docker compose up -d --build`, which recreated the updater itself — terminating the bash process executing the script and leaving the stack in a half-recreated state (we hit this twice on the 2026-05-25 LXC). This was flagged as a "known limitation" in `docker-compose.yml` back at v1.1.5 and deferred. Fix: when `/.dockerenv` is present (meaning the script is running inside a container), `upgrade.sh` enumerates compose's services, removes `updater` from the list, and recreates everything else. The updater stays on its prior image until manually restarted or until the next CLI upgrade. A stale updater is a smaller problem than a half-done upgrade.
