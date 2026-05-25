@@ -393,18 +393,27 @@ jobs:
         id: baseline
         run: |
           set -e
-          # Get the latest semver-shaped release tag, ignoring the PR's
-          # current HEAD so we always test "previous → current" even if
-          # this PR adds a new tag.
-          tag=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)
+          # Pick the latest semver release tag whose commit isn't HEAD.
+          # On scheduled runs of main right after a release, the top tag
+          # points at HEAD itself — fall through to the previous one so
+          # "previous → current" stays meaningful instead of becoming a
+          # no-op self-upgrade.
+          head_sha=$(git rev-parse HEAD)
+          tag=""
+          for candidate in $(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname); do
+            if [ "$(git rev-parse "$candidate^{commit}")" != "$head_sha" ]; then
+              tag="$candidate"
+              break
+            fi
+          done
           if [ -z "$tag" ]; then
-            echo "No release tags found — skipping cross-version test."
+            echo "No release tag ahead of HEAD — skipping cross-version test."
             echo "baseline=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          echo "Latest released tag: $tag"
+          echo "Baseline tag: $tag"
           echo "baseline=$tag" >> "$GITHUB_OUTPUT"
-          echo "pr_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "pr_sha=$head_sha" >> "$GITHUB_OUTPUT"
 
       - name: Skip when no baseline tag exists
         if: steps.baseline.outputs.baseline == ''
@@ -581,9 +590,20 @@ jobs:
       - name: Pick a baseline tag and a file that differs from HEAD
         id: pick
         run: |
-          baseline=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)
+          # Pick the latest semver release tag whose commit isn't HEAD.
+          # On scheduled runs of main right after a release, the top tag
+          # is HEAD — fall through to the previous one so we still have a
+          # real diff to drive the dirty-worktree scenarios.
+          head_sha=$(git rev-parse HEAD)
+          baseline=""
+          for candidate in $(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname); do
+            if [ "$(git rev-parse "$candidate^{commit}")" != "$head_sha" ]; then
+              baseline="$candidate"
+              break
+            fi
+          done
           if [ -z "$baseline" ]; then
-            echo "No release tags — skipping (first release of repo)."
+            echo "No release tag ahead of HEAD — skipping (first release of repo)."
             echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
           # Prefer a small, predictable file. CHANGELOG.md always differs
@@ -591,10 +611,13 @@ jobs:
           file="CHANGELOG.md"
           git diff --name-only "$baseline"..HEAD -- "$file" | grep -q "$file" \
             || file=$(git diff --name-only "$baseline"..HEAD | head -n 1)
-          [ -n "$file" ] || { echo "PR has no file-level changes from baseline?"; exit 1; }
+          if [ -z "$file" ]; then
+            echo "No file-level changes from baseline — skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
           echo "baseline=$baseline" >> "$GITHUB_OUTPUT"
           echo "file=$file" >> "$GITHUB_OUTPUT"
-          echo "head=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "head=$head_sha" >> "$GITHUB_OUTPUT"
           echo "Will test against baseline=$baseline, file=$file"
 
       - name: Stage baseline worktree with PR's upgrade.sh
@@ -678,13 +701,24 @@ jobs:
       - name: Pick baseline tag + PR SHA
         id: baseline
         run: |
-          tag=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)
+          # Pick the latest semver release tag whose commit isn't HEAD.
+          # On scheduled runs of main right after a release, the top tag
+          # is HEAD — fall through to the previous one so the upgrade
+          # isn't a no-op self-upgrade that fails post-upgrade checks.
+          head_sha=$(git rev-parse HEAD)
+          tag=""
+          for candidate in $(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname); do
+            if [ "$(git rev-parse "$candidate^{commit}")" != "$head_sha" ]; then
+              tag="$candidate"
+              break
+            fi
+          done
           if [ -z "$tag" ]; then
-            echo "No baseline tag — skipping."
+            echo "No release tag ahead of HEAD — skipping."
             echo "baseline=" >> "$GITHUB_OUTPUT"; exit 0
           fi
           echo "baseline=$tag" >> "$GITHUB_OUTPUT"
-          echo "pr_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "pr_sha=$head_sha" >> "$GITHUB_OUTPUT"
 
       - name: Pre-flight prereqs
         if: steps.baseline.outputs.baseline != ''
