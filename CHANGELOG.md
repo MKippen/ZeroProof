@@ -4,6 +4,25 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.17] - Unreleased
+
+### Fixed
+- **In-place upgrades could leave the public-facing nginx routing to a half-recreated frontend.** During the May 2026 LXC v1.1.15 → v1.1.16 upgrade, `docker compose up -d` recreated the `frontend` container and the host-network `nginx` started proxying to it before the new bundle was actually being served. Users saw the login page render with no JavaScript bundle attached, while `/health` happily returned 200. The root cause was twofold and both halves are now closed:
+  - `frontend` had **no healthcheck**, so docker treated "container running" as good enough.
+  - `nginx`'s `depends_on` used short-syntax (`- frontend`, `- backend`), which waits only for `service_started`, not `service_healthy`.
+- **`/health` was insufficient as a post-upgrade contract.** During the same incident, `/health` returned 200 while `/api/v1/auth/setup-status` returned a `500 SETUP_STATUS_ERROR` because the backend had lost its DB connection during the postgres recreate. Tier 4 CI now probes the deeper contract on every cross-version upgrade.
+
+### Changed
+- **`frontend` container now has a bundle-aware healthcheck.** It fetches `/index.html` and asserts the response contains a `<script` tag. A bare 200 from nginx no longer counts as healthy — the file has to actually reference a bundle.
+- **`nginx` `depends_on` now uses map syntax with `condition: service_healthy`** for both `frontend` and `backend`. The host-facing proxy waits for each component to pass its own healthcheck before routing traffic on a recreate.
+- **`postgres` healthcheck gains a `start_period: 20s`.** initdb / WAL recovery on container recreate can take longer than the first probe interval; the prior config counted those probes as failures and unnecessarily delayed `backend` startup.
+
+### Added
+- **Deeper post-upgrade probes in the `cross-version-upgrade` and `orphan-cleanup` CI jobs.** After `upgrade.sh` runs, the jobs now verify:
+  - `/api/v1/auth/setup-status` returns HTTP 200 with `"success":true` (catches the broken-DB-chain failure mode the May 2026 incident hit).
+  - `/` returns an `index.html` that references a `<script src="…">` bundle, and that bundle path itself returns 200 (catches the stale/empty-bundle failure mode the same incident hit).
+  Both checks would have caught today's break on the live LXC; the existing `/health` probe did not.
+
 ## [1.1.16] - 2026-05-13
 
 ### Fixed

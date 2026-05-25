@@ -541,12 +541,62 @@ jobs:
           for i in 1 2 3 4 5; do
             code=$(curl -sk -o /dev/null -w '%{http_code}' https://localhost/health || echo 000)
             echo "upgraded /health attempt $i: $code"
-            [ "$code" = "200" ] && exit 0
+            [ "$code" = "200" ] && break
             sleep 3
           done
-          echo "Upgrade made /health unreachable."
-          docker compose logs --tail=30
-          exit 1
+          if [ "$code" != "200" ]; then
+            echo "Upgrade made /health unreachable."
+            docker compose logs --tail=30
+            exit 1
+          fi
+
+      - name: Verify upgraded API proxy answers (setup-status)
+        if: steps.baseline.outputs.baseline != ''
+        run: |
+          # /health proves nginx is up. setup-status proves the full
+          # chain — public nginx → backend container → postgres → JSON.
+          # The May 2026 LXC incident hit /health=200 while setup-status
+          # returned 500 because backend lost its DB connection during
+          # the postgres recreate. Catch that here.
+          body=$(curl -sk https://localhost/api/v1/auth/setup-status)
+          code=$(curl -sk -o /dev/null -w '%{http_code}' https://localhost/api/v1/auth/setup-status)
+          echo "setup-status code=$code body=$body"
+          if [ "$code" != "200" ]; then
+            echo "Backend is reachable via nginx but DB chain is broken post-upgrade."
+            docker compose logs --tail=40 backend postgres
+            exit 1
+          fi
+          if ! echo "$body" | grep -q '"success":true'; then
+            echo "setup-status returned 200 but payload is wrong:"
+            echo "$body"
+            exit 1
+          fi
+
+      - name: Verify upgraded SPA serves a real bundle
+        if: steps.baseline.outputs.baseline != ''
+        run: |
+          # The May 2026 incident had the frontend container respond 200
+          # with an index.html that had no <script src=...> reference.
+          # Browsers loaded a blank page. Assert both: index.html mentions
+          # a script bundle AND that bundle resolves 200.
+          body=$(curl -sk https://localhost/)
+          if echo "$body" | grep -qi "Welcome to nginx"; then
+            echo "Public root is the nginx welcome page — frontend bundle missing."
+            exit 1
+          fi
+          script_path=$(echo "$body" | grep -oE '<script[^>]+src="[^"]+"' | grep -oE 'src="[^"]+"' | head -1 | sed -E 's/src="([^"]+)"/\1/')
+          if [ -z "$script_path" ]; then
+            echo "index.html has no <script src=...> reference. First 2KB:"
+            echo "$body" | head -c 2000
+            exit 1
+          fi
+          echo "Bundle path: $script_path"
+          bcode=$(curl -sk -o /dev/null -w '%{http_code}' "https://localhost${script_path}")
+          if [ "$bcode" != "200" ]; then
+            echo "Bundle path returned HTTP $bcode — SPA is broken."
+            exit 1
+          fi
+          echo "SPA bundle served correctly ($script_path -> 200)."
 
       - name: Verify updater sidecar survived the upgrade (or restarted cleanly)
         if: steps.baseline.outputs.baseline != ''
@@ -805,12 +855,38 @@ jobs:
           for i in 1 2 3 4 5; do
             code=$(curl -sk -o /dev/null -w '%{http_code}' https://localhost/health || echo 000)
             echo "post-orphan-cleanup /health attempt $i: $code"
-            [ "$code" = "200" ] && exit 0
+            [ "$code" = "200" ] && break
             sleep 3
           done
-          echo "Upgrade made /health unreachable."
-          docker compose logs --tail=50
-          exit 1
+          if [ "$code" != "200" ]; then
+            echo "Upgrade made /health unreachable."
+            docker compose logs --tail=50
+            exit 1
+          fi
+
+      - name: Verify upgraded API proxy + SPA bundle after orphan cleanup
+        if: steps.baseline.outputs.baseline != ''
+        run: |
+          # Same deep-probe contract as cross-version-upgrade — /health
+          # alone is insufficient. See note on that job for context.
+          scode=$(curl -sk -o /dev/null -w '%{http_code}' https://localhost/api/v1/auth/setup-status)
+          sbody=$(curl -sk https://localhost/api/v1/auth/setup-status)
+          echo "setup-status code=$scode body=$sbody"
+          if [ "$scode" != "200" ] || ! echo "$sbody" | grep -q '"success":true'; then
+            echo "setup-status broken post-upgrade."
+            docker compose logs --tail=40 backend postgres
+            exit 1
+          fi
+          html=$(curl -sk https://localhost/)
+          script_path=$(echo "$html" | grep -oE '<script[^>]+src="[^"]+"' | grep -oE 'src="[^"]+"' | head -1 | sed -E 's/src="([^"]+)"/\1/')
+          if [ -z "$script_path" ]; then
+            echo "index.html missing script tag post-upgrade. First 2KB:"
+            echo "$html" | head -c 2000
+            exit 1
+          fi
+          bcode=$(curl -sk -o /dev/null -w '%{http_code}' "https://localhost${script_path}")
+          [ "$bcode" = "200" ] || { echo "Bundle $script_path returned $bcode"; exit 1; }
+          echo "SPA + API both healthy after orphan cleanup."
 
       - name: Container state on failure
         if: failure() && steps.baseline.outputs.baseline != ''
