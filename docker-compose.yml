@@ -200,7 +200,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${HOST_WORKTREE:-/opt/zeroproof}:${HOST_WORKTREE:-/opt/zeroproof}
       - zeroproof_updater_progress:/var/run/zeroproof
-    working_dir: ${HOST_WORKTREE:-/opt/zeroproof}
+    # NOTE: don't override working_dir here. The updater image's own
+    # WORKDIR is /app (where dist/index.js lives); the updater process
+    # needs to start from there. When the updater later spawns
+    # upgrade.sh, it sets cwd=UPDATER_WORKTREE itself — that's how the
+    # script lands in the host worktree path that matches the bind
+    # mount above.
     environment:
       - UPDATER_SECRET=${UPDATER_SECRET:-}
       - UPDATER_PORT=9090
