@@ -4,7 +4,7 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.1.17] - Unreleased
+## [1.1.17] - 2026-05-25
 
 ### Fixed
 - **In-place upgrades could leave the public-facing nginx routing to a half-recreated frontend.** During the May 2026 LXC v1.1.15 → v1.1.16 upgrade, `docker compose up -d` recreated the `frontend` container and the host-network `nginx` started proxying to it before the new bundle was actually being served. Users saw the login page render with no JavaScript bundle attached, while `/health` happily returned 200. The root cause was twofold and both halves are now closed:
