@@ -145,6 +145,12 @@ if [ "${GENERATE_ENV:-false}" = true ]; then
 # Generated on $(date)
 # ZeroProof Configuration
 
+# Absolute host path of this worktree. The updater container needs to
+# mount the worktree at the *same* path inside itself, so that when
+# upgrade.sh invokes `docker compose up` from in there, the bind-mount
+# paths it produces are valid on the host. See docker-compose.yml.
+HOST_WORKTREE=$(pwd -P)
+
 # Database
 POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 POSTGRES_DB=zeroproof

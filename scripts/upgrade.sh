@@ -488,7 +488,14 @@ if [[ -f .env && -f .env.example && -f docker-compose.yml ]]; then
             esac
         }
         for key in "${NEW_KEYS[@]}"; do
-            if case_auto_generate "$key"; then
+            if [[ "$key" == "HOST_WORKTREE" ]]; then
+                # The updater bind-mount needs an absolute host path —
+                # see the matching block in install.sh. Compute it from
+                # the worktree we're upgrading inside.
+                value="$(pwd -P)"
+                echo "$key=$value" >> .env
+                echo "  + $key=$value (auto: current install dir)"
+            elif case_auto_generate "$key"; then
                 # /dev/urandom + base64 is portable across alpine, debian,
                 # and any minimal container without bringing in openssl.
                 value="$(head -c 64 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 48)"
