@@ -4,6 +4,16 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.19] - Unreleased
+
+### Fixed
+- **In-app "Apply Update" no longer kills itself mid-upgrade.** `scripts/upgrade.sh` was running inside the updater container and calling `docker compose up -d --build`, which recreated the updater itself — terminating the bash process executing the script and leaving the stack in a half-recreated state (we hit this twice on the 2026-05-25 LXC). This was flagged as a "known limitation" in `docker-compose.yml` back at v1.1.5 and deferred. Fix: when `/.dockerenv` is present (meaning the script is running inside a container), `upgrade.sh` enumerates compose's services, removes `updater` from the list, and recreates everything else. The updater stays on its prior image until manually restarted or until the next CLI upgrade. A stale updater is a smaller problem than a half-done upgrade.
+  - **Bootstrap caveat:** this fix only takes effect from v1.1.19 onward, because v1.1.18's `upgrade.sh` is what runs when an in-app v1.1.18 → v1.1.19 upgrade is initiated. The first upgrade to v1.1.19 must be done from a host CLI (`bash scripts/upgrade.sh v1.1.19`) to avoid the suicide one last time. From v1.1.19 → v1.1.20 onward, in-app upgrades work cleanly.
+  - CLI runs are unaffected — without `/.dockerenv` the recreate list stays empty and `compose up -d --build` recreates everything including the updater.
+
+### Changed
+- **Dashboard "update available" banner now shows the release age.** The banner already named the version it was offering; adding "released N days ago" gives operators a quick read on how far behind they are without clicking through to Settings or GitHub. Reuses the `publishedAt` field the backend already returns from `/api/v1/system/update`.
+
 ## [1.1.18] - 2026-05-25
 
 ### Added

@@ -84,6 +84,28 @@ else
     exit 1
 fi
 
+# When upgrade.sh is invoked from inside the updater container (via the
+# in-app Apply Update flow), a plain `compose up -d --build` would
+# recreate the updater itself — killing this very script mid-execution
+# and leaving the stack in the half-recreated state we hit twice on the
+# 2026-05-25 LXC. Detect in-container execution and exclude `updater`
+# from the recreate target list. The updater stays on its previous
+# image until manually restarted or until the next CLI upgrade. A stale
+# updater is a far smaller problem than a half-done upgrade.
+#
+# CLI runs (host bash, no /.dockerenv) leave RECREATE_SERVICES empty so
+# `$COMPOSE up -d --build` recreates everything, including updater.
+RECREATE_SERVICES=""
+if [[ -f /.dockerenv ]]; then
+    RECREATE_SERVICES="$($COMPOSE config --services 2>/dev/null | grep -vx 'updater' | tr '\n' ' ')"
+    if [[ -z "$RECREATE_SERVICES" ]]; then
+        echo -e "${YELLOW}Could not enumerate services; falling back to default recreate (may interrupt this script).${NC}"
+    else
+        echo "Detected in-container execution — excluding 'updater' from recreate to avoid script suicide."
+        echo "Recreate targets: $RECREATE_SERVICES"
+    fi
+fi
+
 # Remove containers that share our hardcoded `container_name:` values but
 # belong to a *different* compose project. They're the long-tail residue
 # of the SCP-deploy era when COMPOSE_PROJECT_NAME wasn't pinned: a parallel
@@ -151,7 +173,7 @@ if $ROLLBACK; then
     echo -e "${YELLOW}${BOLD}Rolling back: $CURRENT_DESC → $PREV_DESC${NC}"
     git checkout --quiet "$PREV_SHA"
     remove_orphan_containers
-    $COMPOSE up -d --build
+    $COMPOSE up -d --build $RECREATE_SERVICES
     echo -e "${GREEN}Rolled back to $PREV_DESC. Verify with '$COMPOSE ps'.${NC}"
     rm -f "$PREV_FILE"
     exit 0
@@ -199,7 +221,7 @@ if [[ "$CURRENT_SHA" == "$TARGET_SHA" ]]; then
         echo -e "${YELLOW}Worktree is at $TARGET_DESC ($WORKTREE_VERSION) but running stack reports $RUNNING_VERSION.${NC}"
         echo "Converging containers to match the worktree..."
         remove_orphan_containers
-        $COMPOSE up -d --build
+        $COMPOSE up -d --build $RECREATE_SERVICES
         echo -e "${GREEN}${BOLD}Converged to $TARGET_DESC.${NC}"
         exit 0
     fi
@@ -459,7 +481,7 @@ fi
 
 echo "Rebuilding + restarting containers (this may take a few minutes)..."
 remove_orphan_containers
-$COMPOSE up -d --build
+$COMPOSE up -d --build $RECREATE_SERVICES
 # Past the dangerous window: containers are now serving the new version.
 # A health-check failure below is recoverable with --rollback; we don't
 # want the EXIT trap to clobber the worktree on top of that.

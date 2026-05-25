@@ -10,6 +10,18 @@ interface SystemUpdateStatus {
   current: string;
   latest: string | null;
   hasUpdate: boolean;
+  publishedAt: string | null;
+}
+
+function relativeAge(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(ms) || ms < 0) return '';
+  const days = Math.floor(ms / 86_400_000);
+  if (days >= 14) return `${Math.floor(days / 7)} weeks ago`;
+  if (days >= 1) return `${days} day${days === 1 ? '' : 's'} ago`;
+  const hours = Math.floor(ms / 3_600_000);
+  if (hours >= 1) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  return 'just now';
 }
 
 const DISMISS_KEY_PREFIX = 'dashboard-update-banner-dismissed:';
@@ -73,7 +85,9 @@ export function DashboardUpdateBanner() {
       </AlertTitle>
       <AlertDescription className="mt-2 flex items-center justify-between gap-4">
         <span className="text-muted-foreground">
-          A newer ZeroProof release is available. Review and apply from Settings.
+          A newer ZeroProof release is available
+          {data.publishedAt ? <> — released {relativeAge(data.publishedAt)}</> : null}.
+          Review and apply from Settings.
         </span>
         <Button asChild size="sm" variant="outline">
           <Link to="/settings">View update</Link>
