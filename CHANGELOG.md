@@ -4,6 +4,12 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.20] - Unreleased
+
+### Fixed
+- **`remove_orphan_containers()` now nukes hex-prefixed leftovers from prior failed recreates.** When docker can't use the target `container_name:` because the old container still holds it, it prepends 12 hex chars + an underscore — e.g. `e6aa3f9db470_zeroproof-frontend`. These never start and accumulate across failed upgrades, eventually wedging every subsequent `compose up`. The v1.1.16 orphan-cleanup only caught foreign-project conflicts; same-project hex leftovers slipped through because they share our project label and looked legitimate. We hit four of these on the 2026-05-25 LXC. Now any container matching `^[a-f0-9]{12}_<declared-name>$` is removed unconditionally — there is no benign reason for that pattern to exist.
+- **CI: `orphan-cleanup` job now seeds and asserts removal of a hex-prefixed `Created`-state leftover** alongside the existing foreign-project orphan scenario. Locks in the regression coverage so the gap can't reopen.
+
 ## [1.1.19] - 2026-05-25
 
 ### Fixed

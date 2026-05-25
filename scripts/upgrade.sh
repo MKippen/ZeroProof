@@ -125,9 +125,24 @@ remove_orphan_containers() {
     declared=$(grep -E '^\s*container_name:\s*' docker-compose.yml | awk '{print $2}' | tr -d '"' | sort -u)
     [[ -z "$declared" ]] && return 0
 
-    local orphans=() unowned=()
+    local orphans=() unowned=() hex_leftovers=()
     while IFS= read -r name; do
         [[ -z "$name" ]] && continue
+
+        # Hex-prefixed leftovers from a previously failed recreate. When
+        # docker can't use the target container_name (because the old
+        # container still holds it), it prepends 12 hex chars + underscore
+        # — e.g. `e6aa3f9db470_zeroproof-frontend`. These never start and
+        # accumulate across failed upgrades. Always safe to remove
+        # regardless of project label. The v1.1.16 orphan-cleanup logic
+        # only caught foreign-project conflicts, not same-project hex
+        # leftovers; we hit four of these on the 2026-05-25 LXC.
+        while IFS= read -r leftover; do
+            [[ -z "$leftover" ]] && continue
+            hex_leftovers+=("$leftover")
+        done < <(docker ps -a --format '{{.Names}}' 2>/dev/null \
+                 | grep -E "^[a-f0-9]{12}_${name}$" || true)
+
         local cid proj
         cid=$(docker ps -aq -f "name=^${name}$" 2>/dev/null || true)
         [[ -z "$cid" ]] && continue
@@ -138,6 +153,14 @@ remove_orphan_containers() {
             unowned+=("$cid|$name")
         fi
     done <<< "$declared"
+
+    if (( ${#hex_leftovers[@]} > 0 )); then
+        echo -e "${YELLOW}Removing hex-prefixed leftovers from failed prior recreates:${NC}"
+        for leftover in "${hex_leftovers[@]}"; do
+            echo "  $leftover"
+            docker rm -f "$leftover" >/dev/null 2>&1 || true
+        done
+    fi
 
     if (( ${#unowned[@]} > 0 )); then
         echo -e "${YELLOW}Warning: containers with reserved names exist outside any compose project:${NC}"

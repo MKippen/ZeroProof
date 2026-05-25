@@ -815,6 +815,24 @@ jobs:
           docker inspect zeroproof-mqtt --format \
             'orphan in place — project={{index .Config.Labels "com.docker.compose.project"}}, status={{.State.Status}}'
 
+      - name: Seed a hex-prefixed same-project leftover (Created state)
+        if: steps.baseline.outputs.baseline != ''
+        run: |
+          # Reproduces the leftover state we hit four times on the LXC:
+          # when docker can't use the target container_name because the
+          # old container still holds it, it prepends 12 hex chars + an
+          # underscore. v1.1.16's orphan-cleanup only nuked foreign-project
+          # conflicts; same-project hex leftovers slipped through and
+          # blocked future recreates. v1.1.20 closes that gap.
+          leftover_name="abcdef012345_zeroproof-postgres"
+          docker create \
+            --name "$leftover_name" \
+            --label com.docker.compose.project=zeroproof \
+            --label com.docker.compose.service=postgres \
+            alpine:3 sh -c 'echo created and never started' >/dev/null
+          docker inspect "$leftover_name" --format \
+            "hex leftover in place — name={{.Name}} state={{.State.Status}}"
+
       - name: Make PR SHA reachable for upgrade.sh
         if: steps.baseline.outputs.baseline != ''
         run: |
@@ -837,9 +855,13 @@ jobs:
           output=$(bash scripts/upgrade.sh --force-clean "${{ steps.baseline.outputs.pr_sha }}" 2>&1)
           echo "$output"
           grep -qF "Removing orphan containers" <<< "$output" \
-            || { echo "FAIL: didn't log orphan removal"; exit 1; }
+            || { echo "FAIL: didn't log foreign-project orphan removal"; exit 1; }
           grep -qF "zeroproof-mqtt" <<< "$output" \
             || { echo "FAIL: didn't name the orphaned container"; exit 1; }
+          grep -qF "Removing hex-prefixed leftovers" <<< "$output" \
+            || { echo "FAIL: didn't log hex-prefixed leftover removal"; exit 1; }
+          grep -qF "abcdef012345_zeroproof-postgres" <<< "$output" \
+            || { echo "FAIL: didn't name the hex-prefixed leftover"; exit 1; }
 
       - name: Verify orphan is gone and live mqtt is owned by zeroproof
         if: steps.baseline.outputs.baseline != ''
@@ -848,6 +870,11 @@ jobs:
           proj=$(docker inspect zeroproof-mqtt --format '{{index .Config.Labels "com.docker.compose.project"}}')
           echo "Post-upgrade mqtt project label: $proj"
           [ "$proj" = "zeroproof" ] || { echo "FAIL: mqtt not owned by zeroproof"; exit 1; }
+          if docker inspect abcdef012345_zeroproof-postgres >/dev/null 2>&1; then
+            echo "FAIL: hex-prefixed leftover still exists"
+            exit 1
+          fi
+          echo "Hex-prefixed leftover successfully removed."
 
       - name: Verify upgraded /health still answers
         if: steps.baseline.outputs.baseline != ''
