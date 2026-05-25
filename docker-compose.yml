@@ -59,12 +59,17 @@ services:
       - VITE_API_URL=/api/v1
       - VITE_WS_URL=/ws
     restart: unless-stopped
-    # "Healthy" means index.html is served AND contains a script tag.
-    # A bare 200 from nginx isn't enough — during the May 2026 incident
-    # the container responded 200 with an index.html missing its bundle
-    # reference, and the host nginx happily proxied that to users.
+    # "Healthy" means the on-disk index.html that nginx serves actually
+    # contains a script tag. A bare 200 from nginx isn't enough — during
+    # the May 2026 incident the container responded 200 with an index.html
+    # missing its bundle reference, and the host nginx happily proxied
+    # that to users.
+    #
+    # We grep the file on disk (which nginx serves verbatim) instead of
+    # piping `wget -qO-` through grep — busybox wget on nginx:alpine
+    # mishandles bundled short options and silently produces no body.
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/index.html | grep -q '<script'"]
+      test: ["CMD-SHELL", "grep -q '<script' /usr/share/nginx/html/index.html"]
       interval: 15s
       timeout: 5s
       retries: 5
