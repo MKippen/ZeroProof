@@ -25,9 +25,17 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/ssl/private:ro
+    # Map-syntax `depends_on` so nginx waits for frontend + backend to be
+    # *healthy*, not merely created. On `docker compose up -d` during an
+    # in-place upgrade, short-syntax depends_on let nginx start proxying
+    # to a frontend whose new bundle wasn't actually being served yet
+    # (May 2026 LXC incident — users saw a "Welcome back" page with no
+    # script tag because nginx forwarded to a half-recreated frontend).
     depends_on:
-      - frontend
-      - backend
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost/health"]
@@ -51,6 +59,16 @@ services:
       - VITE_API_URL=/api/v1
       - VITE_WS_URL=/ws
     restart: unless-stopped
+    # "Healthy" means index.html is served AND contains a script tag.
+    # A bare 200 from nginx isn't enough — during the May 2026 incident
+    # the container responded 200 with an index.html missing its bundle
+    # reference, and the host nginx happily proxied that to users.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/index.html | grep -q '<script'"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     labels:
       - "app=zeroproof"
       - "component=frontend"
@@ -120,6 +138,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      # On recreate, postgres needs ~5-10s for initdb / WAL recovery
+      # before pg_isready returns 0. Without start_period, the first few
+      # probes count as failures and unnecessarily delay backend startup.
+      start_period: 20s
     labels:
       - "app=zeroproof"
       - "component=database"
