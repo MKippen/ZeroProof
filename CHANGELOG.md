@@ -4,6 +4,11 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.18] - Unreleased
+
+### Added
+- **Dashboard now surfaces "Update available" notifications.** Previously the `SystemUpdateCard` only rendered on the Settings page — a user who never opened Settings would never know their ZeroProof install was behind. The new `DashboardUpdateBanner` reads the same `['system','update']` query (so no extra network) and renders a dismissable alert at the top of the dashboard when `hasUpdate === true`. Dismissal is keyed by the *latest* version in localStorage, so dismissing the v1.1.18 banner won't silence v1.1.19 when it ships.
+
 ## [1.1.17] - 2026-05-25
 
 ### Fixed
