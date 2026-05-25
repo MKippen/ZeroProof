@@ -4,7 +4,7 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.1.21] - Unreleased
+## [1.1.21] - 2026-05-25
 
 ### Fixed
 - **In-app upgrades silently broke `nginx`, `mosquitto`, `rules`, and `backend/firmware` bind mounts.** Hit live during the 2026-05-25 v1.1.20 in-app upgrade attempt. Root cause was a path-mismatch I missed when shipping v1.1.19's self-suicide fix:
