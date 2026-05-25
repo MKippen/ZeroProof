@@ -4,6 +4,29 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.21] - Unreleased
+
+### Fixed
+- **In-app upgrades silently broke `nginx`, `mosquitto`, `rules`, and `backend/firmware` bind mounts.** Hit live during the 2026-05-25 v1.1.20 in-app upgrade attempt. Root cause was a path-mismatch I missed when shipping v1.1.19's self-suicide fix:
+  - The updater container mounted the host worktree at `/repo` inside itself (`volumes: - .:/repo`).
+  - When `upgrade.sh` ran from inside the updater and invoked `docker compose up`, compose resolved relative paths in `docker-compose.yml` (`./nginx/nginx.conf`, `./mosquitto/config`, `./rules`, `./backend/firmware`) **using its own working directory inside the container** — `/repo`.
+  - It then passed `/repo/nginx/nginx.conf` etc. to the docker daemon **as host paths**. The host didn't have a `/repo` directory at all — docker auto-created empty directories there. For file-shaped mounts (nginx.conf, mosquitto.conf) the daemon then errored: "not a directory: Are you trying to mount a directory onto a file" → nginx Exit 127, mqtt crashloop. For directory-shaped mounts (rules, firmware) it silently mounted empty dirs and the containers booted with no rules and no firmware.
+  - v1.1.20 healthchecks still passed because `/health` doesn't read rules.
+
+  Fix: mount the host worktree at the **same absolute path** inside the updater container. `install.sh` writes `HOST_WORKTREE=$(pwd -P)` to `.env` on fresh installs; `upgrade.sh`'s env-sync auto-populates it on existing installs from the current worktree path. `docker-compose.yml`'s `updater` service uses `${HOST_WORKTREE:-/opt/zeroproof}:${HOST_WORKTREE:-/opt/zeroproof}` for the bind mount and sets `UPDATER_WORKTREE` to match.
+
+  CLI runs were never affected — host bash has `PWD=/opt/zeroproof`, paths resolve correctly, mounts work.
+
+### Bootstrap caveat (one-time CLI step, same pattern as v1.1.19)
+
+The first upgrade *to* v1.1.21 still hits the same bug because v1.1.20's `upgrade.sh` is what runs first when an in-app v1.1.20 → v1.1.21 upgrade is initiated. **Apply v1.1.21 via host CLI**, not in-app:
+
+```
+ssh root@<proxmox-node> -- pct exec <ctid> -- bash -lc 'cd /opt/zeroproof && bash scripts/upgrade.sh v1.1.21'
+```
+
+From v1.1.21 → v1.1.22 onward, in-app upgrades exercise the new path layout and work cleanly.
+
 ## [1.1.20] - 2026-05-25
 
 ### Fixed

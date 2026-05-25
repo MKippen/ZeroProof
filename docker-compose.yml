@@ -184,16 +184,34 @@ services:
       dockerfile: updater/Dockerfile
     container_name: zeroproof-updater
     network_mode: host
+    # Mount the host worktree at the SAME absolute path inside the
+    # container. When upgrade.sh runs from in here and invokes `docker
+    # compose up`, compose resolves `./nginx/nginx.conf` etc. relative
+    # to its own working dir. Whatever path it produces is then sent to
+    # the docker daemon AS A HOST PATH. If the inside-container path
+    # doesn't match the host path, the daemon either auto-creates an
+    # empty dir at a bogus host location (silently breaking rules/
+    # firmware mounts) or errors out with "not a directory" when the
+    # target is a file (nginx.conf, mosquitto.conf). Mounting at the
+    # same path on both sides makes the resolution trivially correct.
+    # HOST_WORKTREE is set by install.sh to the install dir (default
+    # /opt/zeroproof); upgrade.sh backfills it on existing installs.
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - .:/repo
+      - ${HOST_WORKTREE:-/opt/zeroproof}:${HOST_WORKTREE:-/opt/zeroproof}
       - zeroproof_updater_progress:/var/run/zeroproof
+    # NOTE: don't override working_dir here. The updater image's own
+    # WORKDIR is /app (where dist/index.js lives); the updater process
+    # needs to start from there. When the updater later spawns
+    # upgrade.sh, it sets cwd=UPDATER_WORKTREE itself — that's how the
+    # script lands in the host worktree path that matches the bind
+    # mount above.
     environment:
       - UPDATER_SECRET=${UPDATER_SECRET:-}
       - UPDATER_PORT=9090
       - UPDATER_HOST=127.0.0.1
       - UPDATER_PROGRESS_DIR=/var/run/zeroproof
-      - UPDATER_WORKTREE=/repo
+      - UPDATER_WORKTREE=${HOST_WORKTREE:-/opt/zeroproof}
       - UPDATER_HEALTH_URL=http://127.0.0.1:3000/health
     restart: unless-stopped
     labels:
