@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import api from '@/api/client';
 import { TimelineHistogram } from '@/components/charts/TimelineHistogram';
+import { DashboardUpdateBanner } from '@/components/DashboardUpdateBanner';
 import { FirstRunChecklist } from '@/components/FirstRunChecklist';
 import type {
   ConfigRequirement,
@@ -109,6 +110,8 @@ export function DashboardPage() {
         <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground">Overview of your network security status</p>
       </div>
+
+      <DashboardUpdateBanner />
 
       {/* First-run checklist — hides itself once UniFi + Intent are set up */}
       <FirstRunChecklist />
