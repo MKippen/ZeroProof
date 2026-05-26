@@ -4,6 +4,14 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.27] - Unreleased
+
+### Fixed
+- **"Server is restarting…" spinner could get stuck indefinitely after a successful in-app upgrade.** Hit during the 2026-05-26 v1.1.24 → v1.1.25 in-app test — the upgrade completed cleanly (git on v1.1.25, all containers healthy) but the UI never transitioned to done. Two compounding issues, both addressed:
+  - **Polling was gated on the WS reconnecting** (v1.1.23 left this in). nginx keep-alives an upstream connection to backend that dies during backend's recreate; the WS reconnect through nginx can hang on that dead socket until a new HTTP request forces nginx to refresh it. The polling effect was waiting forever for a signal it didn't actually need. Now: poll over HTTP regardless of WS state. The poll itself proves backend liveness.
+  - **Network errors and 5xx responses during the recreate window counted as "version didn't change" attempts.** That ate the budget against actual liveness probes — 10 transient failures during the recreate left zero budget for real "is the upgrade done?" checks once backend came back. Now: only count parseable responses with a stale `current` toward the stale-response budget. Network errors and 5xx are treated as "keep trying."
+- **Overall 5-minute hard deadline** so the polling can't hang forever if backend is genuinely gone. Real backends come back within 90s; if we hit 5 min, that's a real failure and the UI says so.
+
 ## [1.1.26] - 2026-05-26
 
 ### Fixed
