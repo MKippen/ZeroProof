@@ -4,7 +4,7 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.1.24] - Unreleased
+## [1.1.24] - 2026-05-26
 
 ### Changed
 - **Updater-drift warning no longer claims something went wrong.** The previous text — "The updater may have been killed mid-upgrade. Re-running the upgrade should bring it back in sync." — pre-dated v1.1.19's suicide-skip and was alarming for the *normal* post-in-app-upgrade state. Replaced with neutral copy that explains the design and shows the exact command to sync (`docker compose up -d --build updater`). Icon switched from AlertTriangle to Info to match the calmer tone. No backend changes — actual one-click resync is queued for a later release where we can ship the throwaway-helper pattern needed for the updater to recreate itself without suicide.
