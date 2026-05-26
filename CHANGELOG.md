@@ -4,6 +4,11 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.28] - Unreleased
+
+### Added
+- **Auto-prune dangling images + build cache after successful upgrades.** The 2026-05-26 LXC ran out of disk (15G of 16G used, 100M free) mid-upgrade because every release builds new images while old ones accumulate forever — `docker system df` showed 9.7G reclaimable across 79 images of which only 7 were in use. Without prune, every upgrade silently brought the system closer to ENOSPC. `scripts/upgrade.sh` now runs `docker image prune -af --filter "until=24h"` and `docker builder prune -af --keep-storage 1g` after the health check passes, and reports how much each call reclaimed. The 24h image filter avoids nuking images you might want for an immediate rollback; the 1G builder budget keeps enough cache to make the next upgrade's rebuild fast. Prune runs only on success — a failed upgrade keeps its rollback path intact.
+
 ## [1.1.27] - 2026-05-26
 
 ### Fixed

@@ -531,6 +531,30 @@ done
 echo ""
 if $HEALTHY; then
     echo -e "${GREEN}${BOLD}Upgrade complete: $CURRENT_DESC → $TARGET_DESC${NC}"
+
+    # Reclaim disk used by old image layers and intermediate build
+    # stages. The 2026-05-26 LXC ran out of disk (15G/16G) after an
+    # upgrade because every release builds new images while old ones
+    # accumulate forever — \`docker system df\` showed 9.7G reclaimable
+    # in 79 images of which only 7 were in use. We run this AFTER the
+    # health check so a busted upgrade doesn't lose its rollback path
+    # (rollback re-builds from cache, which dangling layers feed).
+    #
+    # --keep-storage 1g on the builder leaves enough cache to make the
+    # next upgrade's rebuild fast; -af on images removes any image not
+    # currently tagged AND not referenced by a running container.
+    echo ""
+    echo "Reclaiming disk from dangling images + build cache..."
+    if docker image prune -af --filter "until=24h" >/tmp/prune-images.log 2>&1 \
+        && docker builder prune -af --keep-storage 1g >/tmp/prune-builder.log 2>&1; then
+        img_freed=$(grep -E '^Total reclaimed space:' /tmp/prune-images.log | tail -1 || echo "")
+        bld_freed=$(grep -E '^Total reclaimed space:' /tmp/prune-builder.log | tail -1 || echo "")
+        [[ -n "$img_freed" ]] && echo "  Images: $img_freed"
+        [[ -n "$bld_freed" ]] && echo "  Build cache: $bld_freed"
+    else
+        echo -e "${YELLOW}  (prune failed; not fatal — upgrade is already complete)${NC}"
+    fi
+
     echo ""
     echo "If anything looks off, roll back with:"
     echo "  ./scripts/upgrade.sh --rollback"
