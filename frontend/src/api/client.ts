@@ -96,8 +96,18 @@ class ApiClient {
       const response = await fetch(url, config);
       const data = await this.parseResponse<T>(response);
 
-      // Handle session expiration - redirect to login
+      // Handle session expiration — but retry once before bailing.
+      // During in-app upgrades the backend is recreated, and there's a
+      // ~1-3s window where requests can briefly return 401 (session
+      // middleware re-initializing, or nginx returning auth-shaped
+      // responses while it waits for backend health). A single retry
+      // catches that case without delaying real session expirations
+      // by more than the retry interval.
       if (response.status === 401 && !endpoint.includes('/auth/login')) {
+        if (!isRetry) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          return this.request<T>(endpoint, options, true);
+        }
         console.warn('Session expired, logging out...');
         useAuthStore.getState().logout();
         // Only redirect if we're not already on login page
