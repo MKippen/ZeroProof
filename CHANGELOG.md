@@ -4,6 +4,15 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.23] - Unreleased
+
+### Fixed
+- **"Installing…" spinner could get stuck forever after a successful in-app upgrade.** The `SystemUpdateCard` only transitioned to `restarting` when it received the `updater_complete` WebSocket message — but the backend container is being recreated *as* that message is being sent, so the message frequently never reaches the browser. State sat on `installing` indefinitely while the upgrade had actually completed cleanly. Hit during the 2026-05-25 v1.1.22 in-app upgrade — the upgrade itself worked end-to-end (`git describe` reported v1.1.22, all containers healthy), only the UI was stranded.
+
+  Two fixes:
+  - **Infer `restarting` from a WS disconnect during `installing`.** If the websocket drops while we're mid-install, that *is* the recreate signal — the backend is gone. Transition immediately so the reconnect-resolve logic can fire when it comes back.
+  - **Poll `/system/update` until version matches the target** (up to 10× over 30s) instead of single-shot 1500ms refetch. The old logic raced backend's prisma migrate + bootup and false-positived as "Server reconnected but version did not change" on slow recreates.
+
 ## [1.1.22] - 2026-05-25
 
 ### Changed
