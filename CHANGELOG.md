@@ -4,6 +4,17 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.25] - Unreleased
+
+### Added
+- **Shell lint gate on PRs (`bash -n` + `shellcheck -S error`).** Hard-fails before merge on syntax bugs and runtime-behavior-changing shellcheck errors (command-substitution-in-comment, unquoted globs that break on real input, etc.). Direct response to the 2026-05-25 install.sh backtick-in-heredoc bug that ran `docker compose up` *while writing the .env file* — that class of bug shouldn't ship to CI again. Style-only warnings still allowed; can tighten to `-S warning` later.
+- **In-container `upgrade.sh --check` job in the install-smoke workflow.** Spins an alpine container, mounts the worktree at the same path on both sides (mirroring v1.1.21's production mount layout), runs `upgrade.sh --check`, and asserts:
+  - The v1.1.19 `Detected in-container execution` log line fires.
+  - The recreate targets list excludes `updater` (suicide-skip).
+  - `--check` mode stays read-only.
+
+  Costs ~30 seconds of runner time per run — no docker-in-docker stack, no real upgrade. Every upgrade-path bug shipped today only manifested when the script ran inside a container, and existing Tier 4 jobs invoke it from the host shell. This is the smallest viable in-container coverage that catches regression of the suicide-skip and detection logic.
+
 ## [1.1.24] - 2026-05-26
 
 ### Changed
