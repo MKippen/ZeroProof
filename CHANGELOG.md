@@ -4,7 +4,7 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.1.27] - Unreleased
+## [1.1.27] - 2026-05-26
 
 ### Fixed
 - **"Server is restarting…" spinner could get stuck indefinitely after a successful in-app upgrade.** Hit during the 2026-05-26 v1.1.24 → v1.1.25 in-app test — the upgrade completed cleanly (git on v1.1.25, all containers healthy) but the UI never transitioned to done. Two compounding issues, both addressed:
