@@ -957,18 +957,22 @@ jobs:
       - name: Run upgrade.sh --check inside an alpine container
         if: steps.pick.outputs.skip != 'true'
         run: |
-          set -e
           # Mount worktree at the SAME path on both sides so compose's
           # path resolution matches what the production updater sees
           # post-v1.1.21. Docker socket lets upgrade.sh's compose-detection
           # codepath actually find the binary; --check stays read-only.
           worktree="$(pwd)"
+          set +e
           output=$(docker run --rm \
             -v "$worktree":"$worktree" \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -w "$worktree" \
-            alpine:3 sh -c "apk add --no-cache -q bash git docker-cli docker-cli-compose openssl curl jq 2>&1 >/dev/null && bash scripts/upgrade.sh --check ${{ steps.pick.outputs.tag }}" 2>&1)
+            alpine:3 sh -c "apk add --no-cache bash git docker-cli docker-cli-compose openssl curl jq >/tmp/apk.log 2>&1 || { echo 'apk add failed:'; cat /tmp/apk.log; exit 1; }; bash scripts/upgrade.sh --check ${{ steps.pick.outputs.tag }}" 2>&1)
+          rc=$?
+          set -e
+          echo "=== docker run output (rc=$rc) ==="
           echo "$output"
+          echo "=== end output ==="
           # v1.1.19 in-container detection must fire — if this breaks,
           # in-app upgrades will self-suicide again.
           grep -qF "Detected in-container execution" <<< "$output" \
