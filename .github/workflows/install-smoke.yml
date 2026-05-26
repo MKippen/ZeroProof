@@ -967,7 +967,7 @@ jobs:
             -v "$worktree":"$worktree" \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -w "$worktree" \
-            alpine:3 sh -c "apk add --no-cache bash git docker-cli docker-cli-compose openssl curl jq >/tmp/apk.log 2>&1 || { echo 'apk add failed:'; cat /tmp/apk.log; exit 1; }; bash scripts/upgrade.sh --check ${{ steps.pick.outputs.tag }}" 2>&1)
+            alpine:3 sh -c "apk add --no-cache bash git docker-cli docker-cli-compose openssl curl jq >/tmp/apk.log 2>&1 || { echo 'apk add failed:'; cat /tmp/apk.log; exit 1; }; git config --global --add safe.directory '*'; bash scripts/upgrade.sh --check ${{ steps.pick.outputs.tag }}" 2>&1)
           rc=$?
           set -e
           echo "=== docker run output (rc=$rc) ==="
