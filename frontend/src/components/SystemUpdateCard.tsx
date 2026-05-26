@@ -155,19 +155,34 @@ export function SystemUpdateCard() {
   const restartingTarget =
     applyState.kind === 'restarting' ? applyState.target : null;
 
+  // Poll /system/update over HTTP until the reported `current` matches
+  // the target we asked to install. Two prior bugs informed the shape:
+  //
+  // 1. We do NOT gate on WS reconnect (v1.1.23 did). nginx keeps a
+  //    keep-alived upstream connection to backend that dies during
+  //    backend's recreate; the WS reconnect through nginx can hang on
+  //    that dead socket until a new request forces nginx to refresh
+  //    it. Meanwhile the *HTTP* path through nginx → backend works
+  //    fine, so we poll over HTTP directly and ignore WS state.
+  //
+  // 2. We only count attempts where we got a usable response back.
+  //    Network errors / 5xx while backend is mid-restart mean "keep
+  //    trying", not "version didn't change". Counting those burned
+  //    the budget against actual liveness probes and made the UI
+  //    silently fail to transition (v1.1.25 → v1.1.26 stuck spinner).
   useEffect(() => {
-    if (!restartingTarget || !isWsConnected) return;
+    if (!restartingTarget) return;
     let cancelled = false;
-    let attempts = 0;
-    const maxAttempts = 10;
+    let staleResponses = 0;
+    const maxStale = 10;
     const intervalMs = 3000;
+    const overallDeadline = Date.now() + 5 * 60 * 1000; // 5 min hard cap
 
     const tick = async () => {
       if (cancelled) return;
-      attempts += 1;
       const r = await updateQuery.refetch();
-      const fresh = r.data;
       if (cancelled) return;
+      const fresh = r.data;
       if (fresh && fresh.current === restartingTarget) {
         setApplyState((prev) =>
           prev.kind === 'restarting' && prev.target === restartingTarget
@@ -176,14 +191,23 @@ export function SystemUpdateCard() {
         );
         return;
       }
-      if (attempts >= maxAttempts) {
+      // Got a parseable response with the *old* version — backend is
+      // alive but hasn't applied the upgrade yet. Burn budget.
+      if (fresh) staleResponses += 1;
+      // Either too many stale responses, or we blew the overall
+      // deadline (used when backend is dead long enough that nothing
+      // we see is parseable).
+      if (staleResponses >= maxStale || Date.now() > overallDeadline) {
         setApplyState((prev) =>
           prev.kind === 'restarting' && prev.target === restartingTarget
             ? {
                 kind: 'failed',
                 target: prev.target,
                 lines: prev.lines,
-                reason: `Server reconnected but version did not change after ${(maxAttempts * intervalMs) / 1000}s`,
+                reason:
+                  staleResponses >= maxStale
+                    ? `Backend reported the old version ${maxStale} times in a row — upgrade may have silently rolled back`
+                    : 'Backend did not come back within 5 minutes',
               }
             : prev
         );
@@ -199,7 +223,7 @@ export function SystemUpdateCard() {
       cancelled = true;
       clearTimeout(initial);
     };
-  }, [restartingTarget, isWsConnected, updateQuery]);
+  }, [restartingTarget, updateQuery]);
 
   // Auto-scroll the progress log on new lines.
   useEffect(() => {
