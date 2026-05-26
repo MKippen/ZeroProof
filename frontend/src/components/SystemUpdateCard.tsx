@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CheckCircle2, Download, ExternalLink, FileText, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, ExternalLink, FileText, Info, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import api from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -312,11 +312,19 @@ export function SystemUpdateCard() {
           {status?.versions?.updater &&
             status?.versions?.backend &&
             status.versions.updater !== status.versions.backend && (
-              <div className="rounded-md border border-yellow-500/30 bg-yellow-500/10 p-2 text-xs text-muted-foreground">
-                <AlertTriangle className="mr-1 inline h-3 w-3 text-yellow-400" />
-                Backend and updater versions differ. The updater may have been
-                killed mid-upgrade. Re-running the upgrade should bring it back
-                in sync.
+              <div className="rounded-md border border-muted bg-muted/30 p-2 text-xs text-muted-foreground">
+                <Info className="mr-1 inline h-3 w-3" />
+                <span>
+                  Updater is on <span className="font-mono">{status.versions.updater}</span>{' '}
+                  while backend is on <span className="font-mono">{status.versions.backend}</span>.
+                  This is expected after an in-app upgrade — the updater is
+                  intentionally skipped to avoid killing the upgrade script
+                  mid-run. The current image keeps working; sync it on your
+                  next CLI upgrade, or run on the host:
+                </span>
+                <code className="mt-1 block rounded bg-background/60 px-2 py-1 font-mono">
+                  docker compose up -d --build updater
+                </code>
               </div>
             )}
           <div className="flex items-center justify-between gap-3">
