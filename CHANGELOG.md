@@ -4,6 +4,11 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.26] - Unreleased
+
+### Fixed
+- **In-app upgrades no longer kick the user back to /login.** During the backend recreate window, transient requests can briefly return 401 (session middleware re-initializing, or nginx returning auth-shaped responses while it waits for backend health). The frontend's `apiClient` previously treated any 401 as a real session expiry and forced a logout + redirect. Now retries the request once after a 1.5s delay before bailing — same pattern that already exists for CSRF 403 retries. Real session expirations still log out within ~1.5s; transient recreate-window 401s recover invisibly.
+
 ## [1.1.25] - 2026-05-26
 
 ### Added
