@@ -127,33 +127,79 @@ export function SystemUpdateCard() {
   }, [lastMessage]);
 
   // While the apply is in flight, a WS disconnect means the backend is
-  // restarting (host networking + container recreate). Keep the user on
-  // the "Restarting…" state until the WS reconnects, then refetch.
+  // restarting (host networking + container recreate). Two pathways
+  // land us in `restarting`:
+  //
+  // 1. `updater_complete` WS message arrived before the backend went
+  //    down — explicit signal, handled in the message effect above.
+  // 2. WS dropped *during* the installing phase — backend was recreated
+  //    mid-upgrade and the `updater_complete` message was lost in flight.
+  //    We have to infer "the upgrade reached the recreate phase" from
+  //    the disconnect itself, otherwise the UI sits on `installing`
+  //    forever (the 2026-05-25 v1.1.22 stuck-spinner bug).
   useEffect(() => {
-    if (applyState.kind === 'restarting' && isWsConnected) {
-      // Give the new backend a moment to settle before we refetch.
-      const t = setTimeout(() => {
-        updateQuery.refetch().then((r) => {
-          const fresh = r.data;
-          setApplyState((prev) => {
-            if (prev.kind !== 'restarting') return prev;
-            if (fresh && fresh.current === prev.target) {
-              return { kind: 'done', target: prev.target };
-            }
-            // Reconnected but we're still on the old version → rollback
-            // happened or the upgrade silently failed.
-            return {
-              kind: 'failed',
-              target: prev.target,
-              lines: prev.lines,
-              reason: 'Server reconnected but version did not change',
-            };
-          });
-        });
-      }, 1500);
-      return () => clearTimeout(t);
+    if (applyState.kind === 'installing' && !isWsConnected) {
+      setApplyState((prev) => {
+        if (prev.kind !== 'installing') return prev;
+        return { kind: 'restarting', target: prev.target, lines: prev.lines };
+      });
     }
-  }, [applyState.kind, isWsConnected, updateQuery]);
+  }, [applyState.kind, isWsConnected]);
+
+  // Once WS reconnects after the recreate, poll /system/update until
+  // the reported `current` matches the target we asked to install — or
+  // give up after ~30s and surface a clear failure. Single-shot refetch
+  // (the previous behaviour) raced backend's prisma migrate + bootup
+  // and false-positived as "Server reconnected but version did not
+  // change" on slow recreates.
+  const restartingTarget =
+    applyState.kind === 'restarting' ? applyState.target : null;
+
+  useEffect(() => {
+    if (!restartingTarget || !isWsConnected) return;
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 10;
+    const intervalMs = 3000;
+
+    const tick = async () => {
+      if (cancelled) return;
+      attempts += 1;
+      const r = await updateQuery.refetch();
+      const fresh = r.data;
+      if (cancelled) return;
+      if (fresh && fresh.current === restartingTarget) {
+        setApplyState((prev) =>
+          prev.kind === 'restarting' && prev.target === restartingTarget
+            ? { kind: 'done', target: prev.target }
+            : prev
+        );
+        return;
+      }
+      if (attempts >= maxAttempts) {
+        setApplyState((prev) =>
+          prev.kind === 'restarting' && prev.target === restartingTarget
+            ? {
+                kind: 'failed',
+                target: prev.target,
+                lines: prev.lines,
+                reason: `Server reconnected but version did not change after ${(maxAttempts * intervalMs) / 1000}s`,
+              }
+            : prev
+        );
+        return;
+      }
+      setTimeout(tick, intervalMs);
+    };
+
+    // First check after a short settle delay so we don't hammer a
+    // backend that's literally one HTTP request into its lifetime.
+    const initial = setTimeout(tick, 1500);
+    return () => {
+      cancelled = true;
+      clearTimeout(initial);
+    };
+  }, [restartingTarget, isWsConnected, updateQuery]);
 
   // Auto-scroll the progress log on new lines.
   useEffect(() => {
