@@ -4,7 +4,7 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.1.25] - Unreleased
+## [1.1.25] - 2026-05-26
 
 ### Added
 - **Shell lint gate on PRs (`bash -n` + `shellcheck -S error`).** Hard-fails before merge on syntax bugs and runtime-behavior-changing shellcheck errors (command-substitution-in-comment, unquoted globs that break on real input, etc.). Direct response to the 2026-05-25 install.sh backtick-in-heredoc bug that ran `docker compose up` *while writing the .env file* — that class of bug shouldn't ship to CI again. Style-only warnings still allowed; can tighten to `-S warning` later.
