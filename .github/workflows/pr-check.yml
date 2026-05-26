@@ -35,11 +35,42 @@ jobs:
         with:
           extra_args: --only-verified
 
+  # Hard-fail PRs that introduce shell-syntax bugs or shellcheck-level
+  # errors in any committed script. Caught the 2026-05-25 backtick-in-
+  # heredoc-comment bug retroactively; mainlining it as a PR gate so the
+  # same shape can't ship to production again. shellcheck -S error gates
+  # on actual bugs (command-substitution-in-comment, unquoted globs that
+  # break in real input, etc.) without churning on style-only warnings.
+  shell-lint:
+    name: Shell lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: bash -n syntax check
+        run: |
+          set -e
+          while IFS= read -r -d '' f; do
+            echo "bash -n $f"
+            bash -n "$f"
+          done < <(find scripts -maxdepth 2 -type f -name '*.sh' -print0)
+
+      - name: shellcheck (errors only)
+        run: |
+          set -e
+          # -S error: bugs that change runtime behavior, not style.
+          # We can bump to -S warning once existing scripts are clean.
+          shellcheck -S error scripts/*.sh
+
   # Ensure all tests pass before merge
   test-summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [pr-validation]
+    needs: [pr-validation, shell-lint]
     steps:
       - name: Check all tests
         run: echo "All PR checks passed!"

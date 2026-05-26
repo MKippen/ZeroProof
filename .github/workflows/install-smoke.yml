@@ -920,3 +920,69 @@ jobs:
         run: |
           docker ps -a || true
           docker compose logs --tail=80 || true
+
+  # Tiny-cost in-container coverage. Every upgrade-path bug we hit on
+  # 2026-05-25 only manifested when upgrade.sh ran INSIDE the updater
+  # container (suicide self-recreate, host-path bind-mount mismatch,
+  # WS-disconnect-during-installing). The other Tier 4 jobs invoke
+  # upgrade.sh from the host shell, which doesn't exercise any of that.
+  # We can't afford to spin a full stack inside docker-in-docker for
+  # every PR, so this job pays only the cost of `apk add` + a 30-second
+  # dry-run: spin an alpine container, mount the worktree at the SAME
+  # absolute path on both sides (mirrors v1.1.21's mount layout), run
+  # upgrade.sh --check, and assert the in-container detection log line
+  # fires + --check stays read-only. Catches regressions in the
+  # detection + recreate-target-enumeration logic without paying for a
+  # real recreate.
+  in-container-upgrade-check:
+    name: upgrade.sh --check runs cleanly inside a container
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Pick a baseline tag to point --check at
+        id: pick
+        run: |
+          tag=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)
+          if [ -z "$tag" ]; then
+            echo "No release tags — skipping (first release of repo)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Run upgrade.sh --check inside an alpine container
+        if: steps.pick.outputs.skip != 'true'
+        run: |
+          set -e
+          # Mount worktree at the SAME path on both sides so compose's
+          # path resolution matches what the production updater sees
+          # post-v1.1.21. Docker socket lets upgrade.sh's compose-detection
+          # codepath actually find the binary; --check stays read-only.
+          worktree="$(pwd)"
+          output=$(docker run --rm \
+            -v "$worktree":"$worktree" \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -w "$worktree" \
+            alpine:3 sh -c "apk add --no-cache -q bash git docker-cli docker-cli-compose openssl curl jq 2>&1 >/dev/null && bash scripts/upgrade.sh --check ${{ steps.pick.outputs.tag }}" 2>&1)
+          echo "$output"
+          # v1.1.19 in-container detection must fire — if this breaks,
+          # in-app upgrades will self-suicide again.
+          grep -qF "Detected in-container execution" <<< "$output" \
+            || { echo "FAIL: in-container detection didn't fire (v1.1.19 regression)"; exit 1; }
+          # v1.1.19 recreate-target list must enumerate services
+          # without 'updater' — that's the entire point of the
+          # suicide-skip.
+          grep -qE "Recreate targets:.*backend" <<< "$output" \
+            || { echo "FAIL: recreate targets list didn't include backend"; exit 1; }
+          if grep -qE "Recreate targets:.* updater( |$)" <<< "$output"; then
+            echo "FAIL: recreate targets list includes 'updater' — suicide-skip broken"
+            exit 1
+          fi
+          # --check must remain read-only.
+          grep -qF "no changes applied" <<< "$output" \
+            || { echo "FAIL: --check didn't print its read-only marker"; exit 1; }
+          echo "In-container --check passes all assertions."
