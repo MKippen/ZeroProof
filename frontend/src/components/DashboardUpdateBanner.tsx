@@ -90,7 +90,7 @@ export function DashboardUpdateBanner() {
           Review and apply from Settings.
         </span>
         <Button asChild size="sm" variant="outline">
-          <Link to="/settings">View update</Link>
+          <Link to="/settings">Apply {latest}</Link>
         </Button>
       </AlertDescription>
     </Alert>
