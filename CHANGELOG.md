@@ -4,7 +4,7 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.1.23] - Unreleased
+## [1.1.23] - 2026-05-25
 
 ### Fixed
 - **"Installing…" spinner could get stuck forever after a successful in-app upgrade.** The `SystemUpdateCard` only transitioned to `restarting` when it received the `updater_complete` WebSocket message — but the backend container is being recreated *as* that message is being sent, so the message frequently never reaches the browser. State sat on `installing` indefinitely while the upgrade had actually completed cleanly. Hit during the 2026-05-25 v1.1.22 in-app upgrade — the upgrade itself worked end-to-end (`git describe` reported v1.1.22, all containers healthy), only the UI was stranded.
