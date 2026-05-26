@@ -4,6 +4,11 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.22] - Unreleased
+
+### Changed
+- **Dashboard update banner button now names the version it'll apply** ("Apply v1.1.22" instead of "View update"). Tighter affordance — the user knows what's about to happen before clicking through to Settings.
+
 ## [1.1.21] - 2026-05-25
 
 ### Fixed
