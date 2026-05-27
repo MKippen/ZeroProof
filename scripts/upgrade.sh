@@ -84,6 +84,20 @@ else
     exit 1
 fi
 
+# Pin the docker CLI's API version to whatever the host daemon supports.
+# Inside the updater container we apk-add a current docker-cli (API 1.45+),
+# but the LXC's daemon is older (docker 20.10 → API 1.41). Plain
+# `docker run` / `docker image prune` then fail with:
+#   client version 1.X is too new. Maximum supported API version is 1.41
+# `docker version` is exempt from version negotiation, so we read the
+# server's APIVersion from there and force the client to clamp to it.
+# `compose` does its own negotiation and isn't affected; this only
+# matters for the bare-docker calls (prune + helper container spawn).
+host_api=$(docker version --format '{{.Server.APIVersion}}' 2>/dev/null || echo "")
+if [[ -n "$host_api" ]]; then
+    export DOCKER_API_VERSION="$host_api"
+fi
+
 # When upgrade.sh is invoked from inside the updater container (via the
 # in-app Apply Update flow), a plain `compose up -d --build` would
 # recreate the updater itself — killing this very script mid-execution
@@ -577,17 +591,22 @@ if $HEALTHY; then
         # docker-compose.yml + the bind-mounted worktree at the same
         # absolute path on both sides (v1.1.21's mount layout), so
         # paths resolve identically to the host CLI flow.
+        helper_log="/tmp/zeroproof-self-upgrade-spawn.log"
+        # Propagate DOCKER_API_VERSION into the helper container so its
+        # bundled docker-cli also clamps to the host daemon's API.
         if docker run -d --rm \
             --name "$helper_name" \
+            -e "DOCKER_API_VERSION=${DOCKER_API_VERSION:-}" \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "$worktree":"$worktree" \
             -w "$worktree" \
             alpine:3 \
             sh -c "apk add --no-cache docker-cli docker-cli-compose >/dev/null 2>&1 && sleep 5 && docker compose up -d --build updater >/dev/null 2>&1" \
-            >/dev/null 2>&1; then
+            >"$helper_log" 2>&1; then
             echo "  Helper $helper_name spawned — updater will sync to $TARGET_DESC in ~30s."
         else
-            echo -e "${YELLOW}  Helper failed to spawn — updater stays on prior image until next upgrade.${NC}"
+            echo -e "${YELLOW}  Helper failed to spawn — updater stays on prior image.${NC}"
+            echo -e "${YELLOW}  (spawn error: $(head -3 "$helper_log"))${NC}"
         fi
     fi
 
