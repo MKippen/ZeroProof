@@ -947,9 +947,22 @@ jobs:
       - name: Pick a baseline tag to point --check at
         id: pick
         run: |
-          tag=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)
+          # Pick the latest semver tag whose commit isn't HEAD. If we
+          # point --check at the same commit we're sitting on,
+          # upgrade.sh short-circuits with "Already on <tag>. Nothing
+          # to do." and exits before printing the recreate-target list
+          # that the assertions below grep for. Same pattern as the
+          # other Tier 4 baseline pickers.
+          head_sha=$(git rev-parse HEAD)
+          tag=""
+          for candidate in $(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname); do
+            if [ "$(git rev-parse "$candidate^{commit}")" != "$head_sha" ]; then
+              tag="$candidate"
+              break
+            fi
+          done
           if [ -z "$tag" ]; then
-            echo "No release tags — skipping (first release of repo)."
+            echo "No release tag ahead of HEAD — skipping (first release of repo)."
             echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
