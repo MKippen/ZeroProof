@@ -4,7 +4,7 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.1.29] - Unreleased
+## [1.1.29] - 2026-05-26
 
 ### Added
 - **In-app upgrades now auto-recreate the updater itself.** Throwaway-pattern helper container: after the main upgrade is healthy + prune runs, `upgrade.sh` spawns a detached alpine container that sleeps 5s then runs `docker compose up -d --build updater` from *outside* the dying updater. The helper survives the updater's recreate because the docker daemon owns it directly. Updater syncs to the target version within ~30s of upgrade completion. No more drift, no more "run docker compose on the host" copy in the UI — the whole upgrade is top-to-bottom built in.
