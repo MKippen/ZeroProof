@@ -4,6 +4,11 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.30] - Unreleased
+
+### Fixed
+- **Stuck "Server is restarting…" spinner that wouldn't transition to done** even after a successful upgrade (backend was reporting the target version, drift warning showed it, but the spinner kept spinning). v1.1.27's polling effect listed `updateQuery` in its dependency array, but react-query returns a new object every render — every re-render tore down the in-flight tick and restarted with a fresh 1500ms initial delay. The actual poll never fired. Hold the `refetch` callable in a ref so the effect depends only on `restartingTarget` and stays mounted across renders.
+
 ## [1.1.29] - 2026-05-26
 
 ### Added
