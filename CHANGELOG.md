@@ -4,6 +4,14 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.31] - Unreleased
+
+### Fixed
+- **Auto-prune and updater self-recreate helper were both silently failing** inside the updater container. The updater image's `apk add docker-cli` pulls a current docker CLI (API 1.45+), but the LXC's docker daemon is older (Docker 20.10 → API 1.41). Bare-docker calls (`docker image prune`, `docker run` for the helper) failed with `client version 1.X is too new. Maximum supported API version is 1.41`. The `compose up` path was unaffected because compose does its own version negotiation; v1.1.29's other operations succeeded so the failure mode was invisible until v1.1.30.
+
+  Detect the host daemon's `Server.APIVersion` via `docker version --format` (which is exempt from version negotiation) and export `DOCKER_API_VERSION` for the rest of the script. Propagate the same env into the helper container so its bundled docker-cli clamps to the same API.
+- **Helper-spawn error is now surfaced.** v1.1.29 suppressed stderr with `>/dev/null 2>&1` so a failed helper spawn just said "Helper failed to spawn" with no detail. Capture to a tempfile and echo the first few lines on failure.
+
 ## [1.1.30] - 2026-05-26
 
 ### Fixed
