@@ -155,6 +155,14 @@ export function SystemUpdateCard() {
   const restartingTarget =
     applyState.kind === 'restarting' ? applyState.target : null;
 
+  // react-query returns a new updateQuery object on every render. If we
+  // list it in the polling effect's deps, the effect tears down and
+  // restarts on every render — meaning the 1500ms initial settle delay
+  // keeps resetting and the actual poll never fires. Hold the latest
+  // refetch in a ref so the effect can depend ONLY on restartingTarget.
+  const refetchRef = useRef(updateQuery.refetch);
+  refetchRef.current = updateQuery.refetch;
+
   // Poll /system/update over HTTP until the reported `current` matches
   // the target we asked to install. Two prior bugs informed the shape:
   //
@@ -180,7 +188,7 @@ export function SystemUpdateCard() {
 
     const tick = async () => {
       if (cancelled) return;
-      const r = await updateQuery.refetch();
+      const r = await refetchRef.current();
       if (cancelled) return;
       const fresh = r.data;
       if (fresh && fresh.current === restartingTarget) {
@@ -223,7 +231,7 @@ export function SystemUpdateCard() {
       cancelled = true;
       clearTimeout(initial);
     };
-  }, [restartingTarget, updateQuery]);
+  }, [restartingTarget]);
 
   // Auto-scroll the progress log on new lines.
   useEffect(() => {
