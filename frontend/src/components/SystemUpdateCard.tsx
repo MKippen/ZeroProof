@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CheckCircle2, Download, ExternalLink, FileText, Info, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, ExternalLink, FileText, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import api from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -244,7 +244,6 @@ export function SystemUpdateCard() {
       setApplyState({ kind: 'installing', target, lines: [] });
       toast({
         title: `Installing ${target}`,
-        description: 'Streaming progress below.',
       });
     },
     onError: (error: Error, target) => {
@@ -333,24 +332,13 @@ export function SystemUpdateCard() {
               {status?.versions?.updater ?? (status?.applyEnabled ? '…' : 'not running')}
             </span>
           </div>
-          {status?.versions?.updater &&
-            status?.versions?.backend &&
-            status.versions.updater !== status.versions.backend && (
-              <div className="rounded-md border border-muted bg-muted/30 p-2 text-xs text-muted-foreground">
-                <Info className="mr-1 inline h-3 w-3" />
-                <span>
-                  Updater is on <span className="font-mono">{status.versions.updater}</span>{' '}
-                  while backend is on <span className="font-mono">{status.versions.backend}</span>.
-                  This is expected after an in-app upgrade — the updater is
-                  intentionally skipped to avoid killing the upgrade script
-                  mid-run. The current image keeps working; sync it on your
-                  next CLI upgrade, or run on the host:
-                </span>
-                <code className="mt-1 block rounded bg-background/60 px-2 py-1 font-mono">
-                  docker compose up -d --build updater
-                </code>
-              </div>
-            )}
+          {/* Drift between backend and updater versions used to require a
+              manual `docker compose up -d --build updater`. v1.1.29 spawns
+              a detached helper at the tail of upgrade.sh that recreates the
+              updater automatically, so drift should self-resolve within ~30s
+              of any successful in-app upgrade. Surfacing it as UI cruft is
+              user-hostile — if the helper fails, that's an operator bug to
+              dig into via logs, not a workflow we ask users to do. */}
           <div className="flex items-center justify-between gap-3">
             <span className="text-muted-foreground">Latest available</span>
             <span className="font-mono">

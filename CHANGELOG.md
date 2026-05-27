@@ -4,6 +4,15 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.29] - Unreleased
+
+### Added
+- **In-app upgrades now auto-recreate the updater itself.** Throwaway-pattern helper container: after the main upgrade is healthy + prune runs, `upgrade.sh` spawns a detached alpine container that sleeps 5s then runs `docker compose up -d --build updater` from *outside* the dying updater. The helper survives the updater's recreate because the docker daemon owns it directly. Updater syncs to the target version within ~30s of upgrade completion. No more drift, no more "run docker compose on the host" copy in the UI — the whole upgrade is top-to-bottom built in.
+
+### Removed
+- **Drift warning in the Updates card.** v1.1.24 added neutral copy explaining why backend and updater versions could differ post-upgrade, with a manual `docker compose up -d --build updater` command. v1.1.29's auto-recreate makes the drift self-resolve, so the warning is no longer needed. Surfacing the manual command in the UI was user-hostile — the upgrade should just work.
+- **"Streaming progress below" toast description.** Confusing when the user isn't on the Settings page. Toast title alone (`Installing v1.1.X`) is sufficient signal.
+
 ## [1.1.28] - 2026-05-26
 
 ### Added

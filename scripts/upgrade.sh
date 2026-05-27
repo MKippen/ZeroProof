@@ -555,6 +555,42 @@ if $HEALTHY; then
         echo -e "${YELLOW}  (prune failed; not fatal — upgrade is already complete)${NC}"
     fi
 
+    # Throwaway-pattern updater self-recreate. The main upgrade above
+    # ran with `updater` excluded from the recreate target list (the
+    # v1.1.19 suicide-skip) — recreating the updater while it's
+    # running this script would kill the script mid-execution. Now
+    # that the main upgrade is healthy, spawn a detached helper
+    # container that does the updater recreate from *outside* the
+    # dying updater. The helper survives our death because the docker
+    # daemon owns it directly. CLI runs (no /.dockerenv) don't need
+    # this — host bash recreated the updater normally as part of the
+    # main compose up.
+    if [[ -f /.dockerenv ]]; then
+        echo ""
+        echo "Spawning detached helper to recreate updater..."
+        worktree="$(pwd -P)"
+        helper_name="zeroproof-self-upgrade-$$"
+        # The 5s sleep gives this script enough time to exit cleanly
+        # so its final progress lines reach the WebSocket-tailing
+        # backend before the updater container dies and tears down
+        # the file watcher. Compose v2 in the helper sees the same
+        # docker-compose.yml + the bind-mounted worktree at the same
+        # absolute path on both sides (v1.1.21's mount layout), so
+        # paths resolve identically to the host CLI flow.
+        if docker run -d --rm \
+            --name "$helper_name" \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$worktree":"$worktree" \
+            -w "$worktree" \
+            alpine:3 \
+            sh -c "apk add --no-cache docker-cli docker-cli-compose >/dev/null 2>&1 && sleep 5 && docker compose up -d --build updater >/dev/null 2>&1" \
+            >/dev/null 2>&1; then
+            echo "  Helper $helper_name spawned — updater will sync to $TARGET_DESC in ~30s."
+        else
+            echo -e "${YELLOW}  Helper failed to spawn — updater stays on prior image until next upgrade.${NC}"
+        fi
+    fi
+
     echo ""
     echo "If anything looks off, roll back with:"
     echo "  ./scripts/upgrade.sh --rollback"
