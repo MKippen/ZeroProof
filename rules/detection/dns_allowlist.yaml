@@ -1,0 +1,93 @@
+id: dns_allowlist
+description: |
+  Domains that DNS-based detectors (dns_tunneling, dns_bypass) treat as
+  known-safe and skip when fingerprinting findings.
+
+  These are well-known cloud, CDN, streaming, and IoT-vendor domains that
+  legitimately produce long, high-entropy DNS labels (sharding, cache keys,
+  session tokens). Without an allowlist they generate continuous noise
+  from devices like Amazon Echo / Fire TV / Ring, Meta apps, Apple devices,
+  and any client behind a major CDN.
+
+  Users can disable individual entries or whole categories from the UI
+  (Settings → DNS allowlist), and can add their own per-domain or
+  per-device overrides on top of these defaults.
+categories:
+  - id: amazon
+    label: "Amazon / Alexa / Ring / Fire TV"
+    domains:
+      - amazon.dev
+      - a2z.com
+      - aws.dev
+      - amazonaws.com
+      - ring.com
+      - amazonalexa.com
+      - kindle.com
+      - lastmile.amazon.dev
+      - peg.a2z.com
+  - id: meta
+    label: "Meta / Facebook / Instagram / WhatsApp"
+    domains:
+      - fbcdn.net
+      - facebook.com
+      - instagram.com
+      - whatsapp.net
+      - fbsbx.com
+      - messenger.com
+  - id: google
+    label: "Google / YouTube / Nest"
+    domains:
+      - googleusercontent.com
+      - gstatic.com
+      - doubleclick.net
+      - ggpht.com
+      - googlevideo.com
+      - google-analytics.com
+      - nest.com
+      - googleapis.com
+  - id: apple
+    label: "Apple / iCloud"
+    domains:
+      - icloud-content.com
+      - mzstatic.com
+      - apple-dns.net
+      - applecdn.com
+      - appleidmsa.apple.com
+      - itunes.apple.com
+      - cdn-apple.com
+  - id: microsoft
+    label: "Microsoft / Office 365 / Xbox"
+    domains:
+      - msftncsi.com
+      - office365.com
+      - msedge.net
+      - trafficmanager.net
+      - xboxlive.com
+      - windowsupdate.com
+      - live.com
+  - id: cdns
+    label: "Major CDNs (Akamai, Cloudfront, Fastly, etc.)"
+    domains:
+      - akamaihd.net
+      - akamaiedge.net
+      - cloudfront.net
+      - fastly.net
+      - llnwd.net
+      - edgekey.net
+      - edgesuite.net
+      - azureedge.net
+      - cdn77.org
+      - cdninstagram.com
+      - jsdelivr.net
+  - id: streaming
+    label: "Streaming (Netflix, Spotify, Hulu, etc.)"
+    domains:
+      - nflxvideo.net
+      - nflximg.net
+      - nflxso.net
+      - spotify.com
+      - scdn.co
+      - hulu.com
+      - hulustream.com
+      - rokuchannel.tv
+      - rokucdn.com

@@ -7,6 +7,7 @@ import {
   Database,
   FileJson,
   FileText,
+  ShieldCheck,
   Wand2,
   Network,
 } from 'lucide-react';
@@ -22,9 +23,17 @@ import { ConfigContent } from './ConfigPage';
 import { WizardContent } from './NetworkWizardPage';
 import { RulesContent } from './RulesPage';
 import { DnsProxyConnectionForm } from '@/components/DnsProxyConnectionForm';
+import { DnsAllowlistSettings } from '@/components/DnsAllowlistSettings';
 import { SystemUpdateCard } from '@/components/SystemUpdateCard';
 
-const TAB_VALUES = ['general', 'configuration', 'dns-proxy', 'wizard', 'rules'] as const;
+const TAB_VALUES = [
+  'general',
+  'configuration',
+  'dns-proxy',
+  'allowlist',
+  'wizard',
+  'rules',
+] as const;
 type TabValue = (typeof TAB_VALUES)[number];
 
 function tabFromHash(hash: string): TabValue {
@@ -105,6 +114,10 @@ export function SettingsPage() {
           <TabsTrigger value="dns-proxy" className="flex items-center gap-2">
             <Network className="h-4 w-4" />
             DNS Proxy
+          </TabsTrigger>
+          <TabsTrigger value="allowlist" className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4" />
+            DNS Allowlist
           </TabsTrigger>
           <TabsTrigger value="wizard" className="flex items-center gap-2">
             <Wand2 className="h-4 w-4" />
@@ -210,6 +223,10 @@ export function SettingsPage() {
 
         <TabsContent value="dns-proxy" className="space-y-6">
           <DnsProxyConnectionForm />
+        </TabsContent>
+
+        <TabsContent value="allowlist" className="space-y-6">
+          <DnsAllowlistSettings />
         </TabsContent>
 
         <TabsContent value="wizard">

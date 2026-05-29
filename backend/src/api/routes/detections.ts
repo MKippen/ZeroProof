@@ -19,6 +19,7 @@ import {
   getDetectionSummary,
   listDetections,
 } from '../../services/detection/detectionAnalytics';
+import { createUserEntry } from '../../services/dnsAllowlist';
 import type { ApiResponse } from '../../types';
 import logger from '../../utils/logger';
 
@@ -148,5 +149,132 @@ router.post('/:id/dismiss', requireAuth, (req: Request, res: Response) =>
 router.post('/:id/reopen', requireAuth, (req: Request, res: Response) =>
   setStatus(res, String(req.params.id), 'OPEN')
 );
+
+/**
+ * Allowlist the source detection's parent domain and bulk-resolve every
+ * matching open detection in one call. Used by the "Allow *.foo" and
+ * "Allow for this device" buttons on a DNS-tunneling finding.
+ *
+ * Response includes the new allowlist entry plus the IDs that got resolved,
+ * so the UI can offer an Undo (= DELETE entry + reopen each id).
+ */
+const AllowlistFromDetectionBody = z.object({
+  scope: z.enum(['GLOBAL', 'DEVICE']),
+  note: z.string().max(500).optional(),
+});
+
+router.post('/:id/allowlist', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    const body = AllowlistFromDetectionBody.parse(req.body ?? {});
+    const source = await prisma.detection.findUnique({ where: { id } });
+    if (!source) {
+      sendError(res, null, 'NOT_FOUND', 'Detection not found', 404);
+      return;
+    }
+    const meta = (source.metadata ?? {}) as {
+      parentDomain?: string;
+      clientIp?: string;
+    };
+    if (!meta.parentDomain) {
+      sendError(
+        res,
+        null,
+        'UNSUPPORTED_DETECTION',
+        'This detection has no parent domain to allowlist',
+        400
+      );
+      return;
+    }
+    if (body.scope === 'DEVICE' && !meta.clientIp) {
+      sendError(
+        res,
+        null,
+        'UNSUPPORTED_DETECTION',
+        'This detection has no device key to scope to',
+        400
+      );
+      return;
+    }
+    const userId = (req.user as { id?: string } | undefined)?.id ?? null;
+    const entry = await createUserEntry({
+      parentDomain: meta.parentDomain,
+      scope: body.scope,
+      deviceKey: body.scope === 'DEVICE' ? (meta.clientIp ?? null) : null,
+      deviceLabel:
+        body.scope === 'DEVICE' ? (source.affectedResource ?? null) : null,
+      sourceDetectionId: id,
+      note: body.note ?? null,
+      createdBy: userId,
+    });
+
+    // Bulk-resolve every matching open detection.
+    const candidates = await prisma.detection.findMany({
+      where: { detectorId: source.detectorId, status: 'OPEN' },
+      select: { id: true, metadata: true },
+    });
+    const matched: string[] = [];
+    for (const c of candidates) {
+      const m = (c.metadata ?? {}) as { parentDomain?: string; clientIp?: string };
+      if (m.parentDomain !== meta.parentDomain) continue;
+      if (body.scope === 'DEVICE' && m.clientIp !== meta.clientIp) continue;
+      matched.push(c.id);
+    }
+    if (matched.length > 0) {
+      await prisma.detection.updateMany({
+        where: { id: { in: matched } },
+        data: { status: 'RESOLVED' },
+      });
+    }
+
+    const response: ApiResponse = {
+      success: true,
+      data: {
+        entry,
+        resolvedIds: matched,
+        resolvedCount: matched.length,
+      },
+    };
+    res.json(response);
+  } catch (error) {
+    sendError(
+      res,
+      error,
+      'DETECTION_ALLOWLIST_ERROR',
+      'Failed to allowlist detection'
+    );
+  }
+});
+
+/**
+ * Undo a previous allowlist-from-detection action: delete the entry and
+ * reopen the listed detection ids. UI sends back what came in the toast.
+ */
+const UndoAllowlistBody = z.object({
+  entryId: z.string().min(1).max(64),
+  reopenIds: z.array(z.string().min(1).max(64)).max(2000),
+});
+
+router.post('/allowlist/undo', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const body = UndoAllowlistBody.parse(req.body ?? {});
+    await prisma.dnsAllowlistEntry
+      .delete({ where: { id: body.entryId } })
+      .catch(() => undefined);
+    if (body.reopenIds.length > 0) {
+      await prisma.detection.updateMany({
+        where: { id: { in: body.reopenIds } },
+        data: { status: 'OPEN' },
+      });
+    }
+    const response: ApiResponse = {
+      success: true,
+      data: { reopenedCount: body.reopenIds.length },
+    };
+    res.json(response);
+  } catch (error) {
+    sendError(res, error, 'DETECTION_ALLOWLIST_UNDO_ERROR', 'Failed to undo allowlist');
+  }
+});
 
 export default router;

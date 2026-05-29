@@ -814,3 +814,29 @@ model GitHubRuleRepo {
 
   @@unique([owner, repo])
 }
+
+/// User-managed DNS allowlist entries — domains DNS-based detectors should
+/// skip. Layered on top of the built-in defaults shipped in
+/// `rules/detection/dns_allowlist.yaml`. See backend/src/services/dnsAllowlist.ts.
+///
+/// `scope = "GLOBAL"` ignores the domain everywhere; `scope = "DEVICE"`
+/// ignores it only when the DNS event's client identity matches `deviceKey`
+/// (typically the client IP — DNS events don't carry MAC). `deviceLabel`
+/// is a UI-only friendly name carried alongside the key.
+model DnsAllowlistEntry {
+  id                String   @id @default(cuid())
+  parentDomain      String
+  scope             String // GLOBAL | DEVICE
+  /// Empty string when scope = GLOBAL — Postgres unique indexes treat NULL
+  /// as distinct, which would let duplicates slip through.
+  deviceKey         String   @default("")
+  deviceLabel       String?
+  sourceDetectionId String?
+  note              String?
+  createdAt         DateTime @default(now())
+  createdBy         String?
+
+  @@unique([parentDomain, scope, deviceKey])
+  @@index([parentDomain])
+  @@index([deviceKey])
+}
