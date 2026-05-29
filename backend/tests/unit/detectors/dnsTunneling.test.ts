@@ -157,4 +157,58 @@ describe('dnsTunnelingDetector', () => {
     );
     expect(await dnsTunnelingDetector.evaluate(ctx())).toHaveLength(1);
   });
+
+  it('skips queries whose parent domain is on a user GLOBAL allowlist entry', async () => {
+    // Suffix-match: a user entry for "example" should cover "tunnel.example".
+    (
+      mockedPrisma.dnsAllowlistEntry.findMany as jest.Mock
+    ).mockResolvedValueOnce([
+      {
+        parentDomain: 'example',
+        scope: 'GLOBAL',
+        deviceKey: '',
+      },
+    ]);
+    (mockedPrisma.dnsQueryEvent.findMany as jest.Mock).mockResolvedValue(
+      Array.from({ length: 8 }, (_, i) => ({
+        id: `q-${i}`,
+        domain: highEntropyDomain(i),
+        clientIp: '10.0.0.5',
+        clientName: 'host',
+      }))
+    );
+    expect(await dnsTunnelingDetector.evaluate(ctx())).toEqual([]);
+  });
+
+  it('skips device-scoped allowlist only for the matching clientIp', async () => {
+    (
+      mockedPrisma.dnsAllowlistEntry.findMany as jest.Mock
+    ).mockResolvedValueOnce([
+      {
+        parentDomain: 'tunnel.example',
+        scope: 'DEVICE',
+        deviceKey: '10.0.0.5',
+      },
+    ]);
+    const matched = Array.from({ length: 6 }, (_, i) => ({
+      id: `qa-${i}`,
+      domain: highEntropyDomain(i),
+      clientIp: '10.0.0.5',
+      clientName: 'allowed',
+    }));
+    const other = Array.from({ length: 6 }, (_, i) => ({
+      id: `qb-${i}`,
+      domain: highEntropyDomain(i),
+      clientIp: '10.0.0.99',
+      clientName: 'other',
+    }));
+    (mockedPrisma.dnsQueryEvent.findMany as jest.Mock).mockResolvedValue([
+      ...matched,
+      ...other,
+    ]);
+    const findings = await dnsTunnelingDetector.evaluate(ctx());
+    // Allowlisted device skipped; other device still fires.
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.metadata?.clientIp).toBe('10.0.0.99');
+  });
 });

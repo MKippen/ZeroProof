@@ -4,6 +4,16 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **DNS allowlist for the detection engine.** Built-in defaults for well-known cloud/CDN/IoT-vendor domains (Amazon/Alexa/Ring, Meta, Google, Apple, Microsoft, major CDNs, streaming) live in `rules/detection/dns_allowlist.yaml` and silence the noisy `dns_tunneling` findings those devices produce as a matter of course. Layered on top: user entries managed from Settings → DNS Allowlist (per-domain, global or per-device), and toggles to disable any built-in category or individual entry.
+- **One-click allowlist from a finding.** New row actions on DNS-tunneling detections: `Allow *.<domain>` (global) and `Allow for this device`. Both create the matching allowlist entry, bulk-resolve every open matching finding in one call, and surface a toast with Undo + "View in Settings". Undo deletes the entry and reopens the affected detections.
+- **Click-to-filter on Detections.** Severity badges (in the Severity Mix card and in every table row) and affected-resource chips (in Top Affected Resources and in every row) are now interactive — click to scope the table to that severity or device. Active filters render as removable chips above the table. Filter state is URL-synced so the page is shareable / browser-back-friendly.
+
+### Changed
+- The `dns_tunneling` detector now consults the effective allowlist (built-in defaults minus disabled entries, plus user entries) before producing a finding. Suffix-matched on the parent domain.
+
 ## [1.1.31] - 2026-05-26
 
 ### Fixed

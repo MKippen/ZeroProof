@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertTriangle,
@@ -6,10 +7,13 @@ import {
   ChevronDown,
   ChevronRight,
   EyeOff,
+  Globe,
   Loader2,
   Radar,
   RotateCcw,
   ShieldAlert,
+  Smartphone,
+  X,
 } from 'lucide-react';
 import api from '@/api/client';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +25,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { ToastAction } from '@/components/ui/toast';
+import { useToast } from '@/hooks/useToast';
 import { cn, formatDate } from '@/lib/utils';
 import type {
   ApiResponse,
@@ -28,6 +34,7 @@ import type {
   DetectionSeverity,
   DetectionStatus,
   DetectionSummary,
+  DnsAllowlistFromDetectionResult,
 } from '@/types';
 
 const NUM_FORMAT = new Intl.NumberFormat();
@@ -82,7 +89,13 @@ function statusClass(status: DetectionStatus): string {
   }
 }
 
-function SummaryTiles({ summary }: { summary: DetectionSummary }): JSX.Element {
+function SummaryTiles({
+  summary,
+  onFilterSeverity,
+}: {
+  summary: DetectionSummary;
+  onFilterSeverity: (s: DetectionSeverity) => void;
+}): JSX.Element {
   const critical =
     summary.bySeverity.find((s) => s.severity === 'CRITICAL')?.count ?? 0;
   const high = summary.bySeverity.find((s) => s.severity === 'HIGH')?.count ?? 0;
@@ -136,18 +149,26 @@ function SummaryTiles({ summary }: { summary: DetectionSummary }): JSX.Element {
               const count =
                 summary.bySeverity.find((s) => s.severity === tier)?.count ?? 0;
               return (
-                <li key={tier} className="flex items-center justify-between">
-                  <span
-                    className={cn(
-                      'rounded border px-1.5 py-0.5 text-[10px] uppercase',
-                      severityClass(tier)
-                    )}
+                <li key={tier}>
+                  <button
+                    type="button"
+                    onClick={() => onFilterSeverity(tier)}
+                    disabled={count === 0}
+                    className="flex w-full items-center justify-between rounded px-1 hover:bg-muted/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent"
+                    title={count > 0 ? `Filter to ${tier}` : undefined}
                   >
-                    {tier}
-                  </span>
-                  <span className="font-mono text-xs">
-                    {NUM_FORMAT.format(count)}
-                  </span>
+                    <span
+                      className={cn(
+                        'rounded border px-1.5 py-0.5 text-[10px] uppercase',
+                        severityClass(tier)
+                      )}
+                    >
+                      {tier}
+                    </span>
+                    <span className="font-mono text-xs">
+                      {NUM_FORMAT.format(count)}
+                    </span>
+                  </button>
                 </li>
               );
             })}
@@ -158,6 +179,14 @@ function SummaryTiles({ summary }: { summary: DetectionSummary }): JSX.Element {
   );
 }
 
+interface BarListRow {
+  label: string;
+  sub?: string;
+  count: number;
+  severity?: DetectionSeverity;
+  onClick?: () => void;
+}
+
 function BarList({
   title,
   description,
@@ -165,7 +194,7 @@ function BarList({
 }: {
   title: string;
   description: string;
-  rows: { label: string; sub?: string; count: number; severity?: DetectionSeverity }[];
+  rows: BarListRow[];
 }): JSX.Element {
   const max = rows[0]?.count ?? 0;
   return (
@@ -181,49 +210,81 @@ function BarList({
           </div>
         ) : (
           <ol className="space-y-3">
-            {rows.map((row, idx) => (
-              <li key={`${row.label}-${idx}`} className="space-y-1">
-                <div className="flex items-baseline justify-between gap-3">
-                  <div className="min-w-0 truncate text-sm">
-                    <span className="mr-2 text-xs text-muted-foreground">
-                      {idx + 1}.
+            {rows.map((row, idx) => {
+              const body = (
+                <>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <div className="min-w-0 truncate text-sm">
+                      <span className="mr-2 text-xs text-muted-foreground">
+                        {idx + 1}.
+                      </span>
+                      <span className="font-medium">{row.label}</span>
+                      {row.sub && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {row.sub}
+                        </span>
+                      )}
+                      {row.severity && (
+                        <span
+                          className={cn(
+                            'ml-2 inline-block rounded border px-1.5 py-0.5 text-[10px] uppercase',
+                            severityClass(row.severity)
+                          )}
+                        >
+                          {row.severity}
+                        </span>
+                      )}
+                    </div>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {NUM_FORMAT.format(row.count)}
                     </span>
-                    <span className="font-medium">{row.label}</span>
-                    {row.sub && (
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {row.sub}
-                      </span>
-                    )}
-                    {row.severity && (
-                      <span
-                        className={cn(
-                          'ml-2 inline-block rounded border px-1.5 py-0.5 text-[10px] uppercase',
-                          severityClass(row.severity)
-                        )}
-                      >
-                        {row.severity}
-                      </span>
-                    )}
                   </div>
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {NUM_FORMAT.format(row.count)}
-                  </span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-red-500/70"
-                    style={{
-                      width: max ? `${Math.max(2, (row.count / max) * 100)}%` : '0%',
-                    }}
-                  />
-                </div>
-              </li>
-            ))}
+                  <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-red-500/70"
+                      style={{
+                        width: max ? `${Math.max(2, (row.count / max) * 100)}%` : '0%',
+                      }}
+                    />
+                  </div>
+                </>
+              );
+              return (
+                <li key={`${row.label}-${idx}`} className="space-y-1">
+                  {row.onClick ? (
+                    <button
+                      type="button"
+                      onClick={row.onClick}
+                      className="block w-full rounded text-left hover:bg-muted/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
+                      title={`Filter to ${row.label}`}
+                    >
+                      {body}
+                    </button>
+                  ) : (
+                    <div>{body}</div>
+                  )}
+                </li>
+              );
+            })}
           </ol>
         )}
       </CardContent>
     </Card>
   );
+}
+
+/** Extract the parent domain (a2z.com) from a dns_tunneling finding's metadata. */
+function getParentDomain(row: DetectionRow): string | null {
+  if (row.detectorId !== 'dns_tunneling') return null;
+  const meta = (row.metadata ?? {}) as { parentDomain?: string };
+  return typeof meta.parentDomain === 'string' ? meta.parentDomain : null;
+}
+
+/** True when the row supports the per-device allowlist action. */
+function hasDeviceKey(row: DetectionRow): boolean {
+  if (row.detectorId !== 'dns_tunneling') return false;
+  const meta = (row.metadata ?? {}) as { clientIp?: string };
+  return typeof meta.clientIp === 'string' && meta.clientIp.length > 0;
 }
 
 interface DetectionRowProps {
@@ -233,6 +294,10 @@ interface DetectionRowProps {
   onResolve: () => void;
   onDismiss: () => void;
   onReopen: () => void;
+  onAllowlistDomain: () => void;
+  onAllowlistDevice: () => void;
+  onFilterSeverity: (s: DetectionSeverity) => void;
+  onFilterResource: (r: string) => void;
   busy: boolean;
 }
 
@@ -243,8 +308,14 @@ function DetectionListRow({
   onResolve,
   onDismiss,
   onReopen,
+  onAllowlistDomain,
+  onAllowlistDevice,
+  onFilterSeverity,
+  onFilterResource,
   busy,
 }: DetectionRowProps): JSX.Element {
+  const parentDomain = getParentDomain(row);
+  const canAllowlistDevice = hasDeviceKey(row);
   return (
     <>
       <tr className="align-top hover:bg-muted/30">
@@ -264,14 +335,17 @@ function DetectionListRow({
           </Button>
         </td>
         <td className="whitespace-nowrap px-3 py-2">
-          <span
+          <button
+            type="button"
+            onClick={() => onFilterSeverity(row.severity)}
             className={cn(
-              'rounded border px-1.5 py-0.5 text-[10px] uppercase',
+              'rounded border px-1.5 py-0.5 text-[10px] uppercase transition hover:brightness-125 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1',
               severityClass(row.severity)
             )}
+            title={`Filter to ${row.severity}`}
           >
             {row.severity}
-          </span>
+          </button>
         </td>
         <td className="px-3 py-2">
           <div className="font-medium">{row.title}</div>
@@ -282,7 +356,20 @@ function DetectionListRow({
             )}
           </div>
         </td>
-        <td className="px-3 py-2 text-sm">{row.affectedResource ?? '—'}</td>
+        <td className="px-3 py-2 text-sm">
+          {row.affectedResource ? (
+            <button
+              type="button"
+              onClick={() => onFilterResource(row.affectedResource!)}
+              className="rounded px-1 text-left hover:bg-muted/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
+              title={`Filter to ${row.affectedResource}`}
+            >
+              {row.affectedResource}
+            </button>
+          ) : (
+            '—'
+          )}
+        </td>
         <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
           {formatDate(row.lastSeen)}
         </td>
@@ -298,7 +385,33 @@ function DetectionListRow({
         </td>
         <td className="whitespace-nowrap px-3 py-2 text-right">
           {row.status === 'OPEN' ? (
-            <div className="flex justify-end gap-1">
+            <div className="flex flex-wrap justify-end gap-1">
+              {parentDomain && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={busy}
+                  onClick={onAllowlistDomain}
+                  className="h-7 px-2 text-xs"
+                  title={`Allow *.${parentDomain} for every device`}
+                >
+                  <Globe className="mr-1 h-3 w-3" />
+                  Allow *.{parentDomain}
+                </Button>
+              )}
+              {parentDomain && canAllowlistDevice && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={busy}
+                  onClick={onAllowlistDevice}
+                  className="h-7 px-2 text-xs"
+                  title={`Allow *.${parentDomain} only for this device`}
+                >
+                  <Smartphone className="mr-1 h-3 w-3" />
+                  Allow for this device
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="ghost"
@@ -406,12 +519,46 @@ function DetectionListRow({
 
 export function DetectionsPage(): JSX.Element {
   const queryClient = useQueryClient();
-  const [windowHours, setWindowHours] = useState(24);
-  const [statusFilter, setStatusFilter] = useState<DetectionStatus | 'ALL'>('OPEN');
+  const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [windowHours, setWindowHours] = useState(() => {
+    const raw = Number(searchParams.get('hours'));
+    return Number.isFinite(raw) && raw > 0 ? raw : 24;
+  });
+  const [statusFilter, setStatusFilter] = useState<DetectionStatus | 'ALL'>(() => {
+    const raw = searchParams.get('status');
+    return raw === 'OPEN' || raw === 'RESOLVED' || raw === 'DISMISSED' || raw === 'ALL'
+      ? raw
+      : 'OPEN';
+  });
   const [severityFloor, setSeverityFloor] = useState<DetectionSeverity | 'ALL'>(
-    'ALL'
+    () => (searchParams.get('severityAtLeast') as DetectionSeverity | null) ?? 'ALL'
+  );
+  // Click-to-filter chips, layered on top of the dropdowns.
+  const [severityEquals, setSeverityEquals] = useState<DetectionSeverity | null>(
+    () => (searchParams.get('severity') as DetectionSeverity | null) || null
+  );
+  const [resourceFilter, setResourceFilter] = useState<string | null>(
+    () => searchParams.get('resource') || null
   );
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Keep URL in sync — sharable, bookmarkable, browser-back works.
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    next.set('hours', String(windowHours));
+    if (statusFilter === 'OPEN') next.delete('status');
+    else next.set('status', statusFilter);
+    if (severityFloor === 'ALL') next.delete('severityAtLeast');
+    else next.set('severityAtLeast', severityFloor);
+    if (severityEquals) next.set('severity', severityEquals);
+    else next.delete('severity');
+    if (resourceFilter) next.set('resource', resourceFilter);
+    else next.delete('resource');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [windowHours, statusFilter, severityFloor, severityEquals, resourceFilter]);
 
   const summaryQuery = useQuery({
     queryKey: ['detections', 'analytics', windowHours],
@@ -454,16 +601,100 @@ export function DetectionsPage(): JSX.Element {
     },
   });
 
+  const allowlistMutation = useMutation({
+    mutationFn: async ({
+      id,
+      scope,
+    }: {
+      id: string;
+      scope: 'GLOBAL' | 'DEVICE';
+    }): Promise<DnsAllowlistFromDetectionResult & { sourceTitle: string }> => {
+      const sourceTitle =
+        listQuery.data?.find((r) => r.id === id)?.title ?? 'finding';
+      const response = await api.post<DnsAllowlistFromDetectionResult>(
+        `/detections/${id}/allowlist`,
+        { scope }
+      );
+      return { ...requireData(response), sourceTitle };
+    },
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ['detections'] });
+      await queryClient.invalidateQueries({ queryKey: ['dns-allowlist'] });
+      const { entry, resolvedCount, resolvedIds } = result;
+      const scopeLabel =
+        entry.scope === 'GLOBAL' ? 'everywhere' : 'on this device';
+      toast({
+        title: `Allowlisted *.${entry.parentDomain} ${scopeLabel}`,
+        description: (
+          <span>
+            {resolvedCount === 0
+              ? 'No matching open findings — future ones will be silenced.'
+              : `Resolved ${resolvedCount} matching open finding${resolvedCount === 1 ? '' : 's'}.`}{' '}
+            <Link
+              to="/settings#allowlist"
+              className="underline hover:text-foreground"
+            >
+              View in Settings
+            </Link>
+          </span>
+        ),
+        action: (
+          <ToastAction
+            altText="Undo allowlist"
+            onClick={() => {
+              undoMutation.mutate({ entryId: entry.id, reopenIds: resolvedIds });
+            }}
+          >
+            Undo
+          </ToastAction>
+        ),
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Allowlist failed',
+        description: error.message,
+      });
+    },
+  });
+
+  const undoMutation = useMutation({
+    mutationFn: async ({
+      entryId,
+      reopenIds,
+    }: {
+      entryId: string;
+      reopenIds: string[];
+    }) => {
+      await api.post('/detections/allowlist/undo', { entryId, reopenIds });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['detections'] });
+      await queryClient.invalidateQueries({ queryKey: ['dns-allowlist'] });
+      toast({ title: 'Allowlist entry removed' });
+    },
+  });
+
   const summary = summaryQuery.data;
   const rows = useMemo(() => listQuery.data ?? [], [listQuery.data]);
+  const filteredRows = useMemo(
+    () =>
+      rows.filter((r) => {
+        if (severityEquals && r.severity !== severityEquals) return false;
+        if (resourceFilter && r.affectedResource !== resourceFilter) return false;
+        return true;
+      }),
+    [rows, severityEquals, resourceFilter]
+  );
   const sortedRows = useMemo(
     () =>
-      [...rows].sort(
+      [...filteredRows].sort(
         (a, b) =>
           SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity] ||
           new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime()
       ),
-    [rows]
+    [filteredRows]
   );
 
   const detectorRows =
@@ -477,7 +708,10 @@ export function DetectionsPage(): JSX.Element {
       label: a.resource,
       count: a.count,
       severity: a.maxSeverity,
+      onClick: () => setResourceFilter(a.resource),
     })) ?? [];
+
+  const hasActiveChips = severityEquals !== null || resourceFilter !== null;
 
   return (
     <div className="space-y-6">
@@ -531,7 +765,7 @@ export function DetectionsPage(): JSX.Element {
         </Card>
       ) : (
         <>
-          <SummaryTiles summary={summary} />
+          <SummaryTiles summary={summary} onFilterSeverity={setSeverityEquals} />
 
           <div className="grid gap-4 lg:grid-cols-2">
             <BarList
@@ -587,6 +821,44 @@ export function DetectionsPage(): JSX.Element {
               </div>
             </CardHeader>
             <CardContent>
+              {hasActiveChips && (
+                <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="text-muted-foreground">Filtered by:</span>
+                  {severityEquals && (
+                    <button
+                      type="button"
+                      onClick={() => setSeverityEquals(null)}
+                      className={cn(
+                        'inline-flex items-center gap-1 rounded border px-2 py-0.5 uppercase hover:brightness-110',
+                        severityClass(severityEquals)
+                      )}
+                    >
+                      {severityEquals}
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                  {resourceFilter && (
+                    <button
+                      type="button"
+                      onClick={() => setResourceFilter(null)}
+                      className="inline-flex items-center gap-1 rounded border border-border px-2 py-0.5 text-foreground hover:bg-muted/30"
+                    >
+                      {resourceFilter}
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSeverityEquals(null);
+                      setResourceFilter(null);
+                    }}
+                    className="text-muted-foreground underline hover:text-foreground"
+                  >
+                    Clear all
+                  </button>
+                </div>
+              )}
               {listQuery.isLoading ? (
                 <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -621,7 +893,7 @@ export function DetectionsPage(): JSX.Element {
                           onToggle={() =>
                             setExpandedId((cur) => (cur === row.id ? null : row.id))
                           }
-                          busy={mutation.isPending}
+                          busy={mutation.isPending || allowlistMutation.isPending}
                           onResolve={() =>
                             mutation.mutate({ id: row.id, action: 'resolve' })
                           }
@@ -631,6 +903,14 @@ export function DetectionsPage(): JSX.Element {
                           onReopen={() =>
                             mutation.mutate({ id: row.id, action: 'reopen' })
                           }
+                          onAllowlistDomain={() =>
+                            allowlistMutation.mutate({ id: row.id, scope: 'GLOBAL' })
+                          }
+                          onAllowlistDevice={() =>
+                            allowlistMutation.mutate({ id: row.id, scope: 'DEVICE' })
+                          }
+                          onFilterSeverity={setSeverityEquals}
+                          onFilterResource={setResourceFilter}
                         />
                       ))}
                     </tbody>

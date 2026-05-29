@@ -224,6 +224,49 @@ export interface DetectionRow {
   metadata: unknown;
 }
 
+// ---------- DNS allowlist ----------
+
+export type DnsAllowlistScope = 'GLOBAL' | 'DEVICE';
+
+export interface DnsAllowlistBuiltInCategory {
+  id: string;
+  label: string;
+  domains: string[];
+}
+
+export interface DnsAllowlistBuiltIn {
+  categories: DnsAllowlistBuiltInCategory[];
+}
+
+export interface DnsAllowlistUserEntry {
+  id: string;
+  parentDomain: string;
+  scope: DnsAllowlistScope;
+  deviceKey: string | null;
+  deviceLabel: string | null;
+  sourceDetectionId: string | null;
+  note: string | null;
+  createdAt: string;
+  createdBy: string | null;
+}
+
+export interface DnsAllowlistState {
+  builtIn: DnsAllowlistBuiltIn;
+  disabledBuiltins: string[];
+  userEntries: DnsAllowlistUserEntry[];
+}
+
+export interface DnsAllowlistFromDetectionResult {
+  entry: {
+    id: string;
+    parentDomain: string;
+    scope: DnsAllowlistScope;
+    deviceKey: string;
+  };
+  resolvedIds: string[];
+  resolvedCount: number;
+}
+
 export interface DnsProxyAnalytics {
   configured: boolean;
   windowHours: number;

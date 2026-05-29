@@ -17,6 +17,7 @@
  */
 import type { Severity } from '@prisma/client';
 import prisma from '../services/database';
+import { loadAllowlistSnapshot, isAllowlisted } from '../services/dnsAllowlist';
 import type {
   Detector,
   DetectorContext,
@@ -62,6 +63,8 @@ export const dnsTunnelingDetector: Detector = {
     const minEntropy = envNumber('DNS_TUNNEL_MIN_ENTROPY', 3.5);
     const minHits = envNumber('DNS_TUNNEL_MIN_HITS', 5);
 
+    const allowlist = await loadAllowlistSnapshot();
+
     const queries = await prisma.dnsQueryEvent.findMany({
       where: {
         queriedAt: { gte: new Date(ctx.beginTime), lte: new Date(ctx.endTime) },
@@ -88,6 +91,7 @@ export const dnsTunnelingDetector: Detector = {
       if (q.domain.length < minLength) continue;
       if (shannonEntropy(q.domain) < minEntropy) continue;
       const parent = parentDomain(q.domain);
+      if (isAllowlisted(parent, q.clientIp, allowlist)) continue;
       const key = `${q.clientIp}:${parent}`;
       const bucket = groups.get(key) ?? {
         evidence: [],
