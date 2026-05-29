@@ -4,7 +4,7 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.1.32] - 2026-05-29
 
 ### Added
 - **DNS allowlist for the detection engine.** Built-in defaults for well-known cloud/CDN/IoT-vendor domains (Amazon/Alexa/Ring, Meta, Google, Apple, Microsoft, major CDNs, streaming) live in `rules/detection/dns_allowlist.yaml` and silence the noisy `dns_tunneling` findings those devices produce as a matter of course. Layered on top: user entries managed from Settings → DNS Allowlist (per-domain, global or per-device), and toggles to disable any built-in category or individual entry.
