@@ -232,6 +232,17 @@ export interface UniFiTrafficMatchingList {
   [key: string]: any;
 }
 
+export interface UniFiSysInfo {
+  /** UniFi Network Application version (e.g. "9.x"). NOT the UniFi OS version. */
+  version?: string;
+  /** UniFi OS / console firmware version (e.g. "5.1.12"). Present on UniFi OS consoles. */
+  udm_version?: string;
+  build?: string;
+  hostname?: string;
+  name?: string;
+  [key: string]: unknown;
+}
+
 export interface UniFiFullConfig {
   sites: UniFiSite[];
   devices: UniFiDevice[];
@@ -250,6 +261,7 @@ export interface UniFiFullConfig {
   vpnServers: UniFiVpnServer[];
   trafficMatchingLists: UniFiTrafficMatchingList[];
   firewallZones: any[];
+  sysInfo: UniFiSysInfo | null;
   fetchedAt: Date;
 }
 
@@ -459,6 +471,20 @@ export class UniFiClient {
     }
   }
 
+  /**
+   * Full sysinfo payload from `/stat/sysinfo`. Carries both the Network
+   * Application version (`version`) and the UniFi OS / console firmware
+   * version (`udm_version`) — the latter is what security advisories such as
+   * SAB-064 are versioned against. Returns null if unavailable.
+   */
+  async getSysInfo(): Promise<UniFiSysInfo | null> {
+    try {
+      return (await this.lib.system.get()) as UniFiSysInfo | null;
+    } catch {
+      return null;
+    }
+  }
+
   async getClients(): Promise<any[]> {
     return this.lib.clients.listActive();
   }
@@ -543,6 +569,7 @@ export class UniFiClient {
       trafficMatchingLists,
       firewallZones,
       fingerprintDevices,
+      sysInfo,
     ] = await Promise.all([
       this.getSites(),
       this.getDevices(),
@@ -562,6 +589,7 @@ export class UniFiClient {
       this.getTrafficMatchingLists(),
       this.getFirewallZones(),
       this.getFingerprintDevices(),
+      this.getSysInfo(),
     ]);
 
     // Fingerprint DB → friendly client device names.
@@ -611,6 +639,7 @@ export class UniFiClient {
       vpnServers,
       trafficMatchingLists,
       firewallZones,
+      sysInfo,
       fetchedAt: new Date(),
     };
   }

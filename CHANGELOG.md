@@ -4,6 +4,14 @@ All notable changes to ZeroProof will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.33] - 2026-05-30
+
+### Added
+- **UniFi OS security-advisory detection (SAB-064).** ZeroProof now captures the UniFi OS firmware version of your console(s) on every sync and checks it against known critical advisories. The first seeded advisory is [SAB-064](https://community.ui.com/releases/Security-Advisory-Bulletin-064-064/84811c09-4cf4-42ab-bd61-cc994445963b) — five UniFi OS vulnerabilities (three rated CVSS 10.0: CVE-2026-34908/34909/34910, plus CVE-2026-33000 and CVE-2026-34911) allowing command injection, path traversal, and unauthorized system changes by an actor with network access. Any console running an affected UniFi OS version surfaces a CRITICAL finding on the Vulnerabilities page with the exact fixed version to update to, the bundled CVEs (auto-linked to NVD), and a link to the bulletin. Per-device-family fix thresholds are matched precisely (UniFi OS Server → 5.0.8, UNAS → 5.1.10, UDM-Beast → 5.1.11, everything else → 5.1.12). Adding future bulletins is a data-only change in `backend/src/analyzers/firmwareAdvisory/advisories.ts`.
+
+### Changed
+- The controller version stored on each configuration snapshot is now populated from `/stat/sysinfo` (it was previously always `Unknown` because it read a field the settings endpoint never returns). The UniFi OS version (`udm_version`) is captured alongside it for advisory analysis.
+
 ## [1.1.32] - 2026-05-29
 
 ### Added

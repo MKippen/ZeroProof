@@ -319,6 +319,13 @@ async function syncUniFiConnections(): Promise<void> {
           trafficMatchingLists: fullConfig.trafficMatchingLists,
           aclRules: fullConfig.aclRules,
           rawNetworkConfig: fullConfig.rawNetworkConfig,
+          sysInfo: fullConfig.sysInfo
+            ? {
+                version: fullConfig.sysInfo.version,
+                udm_version: fullConfig.sysInfo.udm_version,
+                build: fullConfig.sysInfo.build,
+              }
+            : null,
           version: 'live',
         };
 

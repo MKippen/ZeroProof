@@ -7,6 +7,7 @@ import { analyzePortForwards } from './portForwardAnalyzer';
 import { analyzeWlanConfig } from './wlanAnalyzer';
 import { analyzeDnsProxyHygiene } from './dnsProxyAnalyzer';
 import { analyzeDnsProxyClientCoverage } from './dnsProxyClientAnalyzer';
+import { analyzeFirmwareAdvisories } from './firmwareAdvisoryAnalyzer';
 
 export async function analyzeConfiguration(
   config: UniFiConfig,
@@ -20,6 +21,7 @@ export async function analyzeConfiguration(
     const vlanFindings = analyzeVlanConfig(config);
     const portForwardFindings = analyzePortForwards(config);
     const wlanFindings = analyzeWlanConfig(config);
+    const firmwareAdvisoryFindings = analyzeFirmwareAdvisories(config);
 
     // Load intent profile + DNS proxy connection for hygiene checks
     const [intentSetting, adguardConnection] = await Promise.all([
@@ -50,6 +52,7 @@ export async function analyzeConfiguration(
       ...vlanFindings,
       ...portForwardFindings,
       ...wlanFindings,
+      ...firmwareAdvisoryFindings,
       ...dnsProxyFindings,
       ...dnsProxyClientFindings
     );
@@ -85,4 +88,5 @@ export async function analyzeConfiguration(
 }
 
 export { analyzeFirewallRules, analyzeVlanConfig, analyzePortForwards, analyzeWlanConfig };
+export { analyzeFirmwareAdvisories } from './firmwareAdvisoryAnalyzer';
 export { analyzeAgainstIntent } from './intentAnalyzer';

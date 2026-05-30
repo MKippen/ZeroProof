@@ -106,6 +106,16 @@ export interface UniFiConfig {
   wlanConf?: UniFiWlan[];
   devices?: UniFiDevice[];
   honeypots?: UniFiHoneypot[];
+  /** sysinfo version fields used for security-advisory analysis (SAB-064 etc.) */
+  sysInfo?: UniFiSysInfo;
+}
+
+export interface UniFiSysInfo {
+  /** UniFi Network Application version (e.g. "9.x"). NOT the UniFi OS version. */
+  version?: string;
+  /** UniFi OS / console firmware version (e.g. "5.1.12") that advisories are versioned against. */
+  udm_version?: string;
+  build?: string;
 }
 
 export interface UniFiSite {
