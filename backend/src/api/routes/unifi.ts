@@ -119,8 +119,25 @@ function buildConfigForAnalysis(fullConfig: any, connectionName: string): Record
     trafficMatchingLists: fullConfig.trafficMatchingLists,
     aclRules: fullConfig.aclRules,
     rawNetworkConfig: fullConfig.rawNetworkConfig,
+    sysInfo: extractVersionInfo(fullConfig.sysInfo),
     version: 'live',
     notes: `Synced from ${connectionName}`,
+  };
+}
+
+/**
+ * Trim sysinfo to the stable version fields used for advisory analysis.
+ * Excludes volatile fields (uptime, etc.) so it can live in the hashed
+ * config snapshot without churning the config hash on every sync.
+ */
+function extractVersionInfo(
+  sysInfo: { version?: string; udm_version?: string; build?: string } | null | undefined
+): { version?: string; udm_version?: string; build?: string } | null {
+  if (!sysInfo) return null;
+  return {
+    version: sysInfo.version,
+    udm_version: sysInfo.udm_version,
+    build: sysInfo.build,
   };
 }
 
@@ -579,7 +596,8 @@ router.post('/sync', requireAuth, async (req: Request, res: Response) => {
       const newConfig = await prisma.configuration.create({
         data: {
           siteName: fullConfig.sites?.[0]?.desc || fullConfig.sites?.[0]?.name || site || connection.siteId,
-          controllerVersion: fullConfig.settings?.controller_version || 'Unknown',
+          controllerVersion:
+            fullConfig.sysInfo?.version || fullConfig.settings?.controller_version || 'Unknown',
           configHash,
           configJson: configForAnalysis as any,
           isActive: true,
@@ -934,6 +952,7 @@ router.post('/connections/:id/sync', requireAuth, async (req: Request, res: Resp
         trafficMatchingLists: fullConfig.trafficMatchingLists,
         aclRules: fullConfig.aclRules,
         rawNetworkConfig: fullConfig.rawNetworkConfig,
+        sysInfo: extractVersionInfo(fullConfig.sysInfo),
         version: 'live',
       };
 
