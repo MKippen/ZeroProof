@@ -8,9 +8,27 @@ import { validate } from '../middleware/validate';
 import { LoginSchema, ChangePasswordSchema, ApiResponse, SessionUser } from '../../types';
 import { isProd } from '../../config';
 import logger from '../../utils/logger';
+import { createInitialAdmin } from '../../services/adminAccount';
+import { closeSessionWebSockets } from '../middleware/websocket';
 
 const router = Router();
 const BCRYPT_ROUNDS = 12;
+
+async function establishSession(req: Request, userId: number): Promise<SessionUser> {
+  // Discard the anonymous session and its CSRF token at the privilege boundary.
+  const previousSessionId = req.sessionID;
+  await new Promise<void>((resolve, reject) => {
+    req.session.regenerate((err) => err ? reject(err) : resolve());
+  });
+  closeSessionWebSockets(previousSessionId);
+  const user: SessionUser = { id: userId };
+  req.session.userId = userId;
+  req.session.user = user;
+  await new Promise<void>((resolve, reject) => {
+    req.session.save((err) => err ? reject(err) : resolve());
+  });
+  return user;
+}
 
 // Rate limiter for login: 10 attempts per 15 minutes per IP
 const loginLimiter = rateLimit({
@@ -67,22 +85,7 @@ router.post('/login', loginLimiter, validate(LoginSchema), async (req: Request, 
       data: { lastLogin: new Date() },
     });
 
-    // Create session
-    const sessionUser: SessionUser = { id: user.id };
-    req.session.userId = user.id;
-    req.session.user = sessionUser;
-
-    // Explicitly save session before responding
-    await new Promise<void>((resolve, reject) => {
-      req.session.save((err) => {
-        if (err) {
-          logger.error('Session save error:', err);
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
-    });
+    const sessionUser = await establishSession(req, user.id);
 
     // Audit log
     await prisma.auditLog.create({
@@ -117,27 +120,29 @@ router.post('/login', loginLimiter, validate(LoginSchema), async (req: Request, 
 router.post('/logout', requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = req.session.userId;
-
-    await prisma.auditLog.create({
-      data: {
-        userId,
-        action: 'LOGOUT',
-        ipAddress: req.ip,
-      },
+    const sessionId = req.sessionID;
+    // Invalidate first and await the store. An unavailable audit sink must never
+    // leave an authenticated session behind after a successful logout response.
+    await new Promise<void>((resolve, reject) => {
+      req.session.destroy((err) => err ? reject(err) : resolve());
     });
-
-    req.session.destroy((err) => {
-      if (err) {
-        logger.error('Session destroy error:', err);
-      }
+    closeSessionWebSockets(sessionId);
+    res.clearCookie('connect.sid', { path: '/' });
+    await prisma.auditLog.create({
+      data: { userId, action: 'LOGOUT', ipAddress: req.ip },
+    }).catch((error: unknown) => {
+      logger.error('Logout audit error:', error);
     });
 
     const response: ApiResponse = { success: true };
     res.json(response);
   } catch (error) {
     logger.error('Logout error:', error);
-    const response: ApiResponse = { success: true };
-    res.json(response);
+    const response: ApiResponse = {
+      success: false,
+      error: { code: 'LOGOUT_ERROR', message: 'Failed to end session' },
+    };
+    res.status(500).json(response);
   }
 });
 
@@ -173,9 +178,8 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
 // GET /api/v1/auth/csrf — returns the per-session CSRF token. The frontend
 // fetches this once on boot (and again after login) and replays it as the
 // X-CSRF-Token header on every mutating request. No auth required: the
-// token is bound to the session, which is in turn bound to the (httpOnly,
-// SameSite=Strict) cookie, so an unauthenticated session still gets a token
-// it can use after login.
+// token is bound to the session and its httpOnly cookie. Login and setup rotate
+// the session, so clients must fetch a fresh token after authenticating.
 router.get('/csrf', (req: Request, res: Response) => {
   const csrfToken = ensureCsrfToken(req);
   const response: ApiResponse = { success: true, data: { csrfToken } };
@@ -288,44 +292,32 @@ router.post('/setup', setupLimiter, async (req: Request, res: Response) => {
       return;
     }
 
-    const password = String(req.body?.password ?? '');
+    const password = req.body?.password;
 
-    if (!password || password.length < 12) {
+    if (typeof password !== 'string' || password.length < 12 || Buffer.byteLength(password, 'utf8') > 72) {
       const response: ApiResponse = {
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Password must be at least 12 characters' },
+        error: { code: 'VALIDATION_ERROR', message: 'Password must be at least 12 characters and at most 72 UTF-8 bytes' },
       };
       res.status(400).json(response);
       return;
     }
 
     const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-    const user = await prisma.user.create({
-      data: {
-        passwordHash: hash,
-        mustChangePassword: false,
-      },
-      select: { id: true },
-    });
+    const user = await createInitialAdmin(hash, false);
+    if (!user) {
+      res.status(409).json({ success: false, error: {
+        code: 'ALREADY_INITIALIZED', message: 'Setup has already been completed',
+      } });
+      return;
+    }
 
     logger.info(`First-run setup completed; created admin (user id ${user.id})`);
 
     // Auto-login the just-created admin: stamp the session and persist it
     // before responding so the frontend can route straight to the dashboard
     // instead of bouncing through the login page.
-    const sessionUser: SessionUser = { id: user.id };
-    req.session.userId = user.id;
-    req.session.user = sessionUser;
-    await new Promise<void>((resolve, reject) => {
-      req.session.save((err) => {
-        if (err) {
-          logger.error('Session save error during /setup auto-login:', err);
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
-    });
+    await establishSession(req, user.id);
 
     const response: ApiResponse<{ user: { id: number } }> = {
       success: true,
@@ -374,12 +366,7 @@ export async function initializeDefaultUser(): Promise<void> {
   }
 
   const hash = await bcrypt.hash(seedPassword, BCRYPT_ROUNDS);
-  await prisma.user.create({
-    data: {
-      passwordHash: hash,
-      mustChangePassword: true,
-    },
-  });
+  if (!await createInitialAdmin(hash, true)) return;
 
   logger.info('Created seed admin from DEFAULT_ADMIN_PASSWORD');
   logger.warn('⚠️  Change the seed admin password after first login.');

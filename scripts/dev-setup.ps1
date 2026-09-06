@@ -2,6 +2,8 @@
 # Run this script in PowerShell (not as Administrator)
 
 $ErrorActionPreference = "Stop"
+$projectRoot = Join-Path $PSScriptRoot ".."
+Set-Location $projectRoot
 
 Write-Host "==================================" -ForegroundColor Cyan
 Write-Host "Development Environment Setup" -ForegroundColor Cyan
@@ -16,35 +18,31 @@ try {
         throw "Node.js not found"
     }
     $majorVersion = [int]($nodeVersion -replace 'v(\d+)\..*', '$1')
-    if ($majorVersion -lt 20) {
-        Write-Host "Node.js version 20+ required. Current: $nodeVersion" -ForegroundColor Red
+    if ($majorVersion -ne 24) {
+        Write-Host "Node.js 24 LTS required. Current: $nodeVersion" -ForegroundColor Red
         Write-Host "Download from: https://nodejs.org/" -ForegroundColor Yellow
         exit 1
     }
     Write-Host "Node.js $nodeVersion - OK" -ForegroundColor Green
 }
 catch {
-    Write-Host "Node.js not found. Please install Node.js 20+ first." -ForegroundColor Red
+    Write-Host "Node.js not found. Please install Node.js 24 LTS first." -ForegroundColor Red
     Write-Host "  Download: https://nodejs.org/" -ForegroundColor Yellow
     Write-Host "  Or use: winget install OpenJS.NodeJS.LTS" -ForegroundColor Yellow
     exit 1
 }
 
-# Check for pnpm
+# Use the repository's pinned package manager, matching CI and Docker.
 Write-Host "Checking pnpm..." -ForegroundColor Yellow
-try {
-    $pnpmVersion = pnpm -v 2>$null
-    if (-not $pnpmVersion) {
-        throw "pnpm not found"
-    }
-    Write-Host "pnpm $pnpmVersion - OK" -ForegroundColor Green
+$packageManager = (Get-Content (Join-Path $projectRoot "package.json") -Raw | ConvertFrom-Json).packageManager
+$expectedPnpmVersion = $packageManager -replace '^pnpm@', ''
+$pnpmCommand = Get-Command pnpm -ErrorAction SilentlyContinue
+if (-not $pnpmCommand -or (pnpm -v) -ne $expectedPnpmVersion) {
+    Write-Host "Installing $packageManager..." -ForegroundColor Yellow
+    npm install --global $packageManager
+    if ($LASTEXITCODE -ne 0) { throw "Failed to install $packageManager" }
 }
-catch {
-    Write-Host "Installing pnpm..." -ForegroundColor Yellow
-    npm install -g pnpm
-    $pnpmVersion = pnpm -v
-    Write-Host "pnpm $pnpmVersion - OK" -ForegroundColor Green
-}
+Write-Host "pnpm $(pnpm -v) - OK" -ForegroundColor Green
 
 # Check for Docker
 Write-Host "Checking Docker..." -ForegroundColor Yellow
@@ -118,17 +116,24 @@ $passwdFile = Join-Path $mosquittoConfigDir "passwd"
 if (-not (Test-Path $mosquittoConfigDir)) {
     New-Item -ItemType Directory -Path $mosquittoConfigDir | Out-Null
 }
-if (-not (Test-Path $passwdFile)) {
-    docker run --rm -v "${mosquittoConfigDir}:/mosquitto/config" eclipse-mosquitto:2 mosquitto_passwd -b -c /mosquitto/config/passwd $mqttUsername $mqttPassword
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Failed to generate MQTT password file" -ForegroundColor Red
-        exit 1
-    }
-    Write-Host "MQTT password file generated." -ForegroundColor Green
+# Repair/create permissions inside Docker; the host cannot chmod a root-created file.
+$configureMqtt = @'
+set -eu
+file=/mosquitto/config/passwd
+if [ -e "$file" ]; then
+    mosquitto_passwd -b "$file" "$1" "$2"
+else
+    mosquitto_passwd -b -c "$file" "$1" "$2"
+fi
+chown mosquitto:mosquitto "$file"
+chmod 600 "$file"
+'@
+docker run --rm --user 0:0 --entrypoint sh -v "${mosquittoConfigDir}:/mosquitto/config" eclipse-mosquitto:2 -ec $configureMqtt -- $mqttUsername $mqttPassword
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Failed to configure MQTT password file" -ForegroundColor Red
+    exit 1
 }
-else {
-    Write-Host "MQTT password file already exists." -ForegroundColor Green
-}
+Write-Host "MQTT password file configured." -ForegroundColor Green
 
 # Fetch released ESP32 firmware so the web flasher works without PlatformIO.
 Write-Host ""
@@ -158,7 +163,7 @@ Write-Host ""
 Write-Host "Starting development services (PostgreSQL, MQTT, Redis)..." -ForegroundColor Yellow
 Push-Location $projectRoot
 try {
-    docker compose -f docker-compose.dev.yml up -d
+    docker compose -f docker-compose.dev.yml up -d --wait --wait-timeout 90 postgres mosquitto redis
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to start Docker services"
     }
@@ -169,49 +174,20 @@ catch {
     exit 1
 }
 
-# Wait for PostgreSQL to be ready
-Write-Host "Waiting for PostgreSQL to be ready..." -ForegroundColor Yellow
-Start-Sleep -Seconds 5
+# Resolve once at the workspace root and build the backend's local library.
+Write-Host "Installing workspace dependencies..." -ForegroundColor Yellow
+pnpm install --frozen-lockfile
+if ($LASTEXITCODE -ne 0) { throw "Failed to install workspace dependencies" }
+pnpm --filter @uguard/unifi-client build
+if ($LASTEXITCODE -ne 0) { throw "Failed to build workspace library" }
 
-# Install backend dependencies
-Write-Host ""
-Write-Host "Installing backend dependencies..." -ForegroundColor Yellow
-Set-Location (Join-Path $projectRoot "backend")
-pnpm install
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Failed to install backend dependencies" -ForegroundColor Red
-    Pop-Location
-    exit 1
-}
-
-# Generate Prisma client
 Write-Host "Generating Prisma client..." -ForegroundColor Yellow
-pnpm prisma generate
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Failed to generate Prisma client" -ForegroundColor Red
-    Pop-Location
-    exit 1
-}
+pnpm --dir backend prisma generate
+if ($LASTEXITCODE -ne 0) { throw "Failed to generate Prisma client" }
 
-# Run database migrations
-Write-Host "Running database migrations..." -ForegroundColor Yellow
-try {
-    pnpm prisma migrate dev --name init 2>$null
-}
-catch {
-    pnpm prisma migrate deploy
-}
-
-# Install frontend dependencies
-Write-Host ""
-Write-Host "Installing frontend dependencies..." -ForegroundColor Yellow
-Set-Location (Join-Path $projectRoot "frontend")
-pnpm install
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Failed to install frontend dependencies" -ForegroundColor Red
-    Pop-Location
-    exit 1
-}
+Write-Host "Applying committed database migrations..." -ForegroundColor Yellow
+pnpm --dir backend prisma migrate deploy
+if ($LASTEXITCODE -ne 0) { throw "Database migration failed" }
 
 Pop-Location
 
@@ -234,5 +210,5 @@ Write-Host "  Backend API: http://localhost:3000" -ForegroundColor White
 Write-Host "  Database:    localhost:5432" -ForegroundColor White
 Write-Host "  MQTT:        localhost:1883" -ForegroundColor White
 Write-Host ""
-Write-Host "Default credentials: admin / (see DEFAULT_ADMIN_PASSWORD in .env)" -ForegroundColor Yellow
+Write-Host "Admin password: see DEFAULT_ADMIN_PASSWORD in .env, or complete first-run setup" -ForegroundColor Yellow
 Write-Host ""

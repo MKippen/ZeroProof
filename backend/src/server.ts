@@ -8,13 +8,14 @@ import type { WebsocketRequestHandler } from 'express-ws';
 import config, { isDev } from './config';
 import routes from './api/routes';
 import { csrfProtection } from './api/middleware/csrf';
+import { protectWebSocket } from './api/middleware/websocket';
 import { errorHandler, notFoundHandler } from './api/middleware/error';
 import { mqttClient } from './mqtt';
 import logger from './utils/logger';
 
 export function createServer(): Express {
   const app = express();
-  expressWs(app);
+  expressWs(app, undefined, { wsOptions: { maxPayload: 64 * 1024 } });
   app.disable('etag');
 
   // Docker deployments put the backend behind nginx/frontend proxies on private networks.
@@ -91,12 +92,14 @@ export function createServer(): Express {
   });
   // CSRF guard — same-origin synchronizer-token, applied AFTER the session
   // middleware (so we can read req.session.csrfToken) and BEFORE route
-  // handlers. Bypasses safe methods, ESP32 device endpoints, and tests.
+  // handlers. Bypasses safe methods and the test environment.
   app.use('/api/v1', csrfProtection);
   app.use('/api/v1', routes);
 
   // WebSocket endpoint
-  const wsHandler: WebsocketRequestHandler = (ws, _req) => {
+  const wsHandler: WebsocketRequestHandler = (ws, req) => {
+    const allowedOrigins = typeof corsOrigin === 'string' ? [corsOrigin] : corsOrigin || [];
+    if (!protectWebSocket(ws, req, allowedOrigins)) return;
     logger.debug('WebSocket client connected');
     mqttClient.addWebSocketClient(ws as unknown as WebSocket);
 

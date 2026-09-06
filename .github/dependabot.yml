@@ -7,50 +7,53 @@ updates:
       day: "monday"
       time: "09:00"
       timezone: "America/Los_Angeles"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
+  # pnpm has one workspace lockfile at the repository root. Updating the
+  # leaf manifests independently bypasses that shared resolution.
   - package-ecosystem: "npm"
-    directory: "/backend"
+    directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "09:00"
       timezone: "America/Los_Angeles"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 5
     groups:
-      backend-production:
+      workspace-production:
         dependency-type: "production"
-      backend-development:
+        update-types: ["minor", "patch"]
+      workspace-development:
         dependency-type: "development"
+        update-types: ["minor", "patch"]
 
+  # The privileged updater intentionally uses its own npm lockfile.
   - package-ecosystem: "npm"
-    directory: "/frontend"
+    directory: "/updater"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "09:00"
       timezone: "America/Los_Angeles"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 5
     groups:
-      frontend-production:
-        dependency-type: "production"
-      frontend-development:
-        dependency-type: "development"
+      updater:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "docker"
-    directory: "/backend"
+    directories: ["/backend", "/frontend", "/updater"]
     schedule:
       interval: "weekly"
       day: "monday"
       time: "09:00"
       timezone: "America/Los_Angeles"
-    open-pull-requests-limit: 0
-
-  - package-ecosystem: "docker"
-    directory: "/frontend"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
-      timezone: "America/Los_Angeles"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 5
+    groups:
+      runtime-images:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]

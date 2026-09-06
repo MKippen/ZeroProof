@@ -153,12 +153,15 @@ services:
 
   mosquitto:
     image: eclipse-mosquitto:2
+    user: "0:0"
+    entrypoint: ["/bin/sh", "/usr/local/bin/zeroproof-mosquitto.sh"]
     container_name: zeroproof-mqtt
     ports:
       - "1883:1883"
       - "9001:9001"
     volumes:
       - ./mosquitto/config:/mosquitto/config:ro
+      - ./scripts/mosquitto-entrypoint.sh:/usr/local/bin/zeroproof-mosquitto.sh:ro
       - mosquitto_data:/mosquitto/data
       - mosquitto_log:/mosquitto/log
     restart: unless-stopped
@@ -212,7 +215,7 @@ services:
       - UPDATER_HOST=127.0.0.1
       - UPDATER_PROGRESS_DIR=/var/run/zeroproof
       - UPDATER_WORKTREE=${HOST_WORKTREE:-/opt/zeroproof}
-      - UPDATER_HEALTH_URL=http://127.0.0.1:3000/health
+      - UPDATER_HEALTH_URL=http://127.0.0.1:3000/api/v1/auth/setup-status
     restart: unless-stopped
     labels:
       - "app=zeroproof"
@@ -241,6 +244,9 @@ services:
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - RULES_DIR=/rules
     depends_on:
+      # The backend applies migrations before becoming healthy.
+      backend:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       mosquitto:

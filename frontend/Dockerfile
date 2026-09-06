@@ -1,15 +1,15 @@
 # Frontend image — built from the repo root so the build context can see the
 # workspace lockfile (and any future packages/* deps the frontend takes on).
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /repo
-
-RUN npm install -g pnpm
 
 # Workspace manifests + lockfile first (cache-friendly install layer).
 COPY pnpm-workspace.yaml ./
 COPY pnpm-lock.yaml ./
 COPY package.json ./
+# Match CI and the lockfile; never bootstrap an unpinned package manager.
+RUN npm install --global "$(node -p "require('./package.json').packageManager")"
 COPY frontend/package.json frontend/
 
 RUN pnpm install --frozen-lockfile
@@ -44,7 +44,7 @@ RUN echo 'server { \
         proxy_set_header If-Modified-Since ""; \
         proxy_set_header Upgrade $http_upgrade; \
         proxy_set_header Connection "upgrade"; \
-        proxy_set_header Host $host; \
+        proxy_set_header Host $http_host; \
         proxy_set_header X-Real-IP $remote_addr; \
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
         proxy_set_header X-Forwarded-Proto $scheme; \
@@ -59,7 +59,8 @@ RUN echo 'server { \
         proxy_http_version 1.1; \
         proxy_set_header Upgrade $http_upgrade; \
         proxy_set_header Connection "upgrade"; \
-        proxy_set_header Host $host; \
+        proxy_set_header Host $http_host; \
+        proxy_set_header X-Forwarded-Proto $scheme; \
     } \
     \
     location = /index.html { \

@@ -22,6 +22,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useWebSocketStore } from '@/stores/websocketStore';
 import api from '@/api/client';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/useToast';
 import { ZeroProofWordmark } from '@/components/brand/ZeroProofLogo';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 
@@ -41,13 +42,16 @@ const navItems = [
 
 export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const { toast } = useToast();
   const navigate = useNavigate();
   const { logout } = useAuthStore();
-  const { connect } = useWebSocketStore();
+  const { connect, disconnect } = useWebSocketStore();
 
   useEffect(() => {
     connect();
-  }, [connect]);
+    return disconnect;
+  }, [connect, disconnect]);
 
   useEffect(() => {
     if (!sidebarOpen) {
@@ -61,7 +65,19 @@ export function Layout() {
   }, [sidebarOpen]);
 
   const handleLogout = async () => {
-    await api.post('/auth/logout');
+    if (loggingOut) return;
+    setLoggingOut(true);
+    const response = await api.post('/auth/logout');
+    setLoggingOut(false);
+    if (!response.success) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not sign out',
+        description: response.error?.message || 'Please try again.',
+      });
+      return;
+    }
+    disconnect();
     api.invalidateCsrfToken();
     logout();
     navigate('/login');
@@ -74,7 +90,7 @@ export function Layout() {
         <ZeroProofWordmark size="sm" />
         <div className="flex items-center gap-1">
           <NotificationBell />
-          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
+          <Button variant="ghost" size="icon" aria-label={sidebarOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={sidebarOpen} aria-controls="main-navigation" onClick={() => setSidebarOpen(!sidebarOpen)}>
             {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>
@@ -95,7 +111,7 @@ export function Layout() {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-1 mt-[4.5rem] lg:mt-0 overflow-y-auto">
+          <nav id="main-navigation" aria-label="Main navigation" className="flex-1 p-4 space-y-1 mt-[4.5rem] lg:mt-0 overflow-y-auto">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -123,9 +139,10 @@ export function Layout() {
               size="sm"
               className="w-full border-border/50 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 transition-all duration-200"
               onClick={handleLogout}
+              disabled={loggingOut}
             >
               <LogOut className="h-4 w-4 mr-2" />
-              Logout
+              {loggingOut ? 'Signing out...' : 'Logout'}
             </Button>
           </div>
         </div>

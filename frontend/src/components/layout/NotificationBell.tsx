@@ -80,6 +80,7 @@ export function NotificationBell({ align = 'right' }: { align?: 'left' | 'right'
   const {
     unreadCount,
     notifications,
+    mutationError,
     fetchUnreadCount,
     fetchNotifications,
     markAsRead,
@@ -173,6 +174,10 @@ export function NotificationBell({ align = 'right' }: { align?: 'left' | 'right'
               </Button>
             )}
           </div>
+
+          {mutationError && (
+            <p role="alert" className="px-4 py-2 text-sm text-red-400">{mutationError}</p>
+          )}
 
           {/* Notification list */}
           <div className="flex-1 overflow-y-auto p-2 space-y-1">

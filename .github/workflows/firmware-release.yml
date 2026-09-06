@@ -9,7 +9,6 @@ on:
       tag:
         description: 'Firmware release tag to publish, for example firmware-v3.1.0'
         required: true
-        default: 'firmware-v0.0.0-manual'
 
 permissions:
   contents: write
@@ -18,10 +17,41 @@ jobs:
   build-and-release:
     name: Build and publish ESP32 firmware
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
+      - name: Resolve firmware version
+        id: version
+        env:
+          REQUESTED_TAG: ${{ github.event.inputs.tag || '' }}
+        run: |
+          set -euo pipefail
+
+          TAG_NAME="${REQUESTED_TAG:-${GITHUB_REF_NAME}}"
+          if [[ ! "${TAG_NAME}" =~ ^firmware-v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Firmware releases require a version tag such as firmware-v3.1.0"
+            exit 1
+          fi
+
+          VERSION="${TAG_NAME#firmware-v}"
+          if [[ -z "${VERSION}" || "${VERSION}" == "${TAG_NAME}" ]]; then
+            echo "::error::Could not extract firmware version from ${TAG_NAME}"
+            exit 1
+          fi
+
+          echo "tag_name=${TAG_NAME}" >> "${GITHUB_OUTPUT}"
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          # Manual dispatch must build the release tag, not default-branch
+          # code attached to an unrelated version's release assets.
+          ref: ${{ steps.version.outputs.tag_name }}
+
+      - name: Record release commit
+        id: source
+        run: echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -41,27 +71,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install platformio
 
-      - name: Resolve firmware version
-        id: version
+      - name: Verify binary version matches the release tag
         env:
-          REQUESTED_TAG: ${{ github.event.inputs.tag || '' }}
+          FIRMWARE_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          set -euo pipefail
-
-          TAG_NAME="${REQUESTED_TAG:-${GITHUB_REF_NAME}}"
-          if [[ "${TAG_NAME}" != firmware-v* ]]; then
-            echo "::error::Firmware release tags must start with firmware-v"
-            exit 1
-          fi
-
-          VERSION="${TAG_NAME#firmware-v}"
-          if [[ -z "${VERSION}" || "${VERSION}" == "${TAG_NAME}" ]]; then
-            echo "::error::Could not extract firmware version from ${TAG_NAME}"
-            exit 1
-          fi
-
-          echo "tag_name=${TAG_NAME}" >> "${GITHUB_OUTPUT}"
-          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          python - <<'PY'
+          import configparser
+          import os
+          import re
+          config = configparser.ConfigParser()
+          config.read("esp32-firmware/platformio.ini")
+          flags = config["env:esp32dev"]["build_flags"].replace(chr(92), "")
+          match = re.search(r'-DFIRMWARE_VERSION="([^"]+)"', flags)
+          if not match or match.group(1) != os.environ["FIRMWARE_VERSION"]:
+              raise SystemExit("Release tag must match the esp32dev FIRMWARE_VERSION build flag")
+          PY
 
       - name: Build firmware
         working-directory: ./esp32-firmware
@@ -116,7 +140,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag_name }}
-          target_commitish: ${{ github.sha }}
+          target_commitish: ${{ steps.source.outputs.commit }}
           name: ESP32 Firmware ${{ steps.version.outputs.version }}
           body: |
             ZeroProof ESP32 firmware release.

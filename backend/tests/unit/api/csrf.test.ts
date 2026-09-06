@@ -26,7 +26,7 @@ function buildApp(initialSession: Record<string, unknown> = {}): express.Express
   });
   app.post('/api/v1/anything', (_req, res) => res.json({ success: true }));
   app.get('/api/v1/anything', (_req, res) => res.json({ success: true }));
-  app.post('/api/v1/esp32/firmware', (_req, res) => res.json({ success: true }));
+  app.post('/api/v1/esp32/provision', (_req, res) => res.json({ success: true }));
 
   return app;
 }
@@ -45,9 +45,12 @@ describe('csrfProtection', () => {
     await request(app).get('/api/v1/anything').expect(200);
   });
 
-  it('exempts ESP32 device endpoints', async () => {
+  it('protects browser-authenticated ESP32 provisioning endpoints', async () => {
     const app = buildApp();
-    await request(app).post('/api/v1/esp32/firmware').expect(200);
+    await request(app).post('/api/v1/esp32/provision').expect(403);
+    const tokenRes = await request(app).get('/api/v1/auth/csrf').expect(200);
+    await request(app).post('/api/v1/esp32/provision')
+      .set('X-CSRF-Token', tokenRes.body.data.csrfToken).expect(200);
   });
 
   it('rejects mutating requests without an X-CSRF-Token header', async () => {

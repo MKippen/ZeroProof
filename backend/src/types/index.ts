@@ -27,7 +27,10 @@ export const LoginSchema = z.object({
 
 export const ChangePasswordSchema = z.object({
   currentPassword: z.string().min(8),
-  newPassword: z.string().min(8).max(100),
+  newPassword: z.string().min(8).max(100).refine(
+    (password) => Buffer.byteLength(password, 'utf8') <= 72,
+    'Password must be at most 72 UTF-8 bytes'
+  ),
 });
 
 export const StartTestSchema = z.object({

@@ -26,22 +26,18 @@ import { test, expect } from '@playwright/test';
  *   - In-app upgrade click → progress log → "Restarting..." UX
  */
 test.describe('fresh install setup flow', () => {
-  // As of v1.1.15 setup is password-only — ZeroProof is single-admin by
-  // design, so the username field is gone. Tier 2 may have created the
-  // admin first; if so this test skips cleanly (see /login fallback below).
-  const password = 'playwright-e2e-setup-password-32+';
+  // This test creates persistent state. A retry cannot recreate a fresh
+  // install, so report the original failure and retain its browser trace.
+  test.describe.configure({ retries: 0 });
+  const password = process.env.E2E_SETUP_PASSWORD ?? 'playwright-e2e-setup-password-32+';
 
   test('redirects to /setup, creates admin, lands on /dashboard', async ({ page }) => {
     await page.goto('/');
 
-    // Either we land on /setup directly (fresh install) or /login
-    // (admin already exists from a previous Tier 2 scenario in the
-    // same run). Skip cleanly on the latter so the test is order-
-    // independent within the same install-smoke job.
-    await page.waitForURL(/\/(setup|login)/, { timeout: 30_000 });
-    if (new URL(page.url()).pathname !== '/setup') {
-      test.skip(true, 'admin already exists — Tier 2 created one earlier');
-    }
+    // CI runs browser setup before the API login scenarios. An existing
+    // admin indicates fixture drift and must fail instead of silently
+    // skipping the only browser check of first-run onboarding.
+    await expect(page).toHaveURL(/\/setup$/, { timeout: 30_000 });
 
     await expect(page.getByRole('heading', { name: /Welcome to ZeroProof/i })).toBeVisible();
 

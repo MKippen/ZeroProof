@@ -32,7 +32,9 @@ function isHtmlResponse(response: HttpResponse<unknown>): boolean {
  * Performs an authenticated request, ingesting cookies/CSRF on the way back.
  *
  * Tries the configured basePath first (default `/proxy/network` for UniFi OS).
- * If that returns HTML or 404, retries against the legacy unprefixed path.
+ * If that returns the successful SPA response or 404, retries against the legacy
+ * unprefixed path. Only GET requests may fall back after a transport failure:
+ * a timeout or unreadable response does not prove that a mutation was unapplied.
  */
 export async function apiRequest<T = unknown>(
   config: ResolvedConfig,
@@ -56,7 +58,14 @@ export async function apiRequest<T = unknown>(
         headers: session.authHeaders(),
       });
     } catch (err) {
+      if (options.method !== 'GET') {
+        throw new UnifiTransportError(
+          `${options.method} ${url} failed; controller outcome is unknown and the request was not retried`,
+          { cause: err, path: url }
+        );
+      }
       lastError = err;
+      lastStatus = undefined;
       continue;
     }
 
@@ -73,12 +82,6 @@ export async function apiRequest<T = unknown>(
       continue;
     }
 
-    if (isHtmlResponse(response)) {
-      // Not a real endpoint on this controller — try next prefix.
-      lastStatus = response.status;
-      continue;
-    }
-
     if (response.status >= 500) {
       throw new UnifiTransportError(`Controller error ${response.status} on ${url}`, {
         statusCode: response.status,
@@ -91,6 +94,14 @@ export async function apiRequest<T = unknown>(
         statusCode: response.status,
         path: url,
       });
+    }
+
+    if (isHtmlResponse(response)) {
+      // A successful SPA response is the controller's endpoint-discovery
+      // convention. Error/redirect HTML must never be treated as that signal:
+      // a gateway may have lost the response after forwarding a mutation.
+      lastStatus = response.status;
+      continue;
     }
 
     return response.data;

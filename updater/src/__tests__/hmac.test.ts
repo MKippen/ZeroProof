@@ -39,6 +39,11 @@ describe('verifyHmac', () => {
   it('rejects an empty secret', () => {
     expect(verifyHmac('{}', sign('{}'), '')).toBe(false);
   });
+
+  it('rejects malformed signatures with equal character lengths without throwing', () => {
+    expect(verifyHmac('{}', 'é'.repeat(64), secret)).toBe(false);
+    expect(verifyHmac('{}', 'g'.repeat(64), secret)).toBe(false);
+  });
 });
 
 describe('isValidTargetRef', () => {

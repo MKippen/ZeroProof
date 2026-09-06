@@ -25,7 +25,7 @@
  */
 import http from 'node:http';
 import { spawn } from 'node:child_process';
-import { promises as fs, createWriteStream, readFileSync } from 'node:fs';
+import { promises as fs, readFileSync } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
@@ -55,13 +55,13 @@ const HOST = process.env.UPDATER_HOST ?? '127.0.0.1';
 const SECRET = process.env.UPDATER_SECRET ?? '';
 const PROGRESS_DIR = process.env.UPDATER_PROGRESS_DIR ?? '/var/run/zeroproof';
 const WORKTREE = process.env.UPDATER_WORKTREE ?? '/repo';
-const HEALTH_URL = process.env.UPDATER_HEALTH_URL ?? 'http://127.0.0.1:3000/health';
+const HEALTH_URL = process.env.UPDATER_HEALTH_URL ?? 'http://127.0.0.1:3000/api/v1/auth/setup-status';
 const HEALTH_TIMEOUT_MS = Number(process.env.UPDATER_HEALTH_TIMEOUT_MS ?? 90_000);
 const MAX_BODY_BYTES = Number(process.env.UPDATER_MAX_BODY_BYTES ?? 16_384);
 
 interface ApplyRequest {
   /** Target ref (tag, branch, or SHA). Falls back to upgrade.sh's "latest tag" default if empty. */
-  target?: string;
+  target?: string | null;
   /** Operation type — `apply` runs upgrade.sh; `rollback` runs upgrade.sh --rollback. */
   op?: 'apply' | 'rollback';
 }
@@ -74,6 +74,7 @@ interface RunState {
   finishedAt?: number;
   exitCode?: number;
   rolledBack?: boolean;
+  rollbackExitCode?: number;
 }
 
 let active: RunState | null = null;
@@ -83,7 +84,7 @@ const log = (...args: unknown[]) => {
   console.log(JSON.stringify({ ts: new Date().toISOString(), msg: args }));
 };
 
-const server = http.createServer(async (req, res) => {
+export const server = http.createServer(async (req, res) => {
   try {
     if (req.method === 'GET' && req.url === '/healthz') {
       res.writeHead(200, { 'content-type': 'application/json' });
@@ -131,10 +132,12 @@ const server = http.createServer(async (req, res) => {
 
       let parsed: ApplyRequest;
       try {
-        parsed = JSON.parse(body) as ApplyRequest;
+        const input: unknown = JSON.parse(body);
+        if (!isApplyRequest(input)) throw new Error('invalid apply request');
+        parsed = input;
       } catch {
         res.writeHead(400, { 'content-type': 'application/json' });
-        res.end(JSON.stringify({ error: 'invalid JSON' }));
+        res.end(JSON.stringify({ error: 'invalid apply request' }));
         return;
       }
 
@@ -173,6 +176,10 @@ if (require.main === module) {
   server.listen(PORT, HOST, () => {
     log(`updater listening on ${HOST}:${PORT}`);
   });
+  process.on('SIGTERM', () => {
+    log('SIGTERM received');
+    server.close(() => process.exit(0));
+  });
 }
 
 class RequestBodyTooLargeError extends Error {}
@@ -185,7 +192,8 @@ function readBody(req: http.IncomingMessage): Promise<string> {
       total += c.length;
       if (total > MAX_BODY_BYTES) {
         reject(new RequestBodyTooLargeError('request body too large'));
-        req.destroy();
+        // Keep draining so the handler can send an actual HTTP 413 response.
+        chunks.length = 0;
         return;
       }
       chunks.push(c);
@@ -197,7 +205,9 @@ function readBody(req: http.IncomingMessage): Promise<string> {
 
 export function verifyHmac(body: string, signature: string, secret: string): boolean {
   if (!secret) return false;
-  if (!signature) return false;
+  // Validate bytes before timingSafeEqual: equal JS string lengths can encode
+  // to different UTF-8 buffer lengths and otherwise throw on malformed input.
+  if (!/^[a-f0-9]{64}$/.test(signature)) return false;
   const expected = crypto
     .createHmac('sha256', secret)
     .update(body, 'utf8')
@@ -208,6 +218,13 @@ export function verifyHmac(body: string, signature: string, secret: string): boo
     Buffer.from(signature, 'utf8'),
     Buffer.from(expected, 'utf8')
   );
+}
+
+function isApplyRequest(input: unknown): input is ApplyRequest {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return false;
+  const request = input as Record<string, unknown>;
+  return (request.op === undefined || request.op === 'apply' || request.op === 'rollback') &&
+    (request.target === undefined || request.target === null || typeof request.target === 'string');
 }
 
 export function isValidTargetRef(target: string): boolean {
@@ -228,86 +245,87 @@ async function startRun(
   op: 'apply' | 'rollback',
   target: string | null
 ): Promise<RunState> {
-  await fs.mkdir(PROGRESS_DIR, { recursive: true });
   const progressPath = path.join(
     PROGRESS_DIR,
-    `upgrade-${Date.now()}.log`
+    `upgrade-${Date.now()}-${crypto.randomUUID()}.log`
   );
-  // Truncate the file so the backend's tail starts clean.
-  await fs.writeFile(progressPath, '');
-
-  const args = ['scripts/upgrade.sh'];
-  if (op === 'rollback') args.push('--rollback');
-  else if (target) args.push(target);
-
-  log(`starting ${op} run target=${target ?? '(latest)'} progress=${progressPath}`);
-
-  const child = spawn('bash', args, {
-    cwd: WORKTREE,
-    env: {
-      ...process.env,
-      // Disable interactive confirm so upgrade.sh runs unattended.
-      // upgrade.sh already skips the confirm when stdin isn't a TTY,
-      // but the spawn() default is "no TTY" so this is just belt+braces.
-      CI: '1',
-    },
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-
-  const out = createWriteStream(progressPath, { flags: 'a' });
-  child.stdout.pipe(out, { end: false });
-  child.stderr.pipe(out, { end: false });
-
   const run: RunState = {
-    pid: child.pid ?? -1,
+    pid: -1,
     startedAt: Date.now(),
     target,
     progressPath,
   };
+  // Reserve synchronously, before any filesystem awaits. Another request must
+  // not start a second privileged upgrade while the first is preparing its log.
   active = run;
 
-  child.on('exit', async (code) => {
-    run.exitCode = code ?? -1;
+  try {
+    await fs.mkdir(PROGRESS_DIR, { recursive: true });
+    await fs.writeFile(progressPath, '');
+  } catch (error) {
+    run.exitCode = -1;
     run.finishedAt = Date.now();
-    out.end();
-    log(`run exited code=${code ?? '?'} elapsedMs=${run.finishedAt - run.startedAt}`);
+    throw error;
+  }
 
-    if (op === 'apply' && code === 0) {
-      // upgrade.sh polls /health for ~90s itself, but only inside its own
-      // process. We re-verify here so a slow-starting service that came up
-      // after upgrade.sh's poll window doesn't trigger an auto-rollback,
-      // and a service that crashed just-after-OK does.
-      const healthy = await waitForHealthy(HEALTH_TIMEOUT_MS, progressPath);
-      if (!healthy) {
-        await appendProgress(
-          progressPath,
-          'Health check failed after upgrade — rolling back automatically.\n'
-        );
+  log(`starting ${op} run target=${target ?? '(latest)'} progress=${progressPath}`);
+  void (async () => {
+    try {
+      run.exitCode = await runScript(op, target, progressPath, (pid) => { run.pid = pid; });
+      // upgrade.sh reserves exit 3 for readiness failure AFTER deployment;
+      // ordinary nonzero preflight/build failures must not trigger rollback.
+      const needsRollback = op === 'apply' && (run.exitCode === 3 ||
+        (run.exitCode === 0 && !await waitForHealthy(HEALTH_TIMEOUT_MS, progressPath)));
+      if (needsRollback) {
+        await appendProgress(progressPath, 'Health check failed after upgrade — rolling back automatically.\n');
         log('triggering auto-rollback');
-        await runRollback(progressPath);
-        run.rolledBack = true;
+        run.rollbackExitCode = await runScript('rollback', null, progressPath);
+        run.rolledBack = run.rollbackExitCode === 0 && await waitForHealthy(HEALTH_TIMEOUT_MS, progressPath);
+        // A recovered rollback still means the requested upgrade failed.
+        run.exitCode = 1;
       }
+      if (op === 'rollback' && run.exitCode === 0 && !await waitForHealthy(HEALTH_TIMEOUT_MS, progressPath)) {
+        run.exitCode = 1;
+      }
+    } catch (error) {
+      run.exitCode = -1;
+      const message = error instanceof Error ? error.message : String(error);
+      log('run failed', message);
+      await appendProgress(progressPath, `Run failed: ${message}\n`);
+    } finally {
+      // Hold the reservation through health verification AND rollback.
+      run.finishedAt = Date.now();
+      log(`run finished code=${run.exitCode} elapsedMs=${run.finishedAt - run.startedAt}`);
     }
-  });
+  })();
 
   return run;
 }
 
-async function runRollback(progressPath: string): Promise<void> {
-  return new Promise((resolve) => {
-    const child = spawn('bash', ['scripts/upgrade.sh', '--rollback'], {
-      cwd: WORKTREE,
-      env: { ...process.env, CI: '1' },
-      stdio: ['ignore', 'pipe', 'pipe'],
+async function runScript(
+  op: 'apply' | 'rollback', target: string | null, progressPath: string,
+  onSpawn?: (pid: number) => void
+): Promise<number> {
+  // Open before spawning and write directly to the fd: no unhandled log-stream
+  // errors, and child close waits for all output before we verify or roll back.
+  const output = await fs.open(progressPath, 'a');
+  try {
+    return await new Promise<number>((resolve, reject) => {
+      const args = ['scripts/upgrade.sh'];
+      if (op === 'rollback') args.push('--rollback');
+      else if (target) args.push(target);
+      const child = spawn('bash', args, {
+        cwd: WORKTREE,
+        env: { ...process.env, CI: '1' },
+        stdio: ['ignore', output.fd, output.fd],
+      });
+      child.once('error', reject);
+      child.once('close', (code) => resolve(code ?? -1));
+      onSpawn?.(child.pid ?? -1);
     });
-    const out = createWriteStream(progressPath, { flags: 'a' });
-    child.stdout.pipe(out, { end: false });
-    child.stderr.pipe(out, { end: false });
-    child.on('exit', () => {
-      out.end();
-      resolve();
-    });
-  });
+  } finally {
+    await output.close();
+  }
 }
 
 async function waitForHealthy(
@@ -338,7 +356,7 @@ function checkHealth(): Promise<boolean> {
         timeout: 3_000,
       },
       (res) => {
-        const ok = (res.statusCode ?? 0) >= 200 && (res.statusCode ?? 0) < 400;
+        const ok = (res.statusCode ?? 0) >= 200 && (res.statusCode ?? 0) < 300;
         res.resume();
         resolve(ok);
       }
@@ -363,8 +381,3 @@ async function appendProgress(progressPath: string, line: string): Promise<void>
     // Best-effort.
   }
 }
-
-process.on('SIGTERM', () => {
-  log('SIGTERM received');
-  server.close(() => process.exit(0));
-});

@@ -14,8 +14,10 @@ import {
 import { bootstrapHistoricalTimeline } from '../../services/historyBootstrapService';
 import logger from '../../utils/logger';
 import { discoverUniFiGateways } from '../../services/unifiConfig';
+import { unifiReadLimiter, unifiMutationLimiter } from '../middleware/rateLimit';
 
 const router = Router();
+router.use(requireAuth, unifiReadLimiter, unifiMutationLimiter);
 
 const PortSchema = z.coerce.number().int().min(1).max(65535).default(443);
 const HostSchema = z.string().trim().min(1).max(255);

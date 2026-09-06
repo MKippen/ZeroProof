@@ -11,20 +11,18 @@
       "prisma"
     ],
     "overrides": {
-      "ajv@<7": "6.15.0",
-      "brace-expansion@<2": "1.1.14",
-      "brace-expansion@>=2 <3": "2.1.0",
-      "flatted": "3.4.2",
-      "follow-redirects": "1.16.0",
-      "ip-address": "10.1.1",
-      "lodash": "4.18.1",
-      "minimatch@<4": "3.1.5",
-      "minimatch@>=9 <10": "9.0.9",
-      "path-to-regexp@<0.2": "0.1.13",
-      "picomatch@<3": "2.3.2",
-      "picomatch@>=4 <5": "4.0.4",
-      "qs": "6.15.1",
-      "rollup": "4.60.2"
+      "qs@>=6 <6.16.0": "^6.16.0",
+      "tsup>esbuild": "^0.28.2"
     }
+  },
+  "engines": {
+    "node": ">=24.0.0 <25"
+  },
+  "scripts": {
+    "build": "pnpm --filter zeroproof-backend prisma:generate && pnpm -r build && npm --prefix updater run build",
+    "lint": "pnpm --filter zeroproof-backend lint && pnpm --filter zeroproof-frontend lint",
+    "test": "pnpm --filter @uguard/unifi-client test && pnpm --filter zeroproof-backend test --runInBand && pnpm --filter zeroproof-frontend test run && npm --prefix updater test -- --runInBand",
+    "audit:deps": "pnpm audit --audit-level=high && npm --prefix updater audit --audit-level=high",
+    "check": "pnpm audit:deps && pnpm lint && pnpm build && pnpm --filter @uguard/unifi-client typecheck && pnpm test"
   }
 }

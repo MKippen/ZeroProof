@@ -3,7 +3,7 @@ import { ApiResponse } from '../../types';
 import logger from '../../utils/logger';
 
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
-  logger.debug(`Auth check - sessionID: ${req.sessionID}, userId: ${req.session?.userId}`);
+  logger.debug(`Auth check - userId: ${req.session?.userId}`);
 
   if (!req.session?.userId) {
     logger.warn(`Auth failed for ${req.method} ${req.path} - no userId in session`);

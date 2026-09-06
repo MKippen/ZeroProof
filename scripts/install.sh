@@ -5,6 +5,9 @@
 
 set -e
 
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
 echo "=================================="
 echo "  ZeroProof Installer"
 echo "  Network Security Validation"
@@ -141,7 +144,8 @@ if [ "${GENERATE_ENV:-false}" = true ]; then
     ENCRYPTION_KEY=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 32)
     UPDATER_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 48)
 
-    cat > .env << EOF
+    # Credentials should never inherit the caller's world-readable umask.
+    (umask 077; cat > .env << EOF
 # Generated on $(date)
 # ZeroProof Configuration
 
@@ -174,6 +178,8 @@ UPDATER_SECRET=$UPDATER_SECRET
 # be flagged with mustChangePassword=true.
 # DEFAULT_ADMIN_PASSWORD=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 16)
 EOF
+    )
+    chmod 600 .env
 
     echo -e "${GREEN}Created .env file with secure credentials${NC}"
 fi
@@ -202,16 +208,9 @@ fi
 # ---- MQTT password file ----
 echo ""
 echo "Configuring MQTT authentication..."
-if ! docker run --rm -v "$(pwd)/mosquitto/config:/mosquitto/config" eclipse-mosquitto:2 \
-    mosquitto_passwd -b -c /mosquitto/config/passwd auditor "$MQTT_PASSWORD" 2>/dev/null; then
-    echo -e "${YELLOW}Warning: MQTT password setup failed. MQTT auth may not work.${NC}"
-    echo "You can retry manually: docker run --rm -v \"\$(pwd)/mosquitto/config:/mosquitto/config\" eclipse-mosquitto:2 mosquitto_passwd -b -c /mosquitto/config/passwd auditor \"<password>\""
-else
-    # 0644 (not 0600) so the in-container mosquitto user (UID 1883) can read
-    # the file. The contents are bcrypt-hashed credentials, not plaintext.
-    chmod 644 mosquitto/config/passwd 2>/dev/null || true
-    echo -e "${GREEN}MQTT configured${NC}"
-fi
+MQTT_USERNAME="${MQTT_USERNAME:-auditor}" MQTT_PASSWORD="$MQTT_PASSWORD" \
+    bash scripts/configure-mqtt.sh
+echo -e "${GREEN}MQTT configured${NC}"
 
 # ---- ESP32 firmware ----
 echo ""
@@ -237,22 +236,23 @@ $COMPOSE_CMD up -d
 # ---- Health check loop (replaces sleep 10) ----
 echo ""
 echo "Waiting for services to become healthy..."
-TIMEOUT=60
-ELAPSED=0
+TIMEOUT="${INSTALL_HEALTH_TIMEOUT_SECONDS:-180}"
+if [[ ! "$TIMEOUT" =~ ^[1-9][0-9]*$ ]]; then
+    echo "INSTALL_HEALTH_TIMEOUT_SECONDS must be a positive integer"
+    exit 1
+fi
+DEADLINE=$((SECONDS + TIMEOUT))
 HEALTHY=false
 
-while [ $ELAPSED -lt $TIMEOUT ]; do
-    if $COMPOSE_CMD ps --format json 2>/dev/null | grep -q '"running"' || \
-       $COMPOSE_CMD ps 2>/dev/null | grep -q "running"; then
-        # Try hitting the health endpoint
-        if curl -sk https://localhost/health &> /dev/null || \
-           curl -sk http://localhost:3000/health &> /dev/null; then
-            HEALTHY=true
-            break
-        fi
+while [ "$SECONDS" -lt "$DEADLINE" ]; do
+    # /health is answered by nginx even when the application or DB is
+    # broken. Exercise the same API + database path a new browser uses.
+    if curl -fsk --connect-timeout 2 --max-time 5 \
+        https://127.0.0.1/api/v1/auth/setup-status > /dev/null; then
+        HEALTHY=true
+        break
     fi
     sleep 3
-    ELAPSED=$((ELAPSED + 3))
     echo -n "."
 done
 echo ""
@@ -260,8 +260,10 @@ echo ""
 if [ "$HEALTHY" = true ]; then
     echo -e "${GREEN}Services started successfully!${NC}"
 else
-    echo -e "${YELLOW}Services may still be starting. Check status with: $COMPOSE_CMD ps${NC}"
-    echo -e "${YELLOW}Check logs with: $COMPOSE_CMD logs${NC}"
+    echo -e "${RED}Application did not become ready within ${TIMEOUT}s.${NC}"
+    echo "Check status with: $COMPOSE_CMD ps"
+    echo "Check logs with: $COMPOSE_CMD logs"
+    exit 1
 fi
 
 # ---- Summary ----
@@ -281,13 +283,12 @@ echo -e "  ${GREEN}https://$LOCAL_IP${NC}"
 echo ""
 if [ -n "${DEFAULT_ADMIN_PASSWORD:-}" ]; then
     echo "Seeded admin credentials (from DEFAULT_ADMIN_PASSWORD):"
-    echo "  Username: admin"
-    echo "  Password: $DEFAULT_ADMIN_PASSWORD"
+    echo "  Password: configured through DEFAULT_ADMIN_PASSWORD"
     echo ""
     echo -e "${YELLOW}You will be prompted to change this on first login.${NC}"
 else
     echo -e "${GREEN}First-run setup:${NC} open the dashboard and choose your"
-    echo "administrator username and password on the /setup page."
+    echo "administrator password on the /setup page."
 fi
 echo ""
 echo "Useful commands:"

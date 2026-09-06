@@ -203,6 +203,83 @@ describe('apiRequest — UniFi-OS first, legacy fallback', () => {
       apiRequest(baseConfig, transport, session, { method: 'GET', path: '/api/p' })
     ).rejects.toBeInstanceOf(UnifiTransportError);
   });
+
+  it('retains GET fallback after an ambiguous transport failure', async () => {
+    const transport = new MockTransport()
+      .on('GET', '/proxy/network/api/read', () => { throw new Error('socket reset'); })
+      .on('GET', '/api/read', () => ({ data: { found: true } }));
+    await expect(apiRequest(baseConfig, transport, new Session(), {
+      method: 'GET', path: '/api/read',
+    })).resolves.toEqual({ found: true });
+    expect(transport.calls).toHaveLength(2);
+  });
+
+  it('does not hide a final GET transport failure behind a previous endpoint 404', async () => {
+    const cause = new Error('read timed out');
+    const transport = new MockTransport()
+      .on('GET', '/proxy/network/api/read', () => ({ status: 404, data: {} }))
+      .on('GET', '/api/read', () => { throw cause; });
+    await expect(apiRequest(baseConfig, transport, new Session(), {
+      method: 'GET', path: '/api/read',
+    })).rejects.toMatchObject({ name: 'UnifiTransportError', cause });
+  });
+
+  describe.each(['POST', 'PUT', 'DELETE'] as const)('%s mutation safety', (method) => {
+    it.each(['socket reset after write', 'request timed out', 'failed to parse JSON response'])(
+      'does not replay after %s', async (message) => {
+        const cause = new UnifiTransportError(message);
+        let applied = 0;
+        const transport = new MockTransport()
+          .on(method, '/proxy/network/api/mutate', () => {
+            applied++;
+            throw cause;
+          })
+          .on(method, '/api/mutate', () => {
+            applied++;
+            return { data: { ok: true } };
+          });
+        await expect(apiRequest(baseConfig, transport, new Session(), {
+          method, path: '/api/mutate', body: { rule: 'example' },
+        })).rejects.toMatchObject({ name: 'UnifiTransportError', cause, path: '/proxy/network/api/mutate' });
+        expect(transport.calls).toHaveLength(1);
+        expect(applied).toBe(1);
+      }
+    );
+
+    it.each([302, 500, 502, 503])('does not replay an HTML %s response', async (status) => {
+      const transport = new MockTransport()
+        .on(method, '/proxy/network/api/mutate', () => ({
+          status, headers: { 'content-type': 'text/html' }, data: '<html>upstream error</html>',
+        }))
+        .on(method, '/api/mutate', () => ({ data: { ok: true } }));
+      await expect(apiRequest(baseConfig, transport, new Session(), {
+        method, path: '/api/mutate',
+      })).rejects.toMatchObject({ name: 'UnifiTransportError', statusCode: status });
+      expect(transport.calls).toHaveLength(1);
+    });
+
+    it('preserves endpoint discovery after an explicit 404 rejection', async () => {
+      const transport = new MockTransport()
+        .on(method, '/proxy/network/api/mutate', () => ({ status: 404, data: {} }))
+        .on(method, '/api/mutate', () => ({ data: { ok: true } }));
+      await expect(apiRequest(baseConfig, transport, new Session(), {
+        method, path: '/api/mutate', body: { rule: 'example' },
+      })).resolves.toEqual({ ok: true });
+      expect(transport.calls.map((call) => call.body)).toEqual([{ rule: 'example' }, { rule: 'example' }]);
+    });
+
+    it.each([401, 403])('preserves typed auth rejection on %s without replay', async (status) => {
+      const transport = new MockTransport().on(method, '/proxy/network/api/mutate', () => ({
+        status, headers: { 'x-csrf-token': 'refreshed' }, data: {},
+      }));
+      const session = new Session();
+      await expect(apiRequest(baseConfig, transport, session, {
+        method, path: '/api/mutate',
+      })).rejects.toMatchObject({ name: 'UnifiAuthError', statusCode: status });
+      expect(transport.calls).toHaveLength(1);
+      expect(session.authHeaders()['X-CSRF-Token']).toBe('refreshed');
+    });
+  });
 });
 
 describe('parseOrThrow', () => {

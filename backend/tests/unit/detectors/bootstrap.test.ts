@@ -9,7 +9,7 @@ import {
   detectorRulesDir,
 } from '../../../src/detectors';
 import { listDetectors, resetDetectors } from '../../../src/detectors/registry';
-import { listDetectorRules } from '../../../src/detectors/ruleLoader';
+import { listDetectorRules, loadDetectorRulesFromDirectory } from '../../../src/detectors/ruleLoader';
 
 beforeEach(() => {
   resetDetectors();
@@ -18,6 +18,10 @@ beforeEach(() => {
 
 describe('bootstrapDetectors', () => {
   it('registers all 10 built-in detectors', () => {
+    expect(loadDetectorRulesFromDirectory(detectorRulesDir())).toEqual({
+      loaded: 10,
+      errors: [],
+    });
     bootstrapDetectors();
     const ids = listDetectors().map((d) => d.id).sort();
     expect(ids).toEqual([

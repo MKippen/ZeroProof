@@ -4,6 +4,9 @@
 
 set -e
 
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
 echo "=================================="
 echo "Development Environment Setup"
 echo "=================================="
@@ -12,24 +15,26 @@ echo ""
 # Check for Node.js
 echo "Checking Node.js..."
 if ! command -v node &> /dev/null; then
-    echo "Node.js not found. Please install Node.js 20+ first."
-    echo "  macOS: brew install node@20"
-    echo "  Ubuntu: curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs"
+    echo "Node.js not found. Please install Node.js 24 LTS first."
+    echo "  macOS: brew install node@24"
+    echo "  Ubuntu: curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash - && sudo apt-get install -y nodejs"
     exit 1
 fi
 
 NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-if [ "$NODE_VERSION" -lt 20 ]; then
-    echo "Node.js version 20+ required. Current: $(node -v)"
+if [ "$NODE_VERSION" -ne 24 ]; then
+    echo "Node.js 24 LTS required. Current: $(node -v)"
     exit 1
 fi
 echo "Node.js $(node -v) - OK"
 
-# Check for pnpm
+# Use the repository's pinned package manager, matching CI and Docker.
 echo "Checking pnpm..."
-if ! command -v pnpm &> /dev/null; then
-    echo "Installing pnpm..."
-    npm install -g pnpm
+PACKAGE_MANAGER=$(node -p "require('./package.json').packageManager")
+EXPECTED_PNPM_VERSION="${PACKAGE_MANAGER#pnpm@}"
+if ! command -v pnpm &> /dev/null || [ "$(pnpm -v)" != "$EXPECTED_PNPM_VERSION" ]; then
+    echo "Installing $PACKAGE_MANAGER..."
+    npm install --global "$PACKAGE_MANAGER"
 fi
 echo "pnpm $(pnpm -v) - OK"
 
@@ -71,16 +76,9 @@ if [ -f .env ]; then
     MQTT_PASSWORD_VALUE="${MQTT_PASSWORD:-mqtt_password}"
 fi
 mkdir -p mosquitto/config
-if [ ! -f mosquitto/config/passwd ]; then
-    docker run --rm -v "$(pwd)/mosquitto/config:/mosquitto/config" eclipse-mosquitto:2 \
-        mosquitto_passwd -b -c /mosquitto/config/passwd "$MQTT_USERNAME_VALUE" "$MQTT_PASSWORD_VALUE"
-    # 0644 (not 0600) so the in-container mosquitto user (UID 1883) can read
-    # the file. Contents are bcrypt-hashed credentials, not plaintext.
-    chmod 644 mosquitto/config/passwd 2>/dev/null || true
-    echo "MQTT password file generated."
-else
-    echo "MQTT password file already exists."
-fi
+MQTT_USERNAME="$MQTT_USERNAME_VALUE" MQTT_PASSWORD="$MQTT_PASSWORD_VALUE" \
+    bash scripts/configure-mqtt.sh
+echo "MQTT password file configured."
 
 # Fetch released ESP32 firmware so the web flasher works without PlatformIO.
 echo ""
@@ -100,35 +98,19 @@ fi
 # Start development services
 echo ""
 echo "Starting development services (PostgreSQL, MQTT, Redis)..."
-docker compose -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.dev.yml up -d --wait --wait-timeout 90 postgres mosquitto redis
 
-# Wait for PostgreSQL to be ready
-echo "Waiting for PostgreSQL..."
-sleep 5
-
-# Install backend dependencies
+# Resolve once at the workspace root and build the backend's local library.
 echo ""
-echo "Installing backend dependencies..."
-cd backend
-pnpm install
+echo "Installing workspace dependencies..."
+pnpm install --frozen-lockfile
+pnpm --filter @uguard/unifi-client build
 
-# Generate Prisma client
 echo "Generating Prisma client..."
-pnpm prisma generate
+pnpm --dir backend prisma generate
 
-# Run database migrations
-echo "Running database migrations..."
-pnpm prisma migrate dev --name init 2>/dev/null || pnpm prisma migrate deploy
-
-cd ..
-
-# Install frontend dependencies
-echo ""
-echo "Installing frontend dependencies..."
-cd frontend
-pnpm install
-
-cd ..
+echo "Applying committed database migrations..."
+pnpm --dir backend prisma migrate deploy
 
 echo ""
 echo "=================================="
@@ -149,5 +131,5 @@ echo "  Backend API: http://localhost:3000"
 echo "  Database: localhost:5432"
 echo "  MQTT: localhost:1883"
 echo ""
-echo "Default credentials: admin / (see DEFAULT_ADMIN_PASSWORD in .env)"
+echo "Admin password: see DEFAULT_ADMIN_PASSWORD in .env, or complete first-run setup"
 echo ""
