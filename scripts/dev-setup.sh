@@ -76,16 +76,9 @@ if [ -f .env ]; then
     MQTT_PASSWORD_VALUE="${MQTT_PASSWORD:-mqtt_password}"
 fi
 mkdir -p mosquitto/config
-if [ ! -f mosquitto/config/passwd ]; then
-    docker run --rm -v "$(pwd)/mosquitto/config:/mosquitto/config" eclipse-mosquitto:2 \
-        mosquitto_passwd -b -c /mosquitto/config/passwd "$MQTT_USERNAME_VALUE" "$MQTT_PASSWORD_VALUE"
-    # 0644 (not 0600) so the in-container mosquitto user (UID 1883) can read
-    # the file. Contents are bcrypt-hashed credentials, not plaintext.
-    chmod 644 mosquitto/config/passwd 2>/dev/null || true
-    echo "MQTT password file generated."
-else
-    echo "MQTT password file already exists."
-fi
+MQTT_USERNAME="$MQTT_USERNAME_VALUE" MQTT_PASSWORD="$MQTT_PASSWORD_VALUE" \
+    bash scripts/configure-mqtt.sh
+echo "MQTT password file configured."
 
 # Fetch released ESP32 firmware so the web flasher works without PlatformIO.
 echo ""

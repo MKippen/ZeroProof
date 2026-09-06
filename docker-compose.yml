@@ -153,12 +153,15 @@ services:
 
   mosquitto:
     image: eclipse-mosquitto:2
+    user: "0:0"
+    entrypoint: ["/bin/sh", "/usr/local/bin/zeroproof-mosquitto.sh"]
     container_name: zeroproof-mqtt
     ports:
       - "1883:1883"
       - "9001:9001"
     volumes:
       - ./mosquitto/config:/mosquitto/config:ro
+      - ./scripts/mosquitto-entrypoint.sh:/usr/local/bin/zeroproof-mosquitto.sh:ro
       - mosquitto_data:/mosquitto/data
       - mosquitto_log:/mosquitto/log
     restart: unless-stopped

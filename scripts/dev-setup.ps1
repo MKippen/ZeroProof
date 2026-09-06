@@ -116,17 +116,24 @@ $passwdFile = Join-Path $mosquittoConfigDir "passwd"
 if (-not (Test-Path $mosquittoConfigDir)) {
     New-Item -ItemType Directory -Path $mosquittoConfigDir | Out-Null
 }
-if (-not (Test-Path $passwdFile)) {
-    docker run --rm -v "${mosquittoConfigDir}:/mosquitto/config" eclipse-mosquitto:2 mosquitto_passwd -b -c /mosquitto/config/passwd $mqttUsername $mqttPassword
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Failed to generate MQTT password file" -ForegroundColor Red
-        exit 1
-    }
-    Write-Host "MQTT password file generated." -ForegroundColor Green
+# Repair/create permissions inside Docker; the host cannot chmod a root-created file.
+$configureMqtt = @'
+set -eu
+file=/mosquitto/config/passwd
+if [ -e "$file" ]; then
+    mosquitto_passwd -b "$file" "$1" "$2"
+else
+    mosquitto_passwd -b -c "$file" "$1" "$2"
+fi
+chown mosquitto:mosquitto "$file"
+chmod 600 "$file"
+'@
+docker run --rm --user 0:0 --entrypoint sh -v "${mosquittoConfigDir}:/mosquitto/config" eclipse-mosquitto:2 -ec $configureMqtt -- $mqttUsername $mqttPassword
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Failed to configure MQTT password file" -ForegroundColor Red
+    exit 1
 }
-else {
-    Write-Host "MQTT password file already exists." -ForegroundColor Green
-}
+Write-Host "MQTT password file configured." -ForegroundColor Green
 
 # Fetch released ESP32 firmware so the web flasher works without PlatformIO.
 Write-Host ""

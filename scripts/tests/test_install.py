@@ -19,6 +19,7 @@ class InstallerTest(unittest.TestCase):
         self.root = Path(self.fixture.name)
         (self.root / "scripts").mkdir()
         shutil.copyfile(INSTALL_SCRIPT, self.root / "scripts/install.sh")
+        shutil.copyfile(INSTALL_SCRIPT.parent / "configure-mqtt.sh", self.root / "scripts/configure-mqtt.sh")
         (self.root / "nginx/ssl").mkdir(parents=True)
         (self.root / "nginx/ssl/server.crt").touch()
         (self.root / "nginx/ssl/server.key").touch()
@@ -30,6 +31,9 @@ class InstallerTest(unittest.TestCase):
 printf 'docker %s\\n' "$*" >> "$COMMAND_LOG"
 if [ "$1" = compose ] && [ "$2" = build ]; then
     exit "${BUILD_EXIT:-0}"
+fi
+if [ "$1" = run ]; then
+    exit "${MQTT_CONFIG_EXIT:-0}"
 fi
 ''')
         self.mock("curl", '''
@@ -88,6 +92,12 @@ esac
         self.assertEqual(result.returncode, 42)
         self.assertNotIn("Installation Complete!", result.stdout)
         self.assertNotIn("docker compose up", self.commands.read_text())
+
+    def test_mqtt_configuration_failure_stops_install(self):
+        result = self.run_install(MQTT_CONFIG_EXIT="13")
+        self.assertEqual(result.returncode, 13)
+        self.assertNotIn("Installation Complete!", result.stdout)
+        self.assertNotIn("docker compose build", self.commands.read_text())
 
     def test_http_error_is_not_reported_as_success(self):
         result = self.run_install(API_EXIT="22")

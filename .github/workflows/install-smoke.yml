@@ -17,14 +17,12 @@ name: Install Smoke Test
 on:
   pull_request:
     paths:
-      - 'scripts/install.sh'
-      - 'scripts/ci/**'
+      - 'scripts/**'
       - '**/package.json'
       - '**/package-lock.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - '.node-version'
-      - 'scripts/upgrade.sh'
       - 'docker-compose.yml'
       - 'docker-compose.dev.yml'
       - 'nginx/**'
@@ -78,6 +76,9 @@ jobs:
             fi
           done
           docker compose version
+
+      - name: Verify MQTT credential permissions on an isolated Linux volume
+        run: bash scripts/ci/test-mqtt-permissions.sh
 
       - name: Run install.sh non-interactively
         run: |
@@ -453,7 +454,8 @@ jobs:
           # Historical releases installed floating pnpm, which now fails
           # before the upgrade can be exercised. Pin only their bootstrap
           # to the release's own packageManager, then restore the checkout.
-          trap 'git restore -- backend/Dockerfile frontend/Dockerfile' EXIT
+          git show "${{ steps.baseline.outputs.pr_sha }}:scripts/configure-mqtt.sh" > "$RUNNER_TEMP/configure-mqtt.sh"
+          trap 'git restore -- backend/Dockerfile frontend/Dockerfile scripts/install.sh' EXIT
           python3 - <<'PY'
           import json
           import re
@@ -465,6 +467,18 @@ jobs:
               path = Path(name)
               path.write_text(path.read_text().replace(
                   "RUN npm install -g pnpm\n", f"RUN npm install -g {manager}\n"))
+          # Old installers chmod a root-created file from the unprivileged
+          # runner and ignore EPERM. Normalize that bootstrap before the
+          # baseline broker starts; keep all historical upgrade logic.
+          installer = Path("scripts/install.sh")
+          source = installer.read_text()
+          start = source.index("# ---- MQTT password file ----")
+          end = source.index("# ---- ESP32 firmware ----", start)
+          source = source[:start] + (
+              'MQTT_USERNAME="${MQTT_USERNAME:-auditor}" MQTT_PASSWORD="$MQTT_PASSWORD" '
+              'bash "$RUNNER_TEMP/configure-mqtt.sh" "$PWD/mosquitto/config"\n\n'
+          ) + source[end:]
+          installer.write_text(source)
           PY
           bash scripts/install.sh < /dev/null
 
@@ -844,7 +858,8 @@ jobs:
           # Historical releases installed floating pnpm, which now fails
           # before the upgrade can be exercised. Pin only their bootstrap
           # to the release's own packageManager, then restore the checkout.
-          trap 'git restore -- backend/Dockerfile frontend/Dockerfile' EXIT
+          git show "${{ steps.baseline.outputs.pr_sha }}:scripts/configure-mqtt.sh" > "$RUNNER_TEMP/configure-mqtt.sh"
+          trap 'git restore -- backend/Dockerfile frontend/Dockerfile scripts/install.sh' EXIT
           python3 - <<'PY'
           import json
           import re
@@ -856,6 +871,18 @@ jobs:
               path = Path(name)
               path.write_text(path.read_text().replace(
                   "RUN npm install -g pnpm\n", f"RUN npm install -g {manager}\n"))
+          # Old installers chmod a root-created file from the unprivileged
+          # runner and ignore EPERM. Normalize that bootstrap before the
+          # baseline broker starts; keep all historical upgrade logic.
+          installer = Path("scripts/install.sh")
+          source = installer.read_text()
+          start = source.index("# ---- MQTT password file ----")
+          end = source.index("# ---- ESP32 firmware ----", start)
+          source = source[:start] + (
+              'MQTT_USERNAME="${MQTT_USERNAME:-auditor}" MQTT_PASSWORD="$MQTT_PASSWORD" '
+              'bash "$RUNNER_TEMP/configure-mqtt.sh" "$PWD/mosquitto/config"\n\n'
+          ) + source[end:]
+          installer.write_text(source)
           PY
           bash scripts/install.sh < /dev/null
 

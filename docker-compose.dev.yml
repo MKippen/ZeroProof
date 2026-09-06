@@ -22,6 +22,8 @@ services:
 
   mosquitto:
     image: eclipse-mosquitto:2
+    user: "0:0"
+    entrypoint: ["/bin/sh", "/usr/local/bin/zeroproof-mosquitto.sh"]
     container_name: zeroproof-mqtt-dev
     # Bound to all interfaces (not just loopback) so ESP32 sensors and other
     # LAN devices can reach the broker. Mosquitto is configured with a
@@ -31,6 +33,7 @@ services:
       - "9001:9001"
     volumes:
       - ./mosquitto/config:/mosquitto/config:ro
+      - ./scripts/mosquitto-entrypoint.sh:/usr/local/bin/zeroproof-mosquitto.sh:ro
       - mosquitto_dev_data:/mosquitto/data
     restart: unless-stopped
     labels:

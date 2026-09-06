@@ -64,12 +64,13 @@ checks after the reviewed changes reach GitHub.
 | --- | --- | --- |
 | P1 | Docker and development bootstrap downloaded floating pnpm; derive the exact version from `packageManager` and standardize Node 24 | `backend/Dockerfile`, `frontend/Dockerfile`, `scripts/dev-setup.*` |
 | P1 | Installer failure was swallowed; preserve nonzero exits, require API/database readiness, and enforce readiness deadlines | `scripts/install.sh`, `scripts/upgrade.sh`, `.github/workflows/install-smoke.yml` |
-| P1 | The new cloud MQTT gate reproduced issue #50: password generation creates root-owned mode 0600, while the runner's ignored chmod fails and the read-only broker mount cannot repair ownership | Cloud run `34042729361`; credential repair tracked in this PR |
+| P1 | The new cloud MQTT gate reproduced issue #50: root-owned credentials were unreadable by the broker. Configure ownership inside Docker and stage a private runtime copy for existing installations with read-only legacy files; retain additional users | Cloud run `34042729361`; `scripts/configure-mqtt.sh`, `scripts/mosquitto-entrypoint.sh` |
 | P1 | Anonymous and cross-origin WebSocket clients could receive live network telemetry; enforce session/origin checks and revoke subscriptions on logout/expiry | `backend/src/api/middleware/websocket.ts`, `backend/src/server.ts` |
 | P1 | Login/setup retained the anonymous session ID; regenerate session and CSRF state at authentication | `backend/src/api/routes/auth.ts` |
 | P1 | Browser-admin ESP32 mutations bypassed CSRF; remove the broad path exemption | `backend/src/api/middleware/csrf.ts` |
 | P1 | Concurrent setup/seed requests could create multiple administrators; serialize first-admin creation in PostgreSQL | `backend/src/services/adminAccount.ts` |
 | P1 | Wrong current password was retried and treated as session expiration; distinguish application errors and never replay mutations after authentication failures | `frontend/src/api/client.ts` |
+| P1 | UniFi writes were replayed after ambiguous transport failures and HTML gateway errors, potentially applying a mutation twice; stop those retries and retain safe endpoint discovery | `packages/unifi-client/src/transport/request.ts` |
 | P1 | Security/intent fetch failures appeared as empty findings or missing configuration; show explicit retryable errors and preserve previous data | `SecurityAnalysisPage.tsx`, `IntentDashboardPage.tsx` |
 | P1 | Privileged upgrade requests could overlap before async startup and during health verification; reserve the run through completion and rollback | `updater/src/index.ts` |
 | P1 | Failed application readiness exited before automatic rollback; use a distinct post-apply exit code and verify recovery before reporting rollback success | `scripts/upgrade.sh`, `updater/src/index.ts` |
@@ -117,9 +118,6 @@ The root `pnpm check` command covers the local JavaScript validation baseline.
    Add explicit source IP/controller/site identity and multi-controller fixtures
    before assigning maximum confidence. This needs a coordinated schema/data
    design rather than a display-name heuristic.
-   Separately, `packages/unifi-client/src/transport/request.ts` retries alternative
-   endpoints after transport failures for every method; ambiguous writes require
-   idempotency/read-back handling rather than automatic replay.
 3. **P1: Prove recovery with state.** Extend the new configuration sentinel to
    sessions, controller secrets, detections and MQTT reconnect. Test failed
    upgrades and automatic rollback against real images. Source rollback does not
@@ -164,10 +162,10 @@ fresh analysis and explicit triage are still required.
 
 ### Validation record
 
-- **`pnpm check` passes on Node 24: 828 tests across all four packages**, both
+- **`pnpm check` passes on Node 24: 860 tests across all four packages**, both
   dependency audits, lint, builds, and UniFi client typecheck.
 - Frozen pnpm install and updater `npm ci` succeed; both audits report zero.
-- UniFi library: ESM/CJS/type declarations and typecheck pass; **125 tests pass**.
+- UniFi library: ESM/CJS/type declarations and typecheck pass; **157 tests pass**.
 - Backend: **557 tests pass**, clean lint and TypeScript build. Scanner/rule-loader
   coverage thresholds pass (scope is not whole-application coverage).
 - Frontend: **112 tests pass**, clean lint and production build.
@@ -187,8 +185,12 @@ fresh analysis and explicit triage are still required.
   navigation. This is complementary to the live API checks, not a full-stack E2E run.
 - Both ESP32 and ESP32-C3 firmware builds pass. No physical hardware test performed.
 - Actionlint 1.7.12, Bash syntax, shellcheck and Compose configuration checks pass;
-  four installer regression checks exercise failed builds, failed readiness and secret
+  five installer regression checks exercise failed builds, MQTT setup failure, failed readiness and secret
   file permissions using isolated stubs.
+- Real MQTT regression tests use an isolated Linux Docker volume to verify
+  credential ownership, preserved additional users, custom application usernames,
+  recovery from a read-only root-owned legacy file, authenticated pub/sub, rejected
+  bad credentials, and broker UID 1883. No host ports or operator credentials are used.
 
 Current cloud installation/upgrade results are tracked in
 [draft PR #75](https://github.com/MKippen/ZeroProof/pull/75). The first run passed

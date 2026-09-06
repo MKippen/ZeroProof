@@ -208,16 +208,9 @@ fi
 # ---- MQTT password file ----
 echo ""
 echo "Configuring MQTT authentication..."
-if ! docker run --rm -v "$(pwd)/mosquitto/config:/mosquitto/config" eclipse-mosquitto:2 \
-    mosquitto_passwd -b -c /mosquitto/config/passwd auditor "$MQTT_PASSWORD" 2>/dev/null; then
-    echo -e "${YELLOW}Warning: MQTT password setup failed. MQTT auth may not work.${NC}"
-    echo "You can retry manually: docker run --rm -v \"\$(pwd)/mosquitto/config:/mosquitto/config\" eclipse-mosquitto:2 mosquitto_passwd -b -c /mosquitto/config/passwd auditor \"<password>\""
-else
-    # 0644 (not 0600) so the in-container mosquitto user (UID 1883) can read
-    # the file. The contents are bcrypt-hashed credentials, not plaintext.
-    chmod 644 mosquitto/config/passwd 2>/dev/null || true
-    echo -e "${GREEN}MQTT configured${NC}"
-fi
+MQTT_USERNAME="${MQTT_USERNAME:-auditor}" MQTT_PASSWORD="$MQTT_PASSWORD" \
+    bash scripts/configure-mqtt.sh
+echo -e "${GREEN}MQTT configured${NC}"
 
 # ---- ESP32 firmware ----
 echo ""
