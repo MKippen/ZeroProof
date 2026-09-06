@@ -6,8 +6,8 @@ Thanks for your interest in contributing to ZeroProof! This document covers the 
 
 ### Prerequisites
 
-- Node.js 20+
-- pnpm
+- Node.js 24 LTS (see `.node-version`)
+- pnpm 10.28.2 (pinned in the root `package.json`)
 - Docker and Docker Compose
 - PostgreSQL (via Docker)
 
@@ -18,18 +18,23 @@ Thanks for your interest in contributing to ZeroProof! This document covers the 
 git clone https://github.com/MKippen/ZeroProof.git
 cd ZeroProof
 
-# Start dev infrastructure
-docker compose -f docker-compose.dev.yml up -d
+# Install the pinned package manager and workspace dependencies
+npm install --global "$(node -p "require('./package.json').packageManager")"
+pnpm install --frozen-lockfile
+npm --prefix updater ci
+pnpm --filter @uguard/unifi-client build
+
+# Start infrastructure for the host-run development servers below
+docker compose -f docker-compose.dev.yml up -d postgres mosquitto redis
 
 # Backend
 cd backend
-pnpm install
-npx prisma db push
+pnpm prisma generate
+pnpm prisma migrate deploy
 pnpm dev
 
 # Frontend (new terminal)
 cd frontend
-pnpm install
 pnpm dev
 ```
 
@@ -37,9 +42,15 @@ The backend runs on `http://localhost:3000` and the frontend on `http://localhos
 
 ### Running Tests
 
+From the repository root, `pnpm check` runs dependency audits, lint, builds and
+all JavaScript/TypeScript unit suites, including the UniFi client and updater.
+Use `./scripts/dev-setup.sh` first to configure local environment variables and
+MQTT credentials if this is a fresh checkout. Docker builds, migrations and
+browser installation/upgrade checks also run in GitHub Actions.
+
 ```bash
 # Backend unit tests
-cd backend && pnpm test -- --no-coverage
+cd backend && pnpm test --no-coverage --runInBand
 
 # Frontend tests
 cd frontend && pnpm test -- run
@@ -52,8 +63,8 @@ cd frontend && pnpm test -- run
 
 1. Create a feature branch from `main`
 2. Make your changes
-3. Run `cd backend && pnpm test -- --no-coverage` to verify tests pass
-4. Run `cd frontend && pnpm test -- run` to verify frontend tests pass
+3. Run `pnpm check` from the repository root
+4. Add regression coverage for changed behavior; verify relevant container/browser flows
 5. Open a PR against `main`
 6. Describe what changed and why in the PR description
 
@@ -115,7 +126,7 @@ Security rules live in `rules/security/industry-standards/` as YAML files. Each 
 
 1. Add a test config to `backend/tests/fixtures/unifiConfigs.ts` that triggers your rule
 2. Add positive and negative cases to the validation matrix in `backend/tests/unit/services/ruleLoader/ruleEngine.test.ts`
-3. Run `cd backend && pnpm test -- --no-coverage` to verify
+3. Run `cd backend && pnpm test --no-coverage --runInBand` to verify
 
 ## Project Structure
 

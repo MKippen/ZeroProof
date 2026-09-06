@@ -6,18 +6,26 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # Backend tests and linting
   backend:
     name: Backend Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: ./backend
 
     services:
       postgres:
-        image: postgres:16
+        image: postgres:15-alpine
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -37,17 +45,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 10.28.2
 
       - name: Get pnpm store directory
         shell: bash
         run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+          echo "STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_ENV"
 
       - name: Setup pnpm cache
         uses: actions/cache@v5
@@ -59,6 +65,10 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Audit workspace dependencies
+        working-directory: .
+        run: pnpm audit --audit-level high
 
       - name: Build workspace packages (backend depends on @uguard/unifi-client)
         working-directory: .
@@ -82,7 +92,7 @@ jobs:
         run: pnpm exec tsc --noEmit
 
       - name: Run database migrations
-        run: pnpm prisma db push --skip-generate
+        run: pnpm prisma migrate deploy
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/zeroproof_test
 
@@ -97,6 +107,7 @@ jobs:
   frontend:
     name: Frontend Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: ./frontend
@@ -108,17 +119,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 10.28.2
 
       - name: Get pnpm store directory
         shell: bash
         run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+          echo "STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_ENV"
 
       - name: Setup pnpm cache
         uses: actions/cache@v5
@@ -146,6 +155,7 @@ jobs:
   updater:
     name: Updater Sidecar
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     defaults:
       run:
         working-directory: ./updater
@@ -157,10 +167,13 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Audit updater dependencies
+        run: npm audit --audit-level=high
 
       - name: Run tests
         run: npm test -- --runInBand
@@ -172,6 +185,7 @@ jobs:
   firmware:
     name: ESP32 Firmware Build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: ./esp32-firmware
@@ -200,6 +214,7 @@ jobs:
   docker:
     name: Docker Build
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -214,8 +229,8 @@ jobs:
           file: ./backend/Dockerfile
           push: false
           tags: zeroproof-backend:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
 
       - name: Build frontend image
         uses: docker/build-push-action@v7
@@ -224,5 +239,15 @@ jobs:
           file: ./frontend/Dockerfile
           push: false
           tags: zeroproof-frontend:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Build updater image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./updater/Dockerfile
+          push: false
+          tags: zeroproof-updater:test
+          cache-from: type=gha,scope=updater
+          cache-to: type=gha,mode=max,scope=updater

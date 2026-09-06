@@ -25,7 +25,7 @@ jobs:
       - name: Check for large files
         run: |
           # Fail if any file larger than 10MB is added
-          find . -type f -size +10M -not -path "./.git/*" | while read file; do
+          find . -type f -size +10M -not -path "./.git/*" | while IFS= read -r file; do
             echo "::error::File $file is larger than 10MB"
             exit 1
           done
@@ -64,7 +64,10 @@ jobs:
           set -e
           # -S error: bugs that change runtime behavior, not style.
           # We can bump to -S warning once existing scripts are clean.
-          shellcheck -S error scripts/*.sh
+          shellcheck -S error scripts/*.sh scripts/ci/*.sh
+
+      - name: Installer regression tests (isolated, no Docker operations)
+        run: python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
 
   # Ensure all tests pass before merge
   test-summary:

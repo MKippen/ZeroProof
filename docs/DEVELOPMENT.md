@@ -2,8 +2,8 @@
 
 ## Prerequisites
 
-- Node.js 20+
-- pnpm (install with `npm install -g pnpm`)
+- Node.js 24 LTS (see `.node-version`)
+- pnpm 10.28.2 (the root `package.json` is the version source of truth)
 - Docker and Docker Compose
 - VS Code (recommended)
 
@@ -17,18 +17,19 @@
 Or manually:
 
 ```bash
-# Start development services (PostgreSQL, MQTT, Redis)
-docker compose -f docker-compose.dev.yml up -d
+# Install workspace dependencies with the configured package manager
+npm install --global "$(node -p "require('./package.json').packageManager")"
+pnpm install --frozen-lockfile
+npm --prefix updater ci
+pnpm --filter @uguard/unifi-client build
 
-# Install backend dependencies
+# Start infrastructure only; the application servers run on the host below
+docker compose -f docker-compose.dev.yml up -d postgres mosquitto redis
+
+# Generate the client and apply committed migrations to your development DB
 cd backend
-pnpm install
 pnpm prisma generate
-pnpm prisma migrate dev
-
-# Install frontend dependencies
-cd ../frontend
-pnpm install
+pnpm prisma migrate deploy
 ```
 
 ## Running Development Servers
@@ -103,6 +104,11 @@ pnpm prisma studio
 ```
 
 ## Testing
+
+From the repository root, `pnpm check` runs both dependency audits, lint, all
+application/package builds and all JavaScript/TypeScript unit suites. Install
+the updater's independent npm lockfile with `npm --prefix updater ci` first.
+Use a disposable database for migration or destructive integration tests.
 
 **Backend:**
 ```bash

@@ -532,10 +532,11 @@ $COMPOSE up -d --build $RECREATE_SERVICES
 UPGRADE_DONE=true
 
 echo ""
-echo "Waiting for backend health (timeout 90s)..."
+echo "Waiting for application and database readiness (timeout 90s)..."
 HEALTHY=false
-for i in {1..30}; do
-    if curl -sk -o /dev/null --max-time 3 https://127.0.0.1/health 2>/dev/null; then
+HEALTH_DEADLINE=$((SECONDS + 90))
+while [ "$SECONDS" -lt "$HEALTH_DEADLINE" ]; do
+    if curl -fsk -o /dev/null --connect-timeout 2 --max-time 3 https://127.0.0.1/api/v1/auth/setup-status 2>/dev/null; then
         HEALTHY=true
         break
     fi
@@ -546,28 +547,8 @@ echo ""
 if $HEALTHY; then
     echo -e "${GREEN}${BOLD}Upgrade complete: $CURRENT_DESC → $TARGET_DESC${NC}"
 
-    # Reclaim disk used by old image layers and intermediate build
-    # stages. The 2026-05-26 LXC ran out of disk (15G/16G) after an
-    # upgrade because every release builds new images while old ones
-    # accumulate forever — \`docker system df\` showed 9.7G reclaimable
-    # in 79 images of which only 7 were in use. We run this AFTER the
-    # health check so a busted upgrade doesn't lose its rollback path
-    # (rollback re-builds from cache, which dangling layers feed).
-    #
-    # --keep-storage 1g on the builder leaves enough cache to make the
-    # next upgrade's rebuild fast; -af on images removes any image not
-    # currently tagged AND not referenced by a running container.
-    echo ""
-    echo "Reclaiming disk from dangling images + build cache..."
-    if docker image prune -af --filter "until=24h" >/tmp/prune-images.log 2>&1 \
-        && docker builder prune -af --keep-storage 1g >/tmp/prune-builder.log 2>&1; then
-        img_freed=$(grep -E '^Total reclaimed space:' /tmp/prune-images.log | tail -1 || echo "")
-        bld_freed=$(grep -E '^Total reclaimed space:' /tmp/prune-builder.log | tail -1 || echo "")
-        [[ -n "$img_freed" ]] && echo "  Images: $img_freed"
-        [[ -n "$bld_freed" ]] && echo "  Build cache: $bld_freed"
-    else
-        echo -e "${YELLOW}  (prune failed; not fatal — upgrade is already complete)${NC}"
-    fi
+    # Host-wide Docker pruning can delete other applications' rollback
+    # images and build caches. Leave cleanup to the host operator.
 
     # Throwaway-pattern updater self-recreate. The main upgrade above
     # ran with `updater` excluded from the recreate target list (the
@@ -624,4 +605,7 @@ echo -e "${YELLOW}Recovery options:${NC}"
 echo "  1. Show backend logs:        $COMPOSE logs --tail=50 backend"
 echo "  2. Roll back automatically:  ./scripts/upgrade.sh --rollback"
 echo "  3. Investigate manually:     git status"
-exit 1
+# Exit 3 means compose applied the target but readiness failed. The updater
+# uses this distinct result to trigger rollback; preflight/build errors stay
+# separate so they never roll back an otherwise healthy current release.
+exit 3

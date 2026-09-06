@@ -108,6 +108,9 @@ services:
       - HOST_IP=${HOST_IP:-}
     command: ["node", "dist/scheduler.js"]
     depends_on:
+      # The backend applies migrations before becoming healthy.
+      backend:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       mosquitto:
