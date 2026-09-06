@@ -4,16 +4,18 @@ import { useAuthStore } from '@/stores/authStore';
 const API_BASE = '/api/v1';
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
-class ApiClient {
+export class ApiClient {
   // Per-tab CSRF token. Synchronizer-token bound to the session cookie —
   // fetched lazily on the first mutating request and refreshed on 403
   // (e.g., session rotated after login).
   private csrfToken: string | null = null;
   private csrfInflight: Promise<string | null> | null = null;
+  private csrfGeneration = 0;
 
   private async getCsrfToken(): Promise<string | null> {
     if (this.csrfToken) return this.csrfToken;
     if (this.csrfInflight) return this.csrfInflight;
+    const generation = this.csrfGeneration;
     this.csrfInflight = (async () => {
       try {
         const response = await fetch(`${API_BASE}/auth/csrf`, {
@@ -22,15 +24,15 @@ class ApiClient {
         });
         if (!response.ok) return null;
         const body = (await response.json()) as ApiResponse<{ csrfToken: string }>;
-        if (body.success && body.data) {
-          this.csrfToken = body.data.csrfToken;
-          return this.csrfToken;
+        if (body.success && typeof body.data?.csrfToken === 'string') {
+          if (generation === this.csrfGeneration) this.csrfToken = body.data.csrfToken;
+          return body.data.csrfToken;
         }
         return null;
       } catch {
         return null;
       } finally {
-        this.csrfInflight = null;
+        if (generation === this.csrfGeneration) this.csrfInflight = null;
       }
     })();
     return this.csrfInflight;
@@ -39,40 +41,39 @@ class ApiClient {
   /** Force a refresh — call after login/logout flips the session. */
   invalidateCsrfToken(): void {
     this.csrfToken = null;
+    this.csrfInflight = null;
+    this.csrfGeneration += 1;
   }
 
-  private async parseResponse<T>(response: Response): Promise<Partial<ApiResponse<T>>> {
-    const body = await response.text();
-    if (!body) {
-      return {};
-    }
+  private async parseResponse<T>(response: Response): Promise<ApiResponse<T>> {
+    if (response.status === 204) return { success: true };
 
     try {
-      return JSON.parse(body) as ApiResponse<T>;
+      const body: unknown = JSON.parse(await response.text());
+      if (body && typeof body === 'object' && 'success' in body && typeof body.success === 'boolean') {
+        return body as ApiResponse<T>;
+      }
     } catch {
-      return {
-        success: false,
-        error: {
-          code: 'INVALID_JSON',
-          message: 'Server returned an invalid JSON response',
-        },
-      };
+      // A proxy can return HTML or an empty body while the backend restarts.
     }
+    return {
+      success: false,
+      error: {
+        code: 'INVALID_RESPONSE',
+        message: 'Server returned an invalid response. Please try again.',
+      },
+    };
   }
 
-  private async buildHeaders(
-    method: string,
-    extra?: HeadersInit,
-    isRetry = false
-  ): Promise<HeadersInit> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...(extra as Record<string, string> | undefined),
-    };
-    if (!SAFE_METHODS.has(method.toUpperCase())) {
-      if (isRetry) this.invalidateCsrfToken();
+  private async buildHeaders(options: RequestInit): Promise<Headers> {
+    const headers = new Headers(options.headers);
+    // The browser must choose the multipart boundary for uploaded files.
+    if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
+    }
+    if (!SAFE_METHODS.has((options.method ?? 'GET').toUpperCase())) {
       const token = await this.getCsrfToken();
-      if (token) headers['X-CSRF-Token'] = token;
+      if (token) headers.set('X-CSRF-Token', token);
     }
     return headers;
   }
@@ -85,34 +86,31 @@ class ApiClient {
     const url = `${API_BASE}${endpoint}`;
     const method = (options.method ?? 'GET').toUpperCase();
 
-    const config: RequestInit = {
-      cache: 'no-store',
-      ...options,
-      headers: await this.buildHeaders(method, options.headers, isRetry),
-      credentials: 'include',
-    };
-
     try {
+      const config: RequestInit = {
+        cache: 'no-store',
+        ...options,
+        headers: await this.buildHeaders(options),
+        credentials: 'include',
+      };
       const response = await fetch(url, config);
       const data = await this.parseResponse<T>(response);
 
-      // Handle session expiration — but retry once before bailing.
-      // During in-app upgrades the backend is recreated, and there's a
-      // ~1-3s window where requests can briefly return 401 (session
-      // middleware re-initializing, or nginx returning auth-shaped
-      // responses while it waits for backend health). A single retry
-      // catches that case without delaying real session expirations
-      // by more than the retry interval.
-      if (response.status === 401 && !endpoint.includes('/auth/login')) {
-        if (!isRetry) {
+      // A 401 can mean the submitted password is wrong, or the upstream
+      // controller rejected its credentials. Only our session middleware's
+      // explicit UNAUTHORIZED response means this browser must sign in again.
+      if (response.status === 401 && data.error?.code === 'UNAUTHORIZED') {
+        // Allow a single read retry during backend restarts. Never replay a
+        // mutation for an auth failure; only a verified CSRF rejection below
+        // guarantees the handler has not run.
+        if (!isRetry && SAFE_METHODS.has(method)) {
           await new Promise((resolve) => setTimeout(resolve, 1500));
           return this.request<T>(endpoint, options, true);
         }
-        console.warn('Session expired, logging out...');
+        this.invalidateCsrfToken();
         useAuthStore.getState().logout();
-        // Only redirect if we're not already on login page
-        if (!window.location.pathname.includes('/login')) {
-          window.location.href = '/login';
+        if (window.location.pathname !== '/login') {
+          window.location.replace('/login');
         }
       }
 
@@ -154,14 +152,14 @@ class ApiClient {
   async post<T>(endpoint: string, body?: unknown): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : JSON.stringify(body),
     });
   }
 
   async patch<T>(endpoint: string, body?: unknown): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'PATCH',
-      body: body ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : JSON.stringify(body),
     });
   }
 
@@ -172,7 +170,7 @@ class ApiClient {
   async put<T>(endpoint: string, body?: unknown): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'PUT',
-      body: body ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : JSON.stringify(body),
     });
   }
 
@@ -180,43 +178,12 @@ class ApiClient {
   async fetch<T>(method: string, endpoint: string, body?: unknown): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: method.toUpperCase(),
-      body: body ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : JSON.stringify(body),
     });
   }
 
   async upload<T>(endpoint: string, formData: FormData): Promise<ApiResponse<T>> {
-    const url = `${API_BASE}${endpoint}`;
-    const csrfHeaders: Record<string, string> = {};
-    const token = await this.getCsrfToken();
-    if (token) csrfHeaders['X-CSRF-Token'] = token;
-
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-        cache: 'no-store',
-        headers: csrfHeaders,
-      });
-      const data = await this.parseResponse<T>(response);
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || { code: 'UNKNOWN', message: 'Upload failed' },
-        };
-      }
-
-      return data as ApiResponse<T>;
-    } catch (error) {
-      return {
-        success: false,
-        error: {
-          code: 'NETWORK_ERROR',
-          message: error instanceof Error ? error.message : 'Network error',
-        },
-      };
-    }
+    return this.request<T>(endpoint, { method: 'POST', body: formData });
   }
 }
 

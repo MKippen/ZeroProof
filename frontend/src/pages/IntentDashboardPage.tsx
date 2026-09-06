@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { DataLoadError } from '@/components/DataLoadError';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
@@ -796,7 +797,7 @@ export function IntentDashboardPage() {
   const [dismissReason, setDismissReason] = useState('');
 
   // Fetch intent profile
-  const { data: intentData, isLoading: isLoadingIntent, error: intentError } = useQuery({
+  const intentQuery = useQuery({
     queryKey: ['intent-profile'],
     queryFn: async () => {
       const response = await api.get<{ profile: NetworkIntentProfile | null; configured: boolean }>(
@@ -805,22 +806,24 @@ export function IntentDashboardPage() {
       if (response.success && response.data) {
         return response.data;
       }
-      // Return default even on error so page doesn't break
-      return { profile: null, configured: false };
+      throw new Error(response.error?.message || 'Unable to load intent profile');
     },
     staleTime: 0, // Always refetch on mount
     refetchOnMount: 'always',
   });
 
   // Fetch intent analysis - runs in parallel, backend handles missing config
-  const { data: analysisData } = useQuery({
+  const analysisQuery = useQuery({
     queryKey: ['intent-analysis'],
     queryFn: async () => {
-      const response = await api.get<IntentAnalysisResult>('/intent/analysis');
-      if (response.success && response.data) {
+      const response = await api.get<IntentAnalysisResult | null>('/intent/analysis');
+      if (response.success && response.data !== undefined) {
         return response.data;
       }
-      return null;
+      // A confirmed missing configuration is an onboarding state. Service
+      // and transport failures must retain the previous analysis instead.
+      if (response.error?.code === 'NO_CONFIG') return null;
+      throw new Error(response.error?.message || 'Unable to load intent analysis');
     },
     staleTime: 0,
     refetchOnMount: 'always',
@@ -828,7 +831,7 @@ export function IntentDashboardPage() {
   });
 
   // Fetch available networks
-  const { data: networksData } = useQuery({
+  const networksQuery = useQuery({
     queryKey: ['intent-networks'],
     queryFn: async () => {
       const response = await api.get<{ networks: UniFiNetwork[]; hasConfig: boolean }>(
@@ -837,14 +840,14 @@ export function IntentDashboardPage() {
       if (response.success && response.data) {
         return response.data;
       }
-      return { networks: [], hasConfig: false };
+      throw new Error(response.error?.message || 'Unable to load available networks');
     },
     staleTime: 0,
     refetchOnMount: 'always',
   });
 
   // Fetch discovered devices
-  const { data: devicesData } = useQuery({
+  const devicesQuery = useQuery({
     queryKey: ['intent-devices'],
     queryFn: async () => {
       const response = await api.get<{ devices: DiscoveredDevice[]; hasConfig: boolean }>(
@@ -853,7 +856,7 @@ export function IntentDashboardPage() {
       if (response.success && response.data) {
         return response.data;
       }
-      return { devices: [], hasConfig: false };
+      throw new Error(response.error?.message || 'Unable to load available devices');
     },
     staleTime: 0,
     refetchOnMount: 'always',
@@ -869,7 +872,7 @@ export function IntentDashboardPage() {
         // Sync may fail if UniFi isn't configured, that's okay
       }
       // Then fetch fresh analysis
-      const response = await api.get<IntentAnalysisResult>('/intent/analysis');
+      const response = await api.get<IntentAnalysisResult | null>('/intent/analysis');
       if (!response.success) {
         throw new Error(response.error?.message || 'Failed to refresh analysis');
       }
@@ -993,32 +996,31 @@ export function IntentDashboardPage() {
     reopenMutation.mutate(dismissalId);
   };
 
-  if (isLoadingIntent) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
+  const { data: intentData } = intentQuery;
+  const { data: analysisData } = analysisQuery;
+  const { data: networksData } = networksQuery;
+  const { data: devicesData } = devicesQuery;
+  // A confirmed missing profile is normal onboarding. Auxiliary analysis
+  // errors matter only after a profile exists; profile failures always matter.
+  const relevantQueries = intentData?.configured
+    ? [intentQuery, analysisQuery, networksQuery, devicesQuery]
+    : [intentQuery];
+  const failedQueries = relevantQueries.filter((query) => query.isError);
+  const loadError = failedQueries.length > 0 ? (
+    <DataLoadError
+      title="Intent data could not be loaded"
+      message={failedQueries.map((query) => query.error?.message).join('. ')}
+      onRetry={() => { failedQueries.forEach((query) => void query.refetch()); }}
+      isRetrying={failedQueries.some((query) => query.isFetching)}
+      hasPreviousData={failedQueries.some((query) => query.data !== undefined)}
+    />
+  ) : null;
 
-  if (intentError) {
+  if (!intentData) {
+    if (loadError) return loadError;
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Intent Analysis</h1>
-          <p className="text-muted-foreground">View and manage your network security goals</p>
-        </div>
-        <Card className="border-red-500/30">
-          <CardContent className="pt-6">
-            <div className="text-center py-8 text-red-500">
-              <Shield className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>Error loading intent profile</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                {intentError instanceof Error ? intentError.message : 'Unknown error'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-center h-64" role="status" aria-label="Loading intent profile">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
@@ -1031,6 +1033,7 @@ export function IntentDashboardPage() {
           <p className="text-muted-foreground">View and manage your network security goals</p>
         </div>
 
+        {loadError}
         <Card className="border-orange-500/30 bg-gradient-to-r from-orange-500/5 to-transparent">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center text-center py-8">
@@ -1107,6 +1110,8 @@ export function IntentDashboardPage() {
           </Button>
         </div>
       </div>
+
+      {loadError}
 
       {/* Timestamps */}
       {analysis && (analysis.configImportedAt || analysis.analyzedAt) && (
@@ -1309,7 +1314,7 @@ export function IntentDashboardPage() {
       )}
 
       {/* Import Config Prompt */}
-      {!analysis && (
+      {!analysis && !analysisQuery.isError && !analysisQuery.isPending && (
         <Card className="border-orange-500/30 bg-gradient-to-r from-orange-500/5 to-transparent">
           <CardContent className="pt-6">
             <div className="flex items-start gap-4">

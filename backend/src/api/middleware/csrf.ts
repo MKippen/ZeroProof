@@ -10,9 +10,6 @@
  *
  * Bypasses:
  *   - Safe HTTP methods (GET / HEAD / OPTIONS) — they don't mutate state.
- *   - `/api/v1/esp32/*` — ESP32 sentinels POST telemetry over MQTT-style
- *     direct HTTP and don't carry a browser session, so synchronizer-token
- *     CSRF doesn't apply. They authenticate via per-device tokens elsewhere.
  *   - `NODE_ENV === 'test'` — unit tests inject sessions directly and don't
  *     boot a real frontend; CSRF is exercised through dedicated tests.
  */
@@ -21,7 +18,6 @@ import { NextFunction, Request, Response } from 'express';
 import type { ApiResponse } from '../../types';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
-const ESP32_PATH_PREFIX = '/esp32/';
 
 /** Mint or return the per-session CSRF token. Idempotent. */
 export function ensureCsrfToken(req: Request): string {
@@ -35,8 +31,6 @@ export function ensureCsrfToken(req: Request): string {
 /** True if the path should bypass CSRF validation. */
 function isExempt(req: Request): boolean {
   if (SAFE_METHODS.has(req.method)) return true;
-  // Path is mounted under /api/v1/* in server.ts, so req.path here starts after.
-  if (req.path.startsWith(ESP32_PATH_PREFIX)) return true;
   return false;
 }
 

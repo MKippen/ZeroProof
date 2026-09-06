@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { DataLoadError } from '@/components/DataLoadError';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Shield,
@@ -738,10 +739,11 @@ export function SecurityAnalysisPage() {
   const [dismissingIssue, setDissmissingIssue] = useState<SecurityIssue | null>(null);
   const [dismissReason, setDismissReason] = useState('');
 
-  const { data: analysis, isLoading: analysisLoading, error } = useQuery({
+  const analysisQuery = useQuery({
     queryKey: ['security-analysis'],
     queryFn: fetchSecurityAnalysis,
   });
+  const { data: analysis } = analysisQuery;
 
   const { data: sources } = useQuery({
     queryKey: ['rule-sources'],
@@ -755,7 +757,10 @@ export function SecurityAnalysisPage() {
         vulnerabilities: Vulnerability[];
         pagination: { page: number; limit: number; total: number; totalPages: number };
       }>(`/vulnerabilities?limit=${VULN_PAGE_SIZE}&status=OPEN&page=${pageParam}`);
-      return response.data || { vulnerabilities: [], pagination: { page: 1, limit: VULN_PAGE_SIZE, total: 0, totalPages: 1 } };
+      if (!response.success || !response.data) {
+        throw new Error(response.error?.message || 'Unable to load vulnerabilities');
+      }
+      return response.data;
     },
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
@@ -772,7 +777,7 @@ export function SecurityAnalysisPage() {
   const hasNextVulnPage = vulnerabilitiesQuery.hasNextPage;
   const isFetchingNextVulnPage = vulnerabilitiesQuery.isFetchingNextPage;
 
-  const { data: vulnerabilityStats } = useQuery({
+  const vulnerabilityStatsQuery = useQuery({
     queryKey: ['vulnerabilities', 'stats', 'OPEN'],
     queryFn: async () => {
       const response = await api.get<{
@@ -781,9 +786,13 @@ export function SecurityAnalysisPage() {
         byType: Array<{ type: string; _count: { id: number } }>;
         recentTrend: Array<{ firstSeen: string; _count: { id: number } }>;
       }>('/vulnerabilities/stats?status=OPEN');
-      return response.data || null;
+      if (!response.success || !response.data) {
+        throw new Error(response.error?.message || 'Unable to load vulnerability totals');
+      }
+      return response.data;
     },
   });
+  const { data: vulnerabilityStats } = vulnerabilityStatsQuery;
 
   const analyzeMutation = useMutation({
     mutationFn: syncAndAnalyze,
@@ -1019,27 +1028,27 @@ export function SecurityAnalysisPage() {
   const mediumLowIssues =
     failedBySeverity.MEDIUM + failedBySeverity.LOW + vulnBySeverity.MEDIUM + vulnBySeverity.LOW;
 
-  if (analysisLoading) {
+  const securityQueries = [analysisQuery, vulnerabilitiesQuery, vulnerabilityStatsQuery];
+  const failedQueries = securityQueries.filter((query) => query.isError);
+  const hasCompleteData = securityQueries.every((query) => query.data !== undefined);
+  const loadError = failedQueries.length > 0 ? (
+    <DataLoadError
+      title="Security data could not be loaded"
+      message={failedQueries.map((query) => query.error?.message).join('. ')}
+      onRetry={() => { failedQueries.forEach((query) => void query.refetch()); }}
+      isRetrying={failedQueries.some((query) => query.isFetching)}
+      hasPreviousData={hasCompleteData}
+    />
+  ) : null;
+
+  // Scores and an empty findings list are meaningful only when every data
+  // source has loaded. React Query retains earlier data after refresh errors.
+  if (!hasCompleteData) {
+    if (loadError) return loadError;
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-64" role="status" aria-label="Loading security data">
         <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-center text-red-500">
-            <ShieldX className="h-12 w-12 mx-auto mb-2" />
-            <p>{(error as Error).message}</p>
-            <Button onClick={() => analyzeMutation.mutate()} className="mt-4">
-              Run Analysis
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     );
   }
 
@@ -1075,6 +1084,8 @@ export function SecurityAnalysisPage() {
           Sync & Analyze
         </Button>
       </div>
+
+      {loadError}
 
       {/* Attribution Card */}
       {sources && sources.length > 0 && (
@@ -1297,7 +1308,7 @@ export function SecurityAnalysisPage() {
             />
           ))}
         </div>
-      ) : (
+      ) : !loadError ? (
         <Card className="border-green-500/30 bg-green-500/5">
           <CardContent className="py-8 text-center">
             <CheckCircle2 className="h-12 w-12 mx-auto mb-2 text-green-500" />
@@ -1313,7 +1324,7 @@ export function SecurityAnalysisPage() {
             </p>
           </CardContent>
         </Card>
-      )}
+      ) : null}
 
       {hasNextVulnPage && (
         <div className="flex justify-center">

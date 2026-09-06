@@ -10,6 +10,7 @@ import { ApiResponse, ESP32ProvisionSchema, FirmwareInfo, WlanInfo } from '../..
 import logger from '../../utils/logger';
 import { getVlanCoverage } from '../../services/vlanCoverageService';
 import config from '../../config';
+import { firmwareDownloadLimiter } from '../middleware/rateLimit';
 
 // Extended WLAN info with VLAN coverage
 interface EnhancedWlanInfo extends WlanInfo {
@@ -61,7 +62,7 @@ function isDockerInternalBrokerHost(host: string): boolean {
 
 // GET /api/v1/esp32/firmware - Serve merged firmware binary (for initial flash via USB)
 // No auth required - ESP32 devices need to download without session cookies
-router.get('/firmware', async (_req: Request, res: Response) => {
+router.get('/firmware', firmwareDownloadLimiter, async (_req: Request, res: Response) => {
   try {
     // Read firmware metadata
     const metadataPath = FIRMWARE_JSON;
@@ -106,7 +107,7 @@ router.get('/firmware', async (_req: Request, res: Response) => {
 });
 
 // GET /api/v1/esp32/firmware/info - Firmware metadata
-router.get('/firmware/info', requireAuth, async (_req: Request, res: Response) => {
+router.get('/firmware/info', requireAuth, firmwareDownloadLimiter, async (_req: Request, res: Response) => {
   try {
     const metadataPath = FIRMWARE_JSON;
     if (!existsSync(metadataPath)) {

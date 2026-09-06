@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { IntentDashboardPage } from '@/pages/IntentDashboardPage';
@@ -77,10 +77,9 @@ const mockNetworks = {
 
 const mockDevices = { devices: [], hasConfig: true };
 
-function renderWithProviders(ui: React.ReactElement) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+function renderWithProviders(ui: React.ReactElement, queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+})) {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>{ui}</MemoryRouter>
@@ -157,5 +156,55 @@ describe('IntentDashboardPage', () => {
     });
     // The passed (configured) setting is inside a collapsible "Checks Passed" section
     expect(screen.getByText(/Check.*Passed/)).toBeInTheDocument();
+  });
+
+  it('shows a retryable profile error instead of sending an existing installation through setup', async () => {
+    vi.mocked(api.get).mockResolvedValue({ success: false, error: { code: 'FETCH_ERROR', message: 'Intent service unavailable' } });
+    renderWithProviders(<IntentDashboardPage />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Intent service unavailable');
+    expect(screen.queryByText('No Intent Profile Configured')).not.toBeInTheDocument();
+    expect(screen.queryByText('Start Security Wizard')).not.toBeInTheDocument();
+    setupDefaultMocks();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry loading data' }));
+    expect(await screen.findByText('Edit Intent')).toBeInTheDocument();
+  });
+
+  it('retains the last successful profile and analysis with a warning when refresh fails', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    setupDefaultMocks();
+    renderWithProviders(<IntentDashboardPage />, client);
+    expect(await screen.findByText('73%')).toBeInTheDocument();
+    vi.mocked(api.get).mockResolvedValue({ success: false, error: { code: 'NETWORK_ERROR', message: 'Refresh failed' } });
+    await act(async () => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ['intent-profile'] }),
+        client.invalidateQueries({ queryKey: ['intent-analysis'] }),
+      ]);
+    });
+    expect(await screen.findByRole('alert')).toHaveTextContent('Showing the last successful data');
+    expect(screen.getByText('73%')).toBeInTheDocument();
+    expect(screen.getByText('IoT Network Isolation')).toBeInTheDocument();
+    expect(screen.queryByText('No Intent Profile Configured')).not.toBeInTheDocument();
+    setupDefaultMocks();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry loading data' }));
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+  });
+
+  it.each(['FETCH_ERROR', 'NO_CONFIG'])('distinguishes an analysis %s response from an empty configuration', async (code) => {
+    vi.mocked(api.get).mockImplementation(async (url: string) => {
+      if (url === '/intent') return { success: true, data: mockIntentProfile };
+      if (url === '/intent/analysis') return { success: false, error: { code, message: 'Analysis is unavailable' } };
+      if (url === '/intent/networks') return { success: true, data: mockNetworks };
+      if (url === '/intent/devices') return { success: true, data: mockDevices };
+      return { success: true, data: null };
+    });
+    renderWithProviders(<IntentDashboardPage />);
+    if (code === 'NO_CONFIG') {
+      expect(await screen.findByText('Import Your UniFi Configuration')).toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    } else {
+      expect(await screen.findByRole('alert')).toHaveTextContent('Analysis is unavailable');
+      expect(screen.queryByText('Import Your UniFi Configuration')).not.toBeInTheDocument();
+    }
   });
 });

@@ -20,6 +20,7 @@ describe('Notification Store', () => {
       unreadCount: 0,
       notifications: [],
       isLoading: false,
+      mutationError: null,
     });
     vi.clearAllMocks();
   });
@@ -132,5 +133,38 @@ describe('Notification Store', () => {
     await useNotificationStore.getState().dismiss('n1');
 
     expect(useNotificationStore.getState().unreadCount).toBe(1);
+  });
+
+  it.each(['markAsRead', 'markAllAsRead', 'dismiss'] as const)('preserves notifications and unread count when %s fails', async (action) => {
+    const notifications = [
+      { id: 'n1', type: 'CONFIG_CHANGED' as const, severity: 'HIGH' as const, title: 'Security change', message: 'Review this', isRead: false, createdAt: '2026-02-14T10:00:00Z' },
+    ];
+    useNotificationStore.setState({ unreadCount: 3, notifications });
+    const failure = { success: false, error: { code: 'NETWORK_ERROR', message: 'Connection lost. Please try again.' } };
+    vi.mocked(api.patch).mockResolvedValue(failure);
+    vi.mocked(api.post).mockResolvedValue(failure);
+    vi.mocked(api.delete).mockResolvedValue(failure);
+
+    await useNotificationStore.getState()[action]('n1');
+    expect(useNotificationStore.getState().notifications).toEqual(notifications);
+    expect(useNotificationStore.getState().unreadCount).toBe(3);
+    expect(useNotificationStore.getState().mutationError).toBe(failure.error.message);
+  });
+
+  it('waits for acknowledgement and does not count the same read notification twice', async () => {
+    useNotificationStore.setState({
+      unreadCount: 3,
+      notifications: [{ id: 'n1', type: 'CONFIG_CHANGED', severity: 'INFO', title: 'Test', message: 'msg', isRead: false, createdAt: '2026-02-14T10:00:00Z' }],
+    });
+    let resolve!: (response: { success: boolean }) => void;
+    vi.mocked(api.patch).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+    const pending = useNotificationStore.getState().markAsRead('n1');
+    expect(useNotificationStore.getState().unreadCount).toBe(3);
+    expect(useNotificationStore.getState().notifications[0].isRead).toBe(false);
+    resolve({ success: true });
+    await pending;
+    vi.mocked(api.patch).mockResolvedValue({ success: true });
+    await useNotificationStore.getState().markAsRead('n1');
+    expect(useNotificationStore.getState().unreadCount).toBe(2);
   });
 });
