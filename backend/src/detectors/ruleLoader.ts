@@ -100,6 +100,9 @@ export function loadDetectorRulesFromDirectory(dir: string): {
       continue;
     }
     if (!entry.endsWith('.yaml') && !entry.endsWith('.yml')) continue;
+    // This reserved file configures DNS suppression, not detector metadata.
+    // dnsAllowlist.ts owns its schema validation and error reporting.
+    if (entry === 'dns_allowlist.yaml') continue;
 
     try {
       const raw = readFileSync(full, 'utf8');

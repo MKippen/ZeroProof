@@ -64,6 +64,7 @@ checks after the reviewed changes reach GitHub.
 | --- | --- | --- |
 | P1 | Docker and development bootstrap downloaded floating pnpm; derive the exact version from `packageManager` and standardize Node 24 | `backend/Dockerfile`, `frontend/Dockerfile`, `scripts/dev-setup.*` |
 | P1 | Installer failure was swallowed; preserve nonzero exits, require API/database readiness, and enforce readiness deadlines | `scripts/install.sh`, `scripts/upgrade.sh`, `.github/workflows/install-smoke.yml` |
+| P1 | The new cloud MQTT gate reproduced issue #50: password generation creates root-owned mode 0600, while the runner's ignored chmod fails and the read-only broker mount cannot repair ownership | Cloud run `34042729361`; credential repair tracked in this PR |
 | P1 | Anonymous and cross-origin WebSocket clients could receive live network telemetry; enforce session/origin checks and revoke subscriptions on logout/expiry | `backend/src/api/middleware/websocket.ts`, `backend/src/server.ts` |
 | P1 | Login/setup retained the anonymous session ID; regenerate session and CSRF state at authentication | `backend/src/api/routes/auth.ts` |
 | P1 | Browser-admin ESP32 mutations bypassed CSRF; remove the broad path exemption | `backend/src/api/middleware/csrf.ts` |
@@ -81,6 +82,7 @@ checks after the reviewed changes reach GitHub.
 | P2 | Upgrade cleanup pruned unrelated applications' Docker images and caches; remove host-wide pruning | `scripts/upgrade.sh` |
 | P2 | Manual firmware release could attach default-branch binaries to a different tag; build the requested tag and verify embedded version | `.github/workflows/firmware-release.yml` |
 | P2 | Dependency maintenance was disabled/incomplete; enable grouped updates for the root workspace, updater, actions and Docker images | `.github/dependabot.yml` |
+| P2 | Every boot reported the DNS allowlist as an invalid detector rule; keep the reserved suppression file in its dedicated loader and require error-free built-in metadata loading | `backend/src/detectors/ruleLoader.ts` |
 
 Dependency audits now report **zero known advisories** for both the pnpm workspace
 and independent updater npm lockfile. Compatible direct/transitive packages were
@@ -188,6 +190,10 @@ fresh analysis and explicit triage are still required.
   four installer regression checks exercise failed builds, failed readiness and secret
   file permissions using isolated stubs.
 
-Cloud installation/upgrade execution remains to be verified after publishing the
-branch. Local results do not imply hosted GitHub checks are green. The existing
-live development stack and preexisting password-reset changes were preserved.
+Current cloud installation/upgrade results are tracked in
+[draft PR #75](https://github.com/MKippen/ZeroProof/pull/75). The first run passed
+application tests, CodeQL, firmware, Docker builds and PR validation; all three
+installation/upgrade scenarios failed the new MQTT gate, exposing the real
+credential-ownership defect described above. Subsequent runs verify the repair.
+Local results alone do not imply hosted checks are green. The existing live
+development stack and preexisting password-reset changes were preserved.
