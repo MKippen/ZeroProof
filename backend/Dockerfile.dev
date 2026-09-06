@@ -1,5 +1,5 @@
 # Development image; build with the repository root as its context.
-FROM node:24-alpine
+FROM node:26-alpine
 
 WORKDIR /repo
 RUN apk add --no-cache openssl
