@@ -1,15 +1,15 @@
 # Frontend image — built from the repo root so the build context can see the
 # workspace lockfile (and any future packages/* deps the frontend takes on).
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /repo
-
-RUN npm install -g pnpm
 
 # Workspace manifests + lockfile first (cache-friendly install layer).
 COPY pnpm-workspace.yaml ./
 COPY pnpm-lock.yaml ./
 COPY package.json ./
+# Match CI and the lockfile; never bootstrap an unpinned package manager.
+RUN npm install --global "$(node -p "require('./package.json').packageManager")"
 COPY frontend/package.json frontend/
 
 RUN pnpm install --frozen-lockfile

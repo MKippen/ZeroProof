@@ -1,16 +1,16 @@
 # Backend image — built from the repo root so the build context can see
 # `packages/*` workspace dependencies (e.g. @uguard/unifi-client).
-FROM node:20-alpine
+FROM node:24-alpine
 
 WORKDIR /repo
 
 RUN apk add --no-cache openssl
-RUN npm install -g pnpm
-
 # Workspace manifests + lockfile first (for cache-friendly install layer).
 COPY pnpm-workspace.yaml ./
 COPY pnpm-lock.yaml ./
 COPY package.json ./
+# Match CI and the lockfile; never bootstrap an unpinned package manager.
+RUN npm install --global "$(node -p "require('./package.json').packageManager")"
 COPY backend/package.json backend/
 COPY packages/unifi-client/package.json packages/unifi-client/
 

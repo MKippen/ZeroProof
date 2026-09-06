@@ -7,14 +7,14 @@
 # Trust boundary: this image gets the Docker socket. Keep deps minimal so
 # the attack surface stays small. Only what upgrade.sh needs to run.
 
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 
 WORKDIR /build
 COPY updater/package.json updater/package-lock.json updater/tsconfig.json ./
 COPY updater/src ./src
 RUN npm ci --no-audit --no-fund && npx tsc
 
-FROM node:20-alpine
+FROM node:24-alpine
 # bash:        upgrade.sh shebang
 # git:         scripts/upgrade.sh fetches tags, checks out refs
 # curl:        upgrade.sh's health-check loop
