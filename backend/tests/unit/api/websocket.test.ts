@@ -8,10 +8,10 @@ function socket() {
   return ws as unknown as Parameters<typeof protectWebSocket>[0];
 }
 
-function request(origin: string | undefined = 'https://zeroproof.local') {
+function request(origin: string | undefined = 'https://zeroproof.local', host = 'zeroproof.local') {
   return {
     sessionID: 'session-1', protocol: 'https',
-    get: (name: string) => ({ origin, host: 'zeroproof.local' })[name],
+    get: (name: string) => ({ origin, host })[name],
     session: { userId: 1, cookie: {}, reload: jest.fn((done) => done(null)) },
   } as unknown as Request;
 }
@@ -37,6 +37,17 @@ describe('WebSocket telemetry authorization', () => {
   it('allows same-origin sessions and explicitly configured frontend origins', () => {
     expect(protectWebSocket(socket(), request())).toBe(true);
     expect(protectWebSocket(socket(), request('http://localhost:5173'), ['http://localhost:5173'])).toBe(true);
+  });
+
+  it.each(['127.0.0.1:5173', '192.168.1.20:5173'])('accepts a proxied development origin with its public port (%s)', (host) => {
+    const req = request(`http://${host}`, host);
+    Object.defineProperty(req, 'protocol', { value: 'http' });
+    expect(protectWebSocket(socket(), req)).toBe(true);
+  });
+
+  it('preserves the origin boundary between two ports on the same hostname', () => {
+    expect(protectWebSocket(socket(), request('https://zeroproof.local:8443', 'zeroproof.local:8443'))).toBe(true);
+    expect(protectWebSocket(socket(), request('https://zeroproof.local:9443', 'zeroproof.local:8443'))).toBe(false);
   });
 
   it('closes subscriptions immediately on logout and cancels revalidation', () => {

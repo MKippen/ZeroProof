@@ -76,6 +76,7 @@ checks after the reviewed changes reach GitHub.
 | P1 | Failed application readiness exited before automatic rollback; use a distinct post-apply exit code and verify recovery before reporting rollback success | `scripts/upgrade.sh`, `updater/src/index.ts` |
 | P2 | Logout could report success while session destruction failed; await invalidation, clear cookie, and report real failure | Backend auth routes and frontend `Layout.tsx` |
 | P2 | Live sockets duplicated or reconnected after logout; own timers and disconnect state, including failed initial handshakes | `frontend/src/stores/websocketStore.ts` |
+| P2 | Final review caught proxy headers dropping custom public ports, rejecting valid sessions under the new WebSocket origin check; preserve the complete request host in both nginx configurations | `frontend/Dockerfile`, `nginx/nginx.conf` |
 | P2 | Uploads bypassed common CSRF/session recovery and malformed API responses resembled success | `frontend/src/api/client.ts` |
 | P2 | Controller operations and public firmware downloads lacked limits; bound controller work per admin and firmware reads per IP | `backend/src/api/middleware/rateLimit.ts` |
 | P2 | Notification mutations changed local state even when persistence failed; preserve state and expose the failure | `frontend/src/stores/notificationStore.ts` |
@@ -102,6 +103,10 @@ scopes, and seeds a configuration sentinel before cross-version upgrade tests.
 Fresh/upgrade/orphan-recovery smoke also requires an authenticated backend MQTT
 connection and a stable broker, addressing the missing gate reported in issue #50.
 The root `pnpm check` command covers the local JavaScript validation baseline.
+The MQTT bootstrap snapshots read-only configuration and credentials into a
+private runtime directory. Restart the broker after changing those source files;
+SIGHUP reloads the existing snapshot. Install/upgrade scenarios recreate the broker
+when its Compose configuration changes.
 
 ### Remaining engineering backlog
 
@@ -162,11 +167,11 @@ fresh analysis and explicit triage are still required.
 
 ### Validation record
 
-- **`pnpm check` passes on Node 24: 860 tests across all four packages**, both
+- **`pnpm check` passes on Node 24: 863 tests across all four packages**, both
   dependency audits, lint, builds, and UniFi client typecheck.
 - Frozen pnpm install and updater `npm ci` succeed; both audits report zero.
 - UniFi library: ESM/CJS/type declarations and typecheck pass; **157 tests pass**.
-- Backend: **557 tests pass**, clean lint and TypeScript build. Scanner/rule-loader
+- Backend: **560 tests pass**, clean lint and TypeScript build. Scanner/rule-loader
   coverage thresholds pass (scope is not whole-application coverage).
 - Frontend: **112 tests pass**, clean lint and production build.
 - Updater: **34 tests pass**, including real disposable child-script lifecycle
@@ -183,6 +188,9 @@ fresh analysis and explicit triage are still required.
 - Production-build Chrome smoke with mocked APIs passes desktop login, wrong
   password remaining authenticated with one submission, logout, setup, and mobile
   navigation. This is complementary to the live API checks, not a full-stack E2E run.
+- An isolated real nginx → Express/session/WebSocket fixture accepts a valid
+  origin on a custom public port and rejects another port on the same host.
+  Production nginx configuration validation also passes.
 - Both ESP32 and ESP32-C3 firmware builds pass. No physical hardware test performed.
 - Actionlint 1.7.12, Bash syntax, shellcheck and Compose configuration checks pass;
   five installer regression checks exercise failed builds, MQTT setup failure, failed readiness and secret
@@ -196,6 +204,8 @@ Current cloud installation/upgrade results are tracked in
 [draft PR #75](https://github.com/MKippen/ZeroProof/pull/75). The first run passed
 application tests, CodeQL, firmware, Docker builds and PR validation; all three
 installation/upgrade scenarios failed the new MQTT gate, exposing the real
-credential-ownership defect described above. Subsequent runs verify the repair.
-Local results alone do not imply hosted checks are green. The existing live
-development stack and preexisting password-reset changes were preserved.
+credential-ownership defect described above. After the repair, all 15 checks
+passed on `297367a`, including [fresh browser setup and both upgrade scenarios](https://github.com/MKippen/ZeroProof/actions/runs/34043234040).
+The final proxy-port correction triggers another run; the PR shows its current
+status. The existing live development stack and preexisting password-reset
+changes were preserved.
