@@ -1,6 +1,6 @@
 # Frontend image — built from the repo root so the build context can see the
 # workspace lockfile (and any future packages/* deps the frontend takes on).
-FROM node:24-alpine AS builder
+FROM node:26-alpine AS builder
 
 WORKDIR /repo
 
