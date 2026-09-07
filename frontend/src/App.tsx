@@ -1,11 +1,11 @@
-import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
-import { useAuthStore } from '@/stores/authStore';
+import { AccountBoundary, AccountLoading } from '@/auth/AccountBoundary';
 import { Layout } from '@/components/layout/Layout';
-import api from '@/api/client';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })));
+const ChangePasswordPage = lazy(() => import('@/pages/ChangePasswordPage').then((m) => ({ default: m.ChangePasswordPage })));
 const SetupPage = lazy(() => import('@/pages/SetupPage').then((m) => ({ default: m.SetupPage })));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
 const DevicesPage = lazy(() => import('@/pages/DevicesPage').then((m) => ({ default: m.DevicesPage })));
@@ -24,118 +24,42 @@ const DNSProxyPage = lazy(() => import('@/pages/DNSProxyPage').then((m) => ({ de
 const TrafficPage = lazy(() => import('@/pages/TrafficPage').then((m) => ({ default: m.TrafficPage })));
 const DetectionsPage = lazy(() => import('@/pages/DetectionsPage').then((m) => ({ default: m.DetectionsPage })));
 
-function ProtectedRoute({ children }: { children: ReactNode }) {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
-}
-
-// Probe /auth/setup-status on first load; if no admin exists, route the
-// user to /setup before any login screen. Avoids the "what is the password?"
-// trap on a true fresh install.
-function SetupGate({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<'loading' | 'initialized' | 'needs-setup'>('loading');
-  const location = useLocation();
-  // If the auth store says we're logged in, setup is by definition done.
-  // Used to avoid bouncing the user back to /setup right after a successful
-  // /setup call, when the cached probe still says "needs-setup".
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-
-  useEffect(() => {
-    let cancelled = false;
-    api
-      .get<{ initialized: boolean }>('/auth/setup-status')
-      .then((res) => {
-        if (cancelled) return;
-        if (res.success && res.data) {
-          setStatus(res.data.initialized ? 'initialized' : 'needs-setup');
-        } else {
-          // If the probe fails we fail open to "initialized" so the existing
-          // login flow still works rather than trapping the user on /setup.
-          setStatus('initialized');
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setStatus('initialized');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Authenticated users are post-setup by definition; treat the gate as
-  // satisfied even if the cached probe is stale (the case after /setup
-  // succeeds and the auth store flips before we'd normally re-probe).
-  const effectiveStatus = isAuthenticated ? 'initialized' : status;
-
-  if (effectiveStatus === 'loading') {
-    return <RouteFallback />;
-  }
-
-  if (effectiveStatus === 'needs-setup' && location.pathname !== '/setup') {
-    return <Navigate to="/setup" replace />;
-  }
-
-  if (effectiveStatus === 'initialized' && location.pathname === '/setup') {
-    // Authenticated users go to the dashboard; unauthenticated users that
-    // somehow land on /setup after init go to /login as before.
-    return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;
-  }
-
-  return <>{children}</>;
-}
-
-function RouteFallback() {
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center text-sm text-muted-foreground">
-      Loading...
-    </div>
-  );
-}
-
 function App() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<RouteFallback />}>
-        <SetupGate>
-        <Routes>
-          <Route path="/setup" element={<SetupPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="devices" element={<DevicesPage />} />
-            <Route path="tests" element={<Navigate to="/devices?tab=tests" replace />} />
-            <Route path="vulnerabilities" element={<Navigate to="/security" replace />} />
-            <Route path="config" element={<ConfigPage />} />
-            <Route path="unifi" element={<UniFiPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="esp32-setup" element={<ESP32SetupPage />} />
-            <Route path="wizard" element={<NetworkWizardPage />} />
-            <Route path="intent" element={<IntentDashboardPage />} />
-            <Route path="security" element={<SecurityAnalysisPage />} />
-            <Route path="optimization" element={<OptimizationPage />} />
-            <Route path="rules" element={<RulesPage />} />
-            <Route path="timeline" element={<TimelinePage />} />
-            <Route path="clients" element={<ClientsPage />} />
-            <Route path="dns-proxy" element={<DNSProxyPage />} />
-            <Route path="traffic" element={<TrafficPage />} />
-            <Route path="detections" element={<DetectionsPage />} />
-          </Route>
-        </Routes>
-        </SetupGate>
-      </Suspense>
+      <AccountBoundary>
+        <Suspense fallback={<AccountLoading />}>
+          <Routes>
+            <Route path="/setup" element={<SetupPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/change-password" element={<ChangePasswordPage />} />
+            <Route
+              path="/"
+              element={<Layout />}
+            >
+              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="devices" element={<DevicesPage />} />
+              <Route path="tests" element={<Navigate to="/devices?tab=tests" replace />} />
+              <Route path="vulnerabilities" element={<Navigate to="/security" replace />} />
+              <Route path="config" element={<ConfigPage />} />
+              <Route path="unifi" element={<UniFiPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="esp32-setup" element={<ESP32SetupPage />} />
+              <Route path="wizard" element={<NetworkWizardPage />} />
+              <Route path="intent" element={<IntentDashboardPage />} />
+              <Route path="security" element={<SecurityAnalysisPage />} />
+              <Route path="optimization" element={<OptimizationPage />} />
+              <Route path="rules" element={<RulesPage />} />
+              <Route path="timeline" element={<TimelinePage />} />
+              <Route path="clients" element={<ClientsPage />} />
+              <Route path="dns-proxy" element={<DNSProxyPage />} />
+              <Route path="traffic" element={<TrafficPage />} />
+              <Route path="detections" element={<DetectionsPage />} />
+            </Route>
+          </Routes>
+        </Suspense>
+      </AccountBoundary>
       <Toaster />
     </BrowserRouter>
   );

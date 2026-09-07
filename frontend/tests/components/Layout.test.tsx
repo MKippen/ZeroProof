@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
@@ -34,6 +34,27 @@ describe('Layout session lifecycle', () => {
     expect(mocks.connect).toHaveBeenCalledTimes(1);
     view.unmount();
     expect(mocks.disconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('pauses live updates during password rotation and reconnects after successful verification', () => {
+    renderLayout();
+    expect(mocks.connect).toHaveBeenCalledTimes(1);
+    act(() => useAuthStore.getState().beginCredentialChange());
+    expect(mocks.disconnect).toHaveBeenCalledTimes(1);
+    expect(mocks.connect).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Logout' })).toBeDisabled();
+    act(() => useAuthStore.getState().beginVerification());
+    expect(mocks.connect).toHaveBeenCalledTimes(1);
+    act(() => useAuthStore.getState().setUser({ id: 1, mustChangePassword: false }));
+    expect(mocks.connect).toHaveBeenCalledTimes(2);
+  });
+
+  it('resumes live updates after a rejected password without logging out', () => {
+    renderLayout();
+    act(() => useAuthStore.getState().beginCredentialChange());
+    act(() => useAuthStore.getState().finishCredentialChange());
+    expect(mocks.connect).toHaveBeenCalledTimes(2);
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
   });
 
   it('reports failed logout and keeps the session available for retry', async () => {

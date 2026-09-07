@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { verifySession } from '@/auth/session';
 import { Eye, EyeOff, Lock, Shield, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,8 +12,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
-  const { setUser, setMustChangePassword } = useAuthStore();
+  const { setInitialized } = useAuthStore();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,16 +30,12 @@ export function LoginPage() {
       // Session ID rotates after login — drop the cached CSRF token so the
       // next mutating request lazily fetches a fresh one for the new session.
       api.invalidateCsrfToken();
-      setUser(response.data.user);
-      setMustChangePassword(response.data.mustChangePassword);
-
-      toast({
-        title: "It's fine. (We checked.)",
-        description: 'Welcome back.',
-      });
-
-      navigate('/dashboard');
+      await verifySession();
+      if (useAuthStore.getState().verificationStatus === 'ready' && useAuthStore.getState().isAuthenticated) {
+        toast({ title: "It's fine. (We checked.)", description: 'Welcome back.' });
+      }
     } else {
+      if (response.error?.code === 'NOT_INITIALIZED') setInitialized(false);
       toast({
         variant: 'destructive',
         title: 'Access denied',
