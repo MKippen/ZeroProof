@@ -156,6 +156,13 @@ PRs #68, #70, #73, and #74 are closed; their requested versions are already met 
 exceeded on `main`. Newly proposed major runtime/toolchain updates remain separate
 compatibility work.
 
+`main` now requires an up-to-date branch and eight GitHub Actions checks, including
+for administrators: Backend Tests, Frontend Tests, Updater Sidecar, Docker Build,
+ESP32 Firmware Build, PR Validation, Shell lint, and Analyze. Existing linear
+history, force-push prevention, and deletion prevention remain enabled. Install
+smoke is conditional on relevant paths and is not a globally required check,
+which would otherwise strand unrelated PRs waiting for a workflow that was skipped.
+
 ### Remaining engineering backlog
 
 1. **P1: Correct detector identity and correlation scope.** `iocMatch.ts` stores
@@ -184,10 +191,10 @@ compatibility work.
    but legacy `CampaignRun`, `CampaignSetting`, `CampaignRunStatus` and
    `CampaignVerdict` objects remain outside the current Prisma schema. Decide
    retention/export before adding a cleanup migration; no data was dropped.
-5. **P2: Enforce merge and supply-chain policy.** `main` currently has no required
-   status checks or reviews, and admin enforcement is disabled. Select required
-   checks after this branch's cloud run is verified. Pin third-party Actions to
-   reviewed commit SHAs and enable scheduled updates for those pins.
+5. **P2: Complete supply-chain policy.** Required checks and administrator
+   enforcement are enabled. Pin third-party Actions to reviewed commit SHAs and
+   enable scheduled updates for those pins. Required human reviews remain a
+   separate team-policy choice; no self-review requirement was introduced.
 6. **P2: Improve website resilience.** Add route error boundaries and unknown-route
    handling, expand keyboard/focus checks, and add real browser coverage for
    settings/controller configuration and upgrade recovery. Split the remaining
