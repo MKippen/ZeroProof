@@ -238,7 +238,7 @@ jobs:
           bash scripts/upgrade.sh --check
 
       - name: Setup Node for Playwright tests
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
 
