@@ -111,6 +111,10 @@ jobs:
         working-directory: .
         run: bash scripts/ci/test-telemetry-scope.sh
 
+      - name: Verify sync leases and interrupted-run recovery with disposable databases
+        working-directory: .
+        run: bash scripts/ci/test-sync-leases.sh
+
   # Frontend tests and linting
   frontend:
     name: Frontend Tests

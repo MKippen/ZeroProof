@@ -139,6 +139,13 @@ describe('API client', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it.each([['SYNC_IN_PROGRESS', 409], ['SYNC_LEASE_LOST', 503]] as const)('does not replay UniFi sync on %s', async (code, status) => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(failure(code, status));
+    expect((await client.post('/unifi/sync')).error?.code).toBe(code);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it('refreshes CSRF for uploads and lets the browser set the multipart boundary', async () => {
     const file = new FormData();
     file.append('file', new Blob(['configuration']), 'config.json');
