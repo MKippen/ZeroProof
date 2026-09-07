@@ -107,6 +107,10 @@ jobs:
         working-directory: .
         run: bash scripts/ci/test-auth-sessions.sh
 
+      - name: Verify telemetry migration and source isolation with disposable databases
+        working-directory: .
+        run: bash scripts/ci/test-telemetry-scope.sh
+
   # Frontend tests and linting
   frontend:
     name: Frontend Tests

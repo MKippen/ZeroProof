@@ -2,8 +2,10 @@
 
 Started 2026-09-06 against `80aab6e` on `main`. The first batch merged through
 [PR #75](https://github.com/MKippen/ZeroProof/pull/75) as `2bac74f` after all 15
-checks passed. Post-merge CI, install smoke, and CodeQL also passed. The account
-state follow-up uses `codex/account-state-hardening-2026-09-06`.
+checks passed. The account-state follow-up merged through
+[PR #87](https://github.com/MKippen/ZeroProof/pull/87) as `fff1956`, also after all
+15 checks passed. Both batches passed post-merge CI, install smoke, and CodeQL.
+The next batch addresses detector provenance and event-time correlation.
 
 ## Objective and approach
 
@@ -149,7 +151,7 @@ Local validation on Node 24 passes **919 tests**: backend 585, frontend 143,
 UniFi client 157, and updater 34. The combined `pnpm check` includes both clean
 dependency audits, lint, builds, and typechecks. Actionlint, shellcheck, Bash
 syntax, and browser-test discovery also pass. Cloud install and browser results
-are recorded in the follow-up PR before merge.
+are recorded in PR #87, including both real browser account scenarios.
 
 GitHub reports zero open Dependabot alerts after PR #75. Superseded dependency
 PRs #68, #70, #73, and #74 are closed; their requested versions are already met or
@@ -163,16 +165,80 @@ history, force-push prevention, and deletion prevention remain enabled. Install
 smoke is conditional on relevant paths and is not a globally required check,
 which would otherwise strand unrelated PRs waiting for a workflow that was skipped.
 
+### Detector provenance and correlation follow-up
+
+New firewall flow and threat events reference a controller/site snapshot. Its
+identity includes the connection, configured controller hostname, port, and site;
+polling cursors belong to that snapshot. Retargeting a connection creates or
+resumes the corresponding scope, and an older in-flight sync cannot advance the
+new target's cursors. Concurrent polls advance cursors monotonically. Upstream
+event IDs now deduplicate within a scope, preserving identical IDs from separate
+controllers or sites. This records configured endpoint provenance, not a claim
+that a hostname can never point to different physical hardware.
+
+The transactional migration preserves all existing telemetry with unknown scope.
+It does not guess historical provenance from current connection settings. Partial
+indexes retain deduplication for older unscoped writers. New ingestion requires
+real, finite event timestamps no later than the poll boundary; missing, invalid,
+or future timestamps become counted, logged skips rather than invented current
+activity or poisoned cursors. A flow's actual start timestamp is a valid fallback
+when its primary timestamp is absent.
+
+IOC findings carry versioned machine identity separately from display labels:
+source kind, connection, scope, normalized IP/MAC, event ID, and observed time.
+New fingerprints include source scope; unknown identities and legacy unscoped
+UniFi rows stay isolated by event. DNS parent-domain matches retain the actual
+listed indicator and the queried hostnames separately. Repeated lookup results,
+including misses, are cached within each bounded event page. Merged evidence is
+deduplicated and retains severity, feed, and observed-time context.
+
+The historical `validated_compromise` detector now verifies the underlying IOC
+flow and IDS rows: same explicit source IP and immutable scope, matching IOC
+destination, and both real event times within the evaluation window. It does not
+compare a client MAC to the reporting gateway MAC, interpret a label as an IP,
+or treat a detection's processing time as event time. Combined findings retain
+flow, indicator, and IDS evidence. The title and incident guidance describe
+corroborated suspicious activity; blocked attempts alone do not establish a
+successful compromise. Numeric confidence retains the framework's deterministic
+rule-match convention and is not a calibrated compromise probability.
+
+**Rollout and remaining limits:** DNS findings still work, but cannot corroborate
+UniFi IDS until an explicit resolver-to-network binding exists. Old findings and
+unscoped raw evidence remain available and cannot silently become validated
+correlations. Versioned fingerprints start new findings; historical findings and
+their dispositions are not rewritten. The first scoped poll can retain a new
+scoped observation of an event already present in legacy history. Traffic totals
+remain raw observations; summary provenance counts and a website notice disclose
+unscoped history and windows spanning multiple controller/site scopes. Overlap
+with old unscoped data clears through the configured telemetry retention policy.
+
+**Rollback:** retain the additive scope schema during application rollback.
+Restoring global upstream-ID uniqueness can fail after valid events from separate
+scopes reuse an ID; do not delete telemetry to recreate that constraint. An older
+application's detectors also lack the new source checks. No production database
+was migrated by this review. A disposable PostgreSQL 15 fixture verifies fresh
+installation, the 13-to-14 migration upgrade, unchanged legacy data, scoped
+deduplication, concurrent initial polling, retargeting, and monotonic cursors.
+
+Local `pnpm check` passes **1,030 tests**: backend 692, frontend 147, UniFi client
+157, and updater 34, plus both dependency audits, lint, builds, and typechecks.
+The new pipeline fixture runs actual IOC evaluation, JSON persistence, and
+correlation together. Cloud migration, installation, browser, and required-check
+results are recorded in the detector follow-up PR before merge.
+
+Issue [#50](https://github.com/MKippen/ZeroProof/issues/50) is closed after the
+merged MQTT ownership fix and repeated green fresh/upgrade broker checks. Upgrade
+recovery issue #49 remains open for its unimplemented stateful rollback work.
+
 ### Remaining engineering backlog
 
-1. **P1: Correct detector identity and correlation scope.** `iocMatch.ts` stores
-   a display name as `affectedResource`; `validatedCompromise.ts` uses that field
-   as an IP when MAC is absent, missing correlations for named DNS clients. Flow
-   and threat queries also omit controller identity from correlation/dedupe keys,
-   so overlapping private addresses across controllers can cross-correlate.
-   Add explicit source IP/controller/site identity and multi-controller fixtures
-   before assigning maximum confidence. This needs a coordinated schema/data
-   design rather than a display-name heuristic.
+1. **P1: Finish cross-source attribution and historical navigation.** Add explicit
+   effective-time AdGuard-to-network bindings before DNS can corroborate UniFi
+   IDS. Provide source-specific history views instead of combining scopes in
+   traffic panels. Extend provenance to the remaining detectors and account for
+   address reuse, NAT, shared resolvers, and controller identity replacement.
+   Normalize cached IPv6 indicators at ingestion, and review public-suffix and
+   subnet matching against representative threat feeds.
 2. **P1: Prove recovery with state.** Extend the new configuration sentinel to
    sessions, controller secrets, detections and MQTT reconnect. Test failed
    upgrades and automatic rollback against real images. Source rollback does not

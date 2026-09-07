@@ -4,7 +4,7 @@
  * because it owns ZeroProof-specific concerns: Prisma persistence,
  * high-water-mark cursor management, retention windowing.
  */
-import type { UniFiConnection } from '@prisma/client';
+import type { TelemetryScope, UniFiConnection } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import {
   UnifiClient as LibUnifiClient,
@@ -29,7 +29,7 @@ export interface SyncResult {
  * Pulls flow + threat events from the controller for the given connection,
  * upserts them into the per-type tables, and advances the high-water-mark
  * cursors. Idempotent — re-running with the same data is a no-op via
- * the unique constraint on `unifiId`.
+ * the unique constraint on `(scopeId, unifiId)`.
  */
 export async function syncFirewallTelemetry(
   connectionId: string
@@ -38,16 +38,51 @@ export async function syncFirewallTelemetry(
   if (!conn) throw new Error(`UniFi connection ${connectionId} not found`);
   if (!conn.isActive) throw new Error(`UniFi connection ${connectionId} is not active`);
 
+  const scope = await getTelemetryScope(conn);
   const lib = buildLibClient(conn);
   await lib.login();
 
   try {
-    const flowsResult = await pullFlows(lib, conn);
-    const threatsResult = await pullThreats(lib, conn);
+    const flowsResult = await pullFlows(lib, conn, scope);
+    const threatsResult = await pullThreats(lib, conn, scope);
 
     return { ...flowsResult, ...threatsResult };
   } finally {
     await lib.logout().catch(() => {});
+  }
+}
+
+async function getTelemetryScope(conn: UniFiConnection): Promise<TelemetryScope> {
+  // Match the library's host-only HTTPS authority semantics without changing
+  // its destination. Persist configured provenance, not a Docker host alias.
+  // In particular, never copy credentials/query strings into scope metadata.
+  let endpoint: URL;
+  try {
+    endpoint = new URL(`https://${conn.host}:${conn.port}`);
+  } catch {
+    throw new Error('UniFi telemetry requires a valid controller hostname and port');
+  }
+  if (endpoint.pathname !== '/' || endpoint.search || endpoint.hash ||
+      endpoint.username || endpoint.password || !Number.isInteger(conn.port) ||
+      conn.port < 1 || conn.port > 65535 || Number(endpoint.port || 443) !== conn.port) {
+    throw new Error('UniFi telemetry requires a hostname without URL credentials, scheme, path, query, or fragment');
+  }
+  const source = {
+    connectionId: conn.id,
+    controllerHost: endpoint.hostname,
+    controllerPort: conn.port,
+    siteId: conn.siteId,
+  };
+  const where = { connectionId_controllerHost_controllerPort_siteId: source };
+  try {
+    return await prisma.telemetryScope.upsert({ where, create: source, update: {} });
+  } catch (error) {
+    // Prisma may emulate an empty-update upsert. Concurrent first polls must
+    // converge on the same immutable scope if another poll inserted it first.
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') throw error;
+    const existing = await prisma.telemetryScope.findUnique({ where });
+    if (!existing) throw error;
+    return existing;
   }
 }
 
@@ -75,16 +110,24 @@ interface FlowSyncOutput {
   flowsHighWater: Date | null;
 }
 
-async function pullFlows(lib: LibUnifiClient, conn: UniFiConnection): Promise<FlowSyncOutput> {
+/** Unknown event time must not become invented current activity or a cursor. */
+function observedAt(value: unknown, pollEndTime: number): Date | null {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > pollEndTime) return null;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+async function pullFlows(lib: LibUnifiClient, conn: UniFiConnection, scope: TelemetryScope): Promise<FlowSyncOutput> {
   const since =
-    conn.flowsHighWater ??
+    scope.flowsHighWater ??
     new Date(Date.now() - conn.flowRetentionDays * 24 * 60 * 60 * 1000);
   const beginTime = since.getTime();
   const endTime = Date.now();
 
   let inserted = 0;
   let skipped = 0;
-  let maxOccurredAt: Date | null = conn.flowsHighWater;
+  let invalidTimeCount = 0;
+  let maxOccurredAt: Date | null = scope.flowsHighWater;
 
   // Buffer rows and batch-insert with skipDuplicates so the Prisma logger
   // doesn't fire per-row error events on duplicates. UniFi exposes a
@@ -104,22 +147,30 @@ async function pullFlows(lib: LibUnifiClient, conn: UniFiConnection): Promise<Fl
   };
 
   for await (const flow of lib.flows.iterate({ beginTime, endTime, limit: 200 })) {
-    const occurredAt = new Date(flow.time ?? flow.flow_start_time ?? endTime);
+    // An absent primary timestamp can use the controller's flow start time.
+    // An explicitly invalid primary timestamp must not be silently replaced.
+    const occurredAt = observedAt(flow.time === undefined ? flow.flow_start_time : flow.time, endTime);
+    if (!occurredAt) {
+      skipped += 1;
+      invalidTimeCount += 1;
+      continue;
+    }
     if (!maxOccurredAt || occurredAt > maxOccurredAt) maxOccurredAt = occurredAt;
-    buffer.push(mapFlowToRow(flow, occurredAt, conn.id));
+    buffer.push(mapFlowToRow(flow, occurredAt, conn.id, scope.id));
     if (buffer.length >= BATCH_SIZE) await flush();
   }
   await flush();
 
-  if (maxOccurredAt && (!conn.flowsHighWater || maxOccurredAt > conn.flowsHighWater)) {
-    await prisma.uniFiConnection.update({
-      where: { id: conn.id },
+  if (maxOccurredAt && (!scope.flowsHighWater || maxOccurredAt > scope.flowsHighWater)) {
+    await prisma.telemetryScope.updateMany({
+      where: { id: scope.id, OR: [{ flowsHighWater: null }, { flowsHighWater: { lt: maxOccurredAt } }] },
       data: { flowsHighWater: maxOccurredAt },
     });
   }
 
+  if (invalidTimeCount) logger.warn(`Flows: skipped ${invalidTimeCount} event(s) with missing, invalid, or future timestamps (scope ${scope.id})`);
   logger.info(
-    `Flows: +${inserted} new, ${skipped} dup, watermark=${maxOccurredAt?.toISOString() ?? 'unchanged'}`
+    `Flows: +${inserted} new, ${skipped} skipped, watermark=${maxOccurredAt?.toISOString() ?? 'unchanged'}`
   );
 
   return { flowsInserted: inserted, flowsSkipped: skipped, flowsHighWater: maxOccurredAt };
@@ -131,16 +182,17 @@ interface ThreatSyncOutput {
   threatsHighWater: Date | null;
 }
 
-async function pullThreats(lib: LibUnifiClient, conn: UniFiConnection): Promise<ThreatSyncOutput> {
+async function pullThreats(lib: LibUnifiClient, conn: UniFiConnection, scope: TelemetryScope): Promise<ThreatSyncOutput> {
   const since =
-    conn.threatsHighWater ??
+    scope.threatsHighWater ??
     new Date(Date.now() - conn.flowRetentionDays * 24 * 60 * 60 * 1000);
   const beginTime = since.getTime();
   const endTime = Date.now();
 
   let inserted = 0;
   let skipped = 0;
-  let maxOccurredAt: Date | null = conn.threatsHighWater;
+  let invalidTimeCount = 0;
+  let maxOccurredAt: Date | null = scope.threatsHighWater;
 
   const BATCH_SIZE = 500;
   let buffer: Prisma.FirewallThreatEventUncheckedCreateInput[] = [];
@@ -157,22 +209,28 @@ async function pullThreats(lib: LibUnifiClient, conn: UniFiConnection): Promise<
   };
 
   for await (const threat of lib.threats.iterate({ beginTime, endTime, limit: 200 })) {
-    const occurredAt = new Date(threat.timestamp ?? endTime);
+    const occurredAt = observedAt(threat.timestamp, endTime);
+    if (!occurredAt) {
+      skipped += 1;
+      invalidTimeCount += 1;
+      continue;
+    }
     if (!maxOccurredAt || occurredAt > maxOccurredAt) maxOccurredAt = occurredAt;
-    buffer.push(mapThreatToRow(threat, occurredAt, conn.id));
+    buffer.push(mapThreatToRow(threat, occurredAt, conn.id, scope.id));
     if (buffer.length >= BATCH_SIZE) await flush();
   }
   await flush();
 
-  if (maxOccurredAt && (!conn.threatsHighWater || maxOccurredAt > conn.threatsHighWater)) {
-    await prisma.uniFiConnection.update({
-      where: { id: conn.id },
+  if (maxOccurredAt && (!scope.threatsHighWater || maxOccurredAt > scope.threatsHighWater)) {
+    await prisma.telemetryScope.updateMany({
+      where: { id: scope.id, OR: [{ threatsHighWater: null }, { threatsHighWater: { lt: maxOccurredAt } }] },
       data: { threatsHighWater: maxOccurredAt },
     });
   }
 
+  if (invalidTimeCount) logger.warn(`Threats: skipped ${invalidTimeCount} event(s) with missing, invalid, or future timestamps (scope ${scope.id})`);
   logger.info(
-    `Threats: +${inserted} new, ${skipped} dup, watermark=${maxOccurredAt?.toISOString() ?? 'unchanged'}`
+    `Threats: +${inserted} new, ${skipped} skipped, watermark=${maxOccurredAt?.toISOString() ?? 'unchanged'}`
   );
 
   return { threatsInserted: inserted, threatsSkipped: skipped, threatsHighWater: maxOccurredAt };
@@ -181,7 +239,8 @@ async function pullThreats(lib: LibUnifiClient, conn: UniFiConnection): Promise<
 function mapFlowToRow(
   flow: FlowEvent,
   occurredAt: Date,
-  connectionId: string
+  connectionId: string,
+  scopeId: string
 ): Prisma.FirewallFlowEventUncheckedCreateInput {
   const primaryPolicy = flow.policies?.[0];
   return {
@@ -233,13 +292,15 @@ function mapFlowToRow(
     primaryPolicyName: primaryPolicy?.name ?? null,
 
     connectionId,
+    scopeId,
   };
 }
 
 function mapThreatToRow(
   threat: ThreatAlert,
   occurredAt: Date,
-  connectionId: string
+  connectionId: string,
+  scopeId: string
 ): Prisma.FirewallThreatEventUncheckedCreateInput {
   const params = threat.parameters;
   const device = params?.DEVICE;
@@ -260,6 +321,7 @@ function mapThreatToRow(
     deviceModel: device?.model ?? null,
     rawJson: threat as unknown as Prisma.InputJsonValue,
     connectionId,
+    scopeId,
   };
 }
 

@@ -123,6 +123,9 @@ export interface TrafficSummary {
   byRisk: { low: number; medium: number; high: number; concerning: number };
   uniqueSrcMacs: number;
   threatCount: number;
+  unscopedFlowCount: number;
+  unscopedThreatCount: number;
+  sourceScopeCount: number;
 }
 
 export interface TrafficTopPolicy {

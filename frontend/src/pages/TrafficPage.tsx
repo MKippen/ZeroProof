@@ -6,6 +6,7 @@ import {
   ArrowRight,
   ArrowUp,
   ArrowUpDown,
+  Info,
   Loader2,
   Server,
   Shield,
@@ -13,6 +14,7 @@ import {
   Settings as SettingsIcon,
 } from 'lucide-react';
 import api from '@/api/client';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,6 +23,7 @@ import type {
   ApiResponse,
   TrafficAnalytics,
   TrafficFlow,
+  TrafficSummary,
   TrafficThreat,
 } from '@/types';
 
@@ -44,8 +47,8 @@ function NotConfigured(): JSX.Element {
           <h2 className="text-xl font-semibold">UniFi not configured</h2>
           <p className="text-sm text-muted-foreground">
             Connect your UniFi controller to start ingesting firewall flows and threat detections.
-            Each pull lands in ZeroProof&apos;s database — survive UniFi&apos;s ~5,000-row session
-            window and cross-correlate with DNS Proxy verdicts.
+            ZeroProof retains traffic history beyond UniFi&apos;s recent session window, so you
+            can investigate older events and review them alongside DNS Proxy findings.
           </p>
         </div>
         <Button asChild>
@@ -110,6 +113,33 @@ function SummaryTiles({ analytics }: { analytics: TrafficAnalytics }): JSX.Eleme
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function TrafficHistoryNotice({ summary }: { summary: TrafficSummary }): JSX.Element | null {
+  const hasOlderHistory = summary.unscopedFlowCount > 0 || summary.unscopedThreatCount > 0;
+  const hasMultipleSources = summary.sourceScopeCount > 1;
+  if (!hasOlderHistory && !hasMultipleSources) return null;
+  return (
+    <Alert role="note" aria-labelledby="traffic-history-context" className="border-amber-500/40 bg-amber-500/5">
+      <Info className="h-4 w-4" aria-hidden="true" />
+      <AlertTitle id="traffic-history-context">Traffic history context</AlertTitle>
+      <AlertDescription className="space-y-2 text-muted-foreground">
+        {hasOlderHistory && (
+          <p>
+            Older history includes {NUM_FORMAT.format(summary.unscopedFlowCount)} flow observations and{' '}
+            {NUM_FORMAT.format(summary.unscopedThreatCount)} threat observations without a verified controller or site.
+            The first sync after upgrading may record some of these observations again, so totals may include repeats.
+          </p>
+        )}
+        {hasMultipleSources && (
+          <p>
+            This time range combines {NUM_FORMAT.format(summary.sourceScopeCount)} controller or site histories
+            because the connection has pointed to different sources. Totals include all of those histories.
+          </p>
+        )}
+      </AlertDescription>
+    </Alert>
   );
 }
 
@@ -291,9 +321,8 @@ export function TrafficPage(): JSX.Element {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Traffic &amp; Flow</h1>
           <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-            UniFi firewall flows and IPS detections, captured into ZeroProof&apos;s database and
-            cross-correlatable with DNS Proxy verdicts. Outlasts UniFi&apos;s session window so you
-            can investigate yesterday&apos;s blocks, not just the last hour.
+            UniFi firewall flows and IPS detections, saved beyond UniFi&apos;s recent session window.
+            Review traffic history alongside DNS Proxy findings when investigating blocked connections.
           </p>
         </div>
         {configured && (
@@ -315,6 +344,7 @@ export function TrafficPage(): JSX.Element {
         <NotConfigured />
       ) : (
         <>
+          <TrafficHistoryNotice summary={analytics.summary} />
           <SummaryTiles analytics={analytics} />
 
           <div className="grid gap-4 lg:grid-cols-3">

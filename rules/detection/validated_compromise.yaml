@@ -1,23 +1,26 @@
 id: validated_compromise
 description: |
-  The highest-confidence finding the detection engine produces. Fires when a
-  single device shows BOTH (a) an IOC match against a threat-intel feed AND
-  (b) a UniFi IDS hit, in the same time window.
+  Corroborates a threat-intel flow match with a UniFi IDS event from the same
+  source IP and immutable controller/site scope. Both underlying events must
+  occur within the evaluation window. Reporting gateway MAC addresses and
+  client display names are not used as endpoint identity.
 
-  Two independent signals corroborating each other gives near-zero false
-  positive rate. Treat it as an active incident, not a notification.
+  Investigate promptly. These signals establish suspicious network activity,
+  not successful compromise; a blocked attempt may not have reached its target.
+  Legacy telemetry without source provenance and DNS without an explicit
+  network binding cannot produce this correlation.
 severity:
   base: CRITICAL
 remediation: |
-  Follow the incident playbook:
-    1. Isolate the host immediately (block egress + block lateral movement).
-    2. Preserve evidence — pull flow logs, DNS logs, and any process snapshots
-       you have access to before remediating.
-    3. Re-image the host. Do not attempt to clean in place.
-    4. Rotate credentials the host had access to (cloud sessions, SSH keys,
-       SaaS logins).
-    5. Document the timeline and root cause; update detection rules if a new
-       indicator class led to the discovery.
+  Follow the incident investigation playbook:
+    1. Preserve the referenced flow, indicator, and IDS evidence.
+    2. Verify which endpoint held the source IP at each event time, including
+       DHCP changes, NAT, shared resolvers, and security-test activity.
+    3. Check the signature, direction, action, and endpoint telemetry to
+       establish whether the activity was malicious and whether it succeeded.
+    4. Contain confirmed malicious activity according to the incident policy;
+       assess recovery and credential rotation using the confirmed impact.
+    5. Document the timeline, disposition, and any tuning needed.
 references:
   - https://attack.mitre.org/
 retention_days: 90

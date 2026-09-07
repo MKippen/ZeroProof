@@ -76,6 +76,9 @@ describe('GET /api/v1/traffic/analytics', () => {
       byRisk: { low: 4900, medium: 50, high: 50, concerning: 0 },
       uniqueSrcMacs: 25,
       threatCount: 50,
+      unscopedFlowCount: 0,
+      unscopedThreatCount: 0,
+      sourceScopeCount: 1,
     });
     mockedAnalytics.getTopPolicies.mockResolvedValue([
       { name: 'Block: IOT > Internet', type: null, count: 1500 },
@@ -115,6 +118,9 @@ describe('GET /api/v1/traffic/analytics', () => {
       byRisk: { low: 0, medium: 0, high: 0, concerning: 0 },
       uniqueSrcMacs: 0,
       threatCount: 0,
+      unscopedFlowCount: 0,
+      unscopedThreatCount: 0,
+      sourceScopeCount: 0,
     });
     mockedAnalytics.getTopPolicies.mockResolvedValue([]);
     mockedAnalytics.getTopClients.mockResolvedValue([]);
