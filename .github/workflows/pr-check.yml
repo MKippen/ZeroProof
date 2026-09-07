@@ -31,7 +31,7 @@ jobs:
           done
 
       - name: Check for secrets
-        uses: trufflesecurity/trufflehog@v3.95.2
+        uses: trufflesecurity/trufflehog@v3.97.4
         with:
           extra_args: --only-verified
 
