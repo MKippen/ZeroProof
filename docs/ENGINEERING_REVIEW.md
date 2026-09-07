@@ -1,7 +1,9 @@
 # Engineering review and improvement plan
 
-Started 2026-09-06 against `80aab6e` on `main`. Working branch:
-`codex/engineering-hardening-2026-09-06`.
+Started 2026-09-06 against `80aab6e` on `main`. The first batch merged through
+[PR #75](https://github.com/MKippen/ZeroProof/pull/75) as `2bac74f` after all 15
+checks passed. Post-merge CI, install smoke, and CodeQL also passed. The account
+state follow-up uses `codex/account-state-hardening-2026-09-06`.
 
 ## Objective and approach
 
@@ -108,14 +110,55 @@ private runtime directory. Restart the broker after changing those source files;
 SIGHUP reloads the existing snapshot. Install/upgrade scenarios recreate the broker
 when its Compose configuration changes.
 
+### Account-state follow-up
+
+The API now verifies the current administrator and a server-side credential
+fingerprint on authenticated requests. Resetting/changing the password or deleting
+the account invalidates older sessions. The fingerprint never enters an API
+response or browser storage. Database lookup failures return a retryable 503 and
+retain the cookie. Privileged requests return `PASSWORD_CHANGE_REQUIRED` until a
+required change is complete; account verification, logout, and password renewal
+remain usable. WebSockets apply the same policy and revalidate idle sessions.
+
+Password updates compare the observed hash at commit time so concurrent changes
+have one winner. A successful change rotates the current session and CSRF token;
+other sessions become invalid. If session renewal fails after the new password
+has committed, the response explicitly directs the user to sign in with the new
+password rather than falsely reporting that the password did not change.
+
+The website verifies `/auth/me` on startup and uses a shared account boundary for
+setup, login, required password changes, and protected pages. Saved browser state
+does not grant access. Failed verification offers retry instead of showing an
+invented account state. Setup completed by another tab invalidates the cached
+setup decision. Account changes clear cached queries, notifications, and sockets;
+late responses from earlier account state cannot restore those data.
+
+**Upgrade behavior:** sessions created before this change require one sign-in,
+because they lack the credential fingerprint. No database migration or password
+reset is needed. Other processes observe password revocation on the next request;
+idle WebSockets revalidate within 30 seconds. Already-running authorized work is
+not retroactively undone by a later password change.
+
+CI adds a disposable PostgreSQL 15 + trusted HTTPS fixture for production cookie,
+CSRF, password-policy, revocation, concurrency, WebSocket, and database-failure
+checks. Live browser scenarios cover cookie-only reload, forged local auth state,
+required password renewal, ordinary Settings password changes, and independent
+session revocation. These tests use generated fixture accounts only.
+
+Local validation on Node 24 passes **919 tests**: backend 585, frontend 143,
+UniFi client 157, and updater 34. The combined `pnpm check` includes both clean
+dependency audits, lint, builds, and typechecks. Actionlint, shellcheck, Bash
+syntax, and browser-test discovery also pass. Cloud install and browser results
+are recorded in the follow-up PR before merge.
+
+GitHub reports zero open Dependabot alerts after PR #75. Superseded dependency
+PRs #68, #70, #73, and #74 are closed; their requested versions are already met or
+exceeded on `main`. Newly proposed major runtime/toolchain updates remain separate
+compatibility work.
+
 ### Remaining engineering backlog
 
-1. **P1: Make account/session state authoritative.** `requirePasswordChange` is
-   currently a no-op; the seeded-password flag needs coordinated API enforcement
-   and a usable password-change route. Refresh `/auth/me` on application startup
-   instead of trusting persisted browser state. Resolve the cached setup-state
-   loop when another tab completes first-run setup.
-2. **P1: Correct detector identity and correlation scope.** `iocMatch.ts` stores
+1. **P1: Correct detector identity and correlation scope.** `iocMatch.ts` stores
    a display name as `affectedResource`; `validatedCompromise.ts` uses that field
    as an IP when MAC is absent, missing correlations for named DNS clients. Flow
    and threat queries also omit controller identity from correlation/dedupe keys,
@@ -123,33 +166,33 @@ when its Compose configuration changes.
    Add explicit source IP/controller/site identity and multi-controller fixtures
    before assigning maximum confidence. This needs a coordinated schema/data
    design rather than a display-name heuristic.
-3. **P1: Prove recovery with state.** Extend the new configuration sentinel to
+2. **P1: Prove recovery with state.** Extend the new configuration sentinel to
    sessions, controller secrets, detections and MQTT reconnect. Test failed
    upgrades and automatic rollback against real images. Source rollback does not
    undo database migrations; define backup/restore and compatibility rules before
    relying on rollback for schema changes. Track existing issues
    [#49](https://github.com/MKippen/ZeroProof/issues/49) and
    [#50](https://github.com/MKippen/ZeroProof/issues/50).
-4. **P2: Guard scheduled work and large data volumes.** Review overlapping async
+3. **P2: Guard scheduled work and large data volumes.** Review overlapping async
    `setInterval` jobs in `scheduler.ts`, atomic detection persistence, bounded
    telemetry queries, and per-flow IOC lookup cost. Exercise timeouts, disconnects,
    shutdown and repeated jobs with realistic retained data. A crashed sync can
    leave `lastSyncStatus=IN_PROGRESS`, which the scheduler skips indefinitely;
    replace that flag with a recoverable lease. Add timestamp/nonce validation to
    updater HMAC requests if protecting against replay across process restarts.
-5. **P2: Reconcile schema history without losing data.** All 13 migrations apply,
+4. **P2: Reconcile schema history without losing data.** All 13 migrations apply,
    but legacy `CampaignRun`, `CampaignSetting`, `CampaignRunStatus` and
    `CampaignVerdict` objects remain outside the current Prisma schema. Decide
    retention/export before adding a cleanup migration; no data was dropped.
-6. **P2: Enforce merge and supply-chain policy.** `main` currently has no required
+5. **P2: Enforce merge and supply-chain policy.** `main` currently has no required
    status checks or reviews, and admin enforcement is disabled. Select required
    checks after this branch's cloud run is verified. Pin third-party Actions to
    reviewed commit SHAs and enable scheduled updates for those pins.
-7. **P2: Improve website resilience.** Add route error boundaries and unknown-route
+6. **P2: Improve website resilience.** Add route error boundaries and unknown-route
    handling, expand keyboard/focus checks, and add real browser coverage for
    settings/controller configuration and upgrade recovery. Split the remaining
    approximately 503 kB Recharts chunk if measured loading warrants it.
-8. **P3: Plan major toolchain migrations.** Prisma, React, ESLint, Jest/Vitest,
+7. **P3: Plan major toolchain migrations.** Prisma, React, ESLint, Jest/Vitest,
    Recharts and Tailwind need separate compatibility work. Firmware builds pass,
    but ESP32 and C3 currently use different ArduinoJson major/platform constraints;
    unify them with hardware validation. Do not treat successful compilation as
@@ -162,10 +205,13 @@ around controller work and public firmware downloads are actionable. The Helmet
 alert concerns CSP disabled only in development; production retains Helmet's
 defaults. The sensitive-query alert identifies `includePassword=true`, a selector,
 not a password value in the URL; the response route requires authentication and
-uses no-store/audit controls. These assessments do not close GitHub alerts;
-fresh analysis and explicit triage are still required.
+uses no-store/audit controls. Post-merge analysis resolved the rate-limiting
+alerts. Three alerts remain: the development CSP branch, the query selector, and
+an HTTP-only session-cookie fixture in integration tests. Production secure
+cookies are separately exercised over trusted TLS in the account-state fixture.
+These assessments do not dismiss GitHub alerts.
 
-### Validation record
+### First-batch validation record
 
 - **`pnpm check` passes on Node 24: 863 tests across all four packages**, both
   dependency audits, lint, builds, and UniFi client typecheck.
@@ -200,12 +246,14 @@ fresh analysis and explicit triage are still required.
   recovery from a read-only root-owned legacy file, authenticated pub/sub, rejected
   bad credentials, and broker UID 1883. No host ports or operator credentials are used.
 
-Current cloud installation/upgrade results are tracked in
-[draft PR #75](https://github.com/MKippen/ZeroProof/pull/75). The first run passed
+First-batch cloud installation/upgrade results are tracked in
+[merged PR #75](https://github.com/MKippen/ZeroProof/pull/75). The first run passed
 application tests, CodeQL, firmware, Docker builds and PR validation; all three
 installation/upgrade scenarios failed the new MQTT gate, exposing the real
 credential-ownership defect described above. After the repair, all 15 checks
 passed on `297367a`, including [fresh browser setup and both upgrade scenarios](https://github.com/MKippen/ZeroProof/actions/runs/34043234040).
-The final proxy-port correction triggers another run; the PR shows its current
-status. The existing live development stack and preexisting password-reset
-changes were preserved.
+All 15 checks also passed on final commit `9d59eb4`, including the
+[final install/upgrade run](https://github.com/MKippen/ZeroProof/actions/runs/34043469171).
+Post-merge CI, install smoke, and CodeQL passed on `main` at `2bac74f`.
+The existing live development stack and preexisting password-reset changes
+were preserved.

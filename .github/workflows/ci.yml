@@ -103,6 +103,10 @@ jobs:
           SESSION_SECRET: test-session-secret-ci-minimum-32chars!
           ENCRYPTION_KEY: test-encryption-key-32bytes!!!!!
 
+      - name: Verify production sessions over TLS with an isolated database
+        working-directory: .
+        run: bash scripts/ci/test-auth-sessions.sh
+
   # Frontend tests and linting
   frontend:
     name: Frontend Tests

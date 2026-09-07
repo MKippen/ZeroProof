@@ -37,6 +37,22 @@ on:
       # not just `prisma migrate deploy` on an empty test fixture.
       - 'backend/prisma/migrations/**'
       - 'backend/prisma/schema.prisma'
+      - 'backend/src/api/middleware/**'
+      - 'backend/src/api/routes/auth.ts'
+      - 'backend/src/services/accountSession.ts'
+      - 'backend/src/services/adminAccount.ts'
+      - 'backend/src/server.ts'
+      - 'frontend/src/App.tsx'
+      - 'frontend/src/auth/**'
+      - 'frontend/src/api/client.ts'
+      - 'frontend/src/stores/authStore.ts'
+      - 'frontend/src/components/PasswordChangeForm.tsx'
+      - 'frontend/src/pages/LoginPage.tsx'
+      - 'frontend/src/pages/SetupPage.tsx'
+      - 'frontend/src/pages/ChangePasswordPage.tsx'
+      - 'frontend/src/pages/SettingsPage.tsx'
+      - 'frontend/tests/e2e/**'
+      - 'frontend/playwright.config.ts'
       - '.github/workflows/install-smoke.yml'
   push:
     branches: [main]
@@ -245,7 +261,7 @@ jobs:
         env:
           PLAYWRIGHT_BASE_URL: https://localhost
           CI: 'true'
-        run: pnpm test:e2e
+        run: pnpm test:e2e tests/e2e/setup-flow.spec.ts
 
       - name: Upload Playwright report on failure
         if: failure()
@@ -379,6 +395,34 @@ jobs:
 
           echo ""
           echo "All 11 critical-path API scenarios passed."
+
+      - name: Require password renewal on the disposable test administrator
+        run: |
+          docker compose exec -T backend node <<'JS'
+          const { PrismaClient } = require('@prisma/client');
+          const prisma = new PrismaClient();
+          (async () => {
+            const users = await prisma.user.findMany({ select: { id: true } });
+            if (users.length !== 1) throw new Error('Expected exactly one browser-created fixture administrator');
+            await prisma.user.update({ where: { id: users[0].id }, data: { mustChangePassword: true } });
+          })().catch((error) => { console.error(error); process.exitCode = 1; })
+            .finally(() => prisma.$disconnect());
+          JS
+
+      - name: Verify required password change and session recovery in the browser
+        working-directory: ./frontend
+        env:
+          PLAYWRIGHT_BASE_URL: https://localhost
+          CI: 'true'
+        run: pnpm test:e2e tests/e2e/password-policy.spec.ts
+
+      - name: Upload password policy browser report on failure
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: password-policy-playwright-report
+          path: frontend/playwright-report/
+          retention-days: 14
 
 
   cross-version-upgrade:
