@@ -31,6 +31,8 @@ jest.mock('../../../../src/utils/encryption', () => ({
 }));
 
 import prisma from '../../../../src/services/database';
+import { Prisma } from '@prisma/client';
+import logger from '../../../../src/utils/logger';
 import {
   syncFirewallTelemetry,
   cleanupExpiredFirewallTelemetry,
@@ -64,6 +66,12 @@ const baseConnection: ConnectionRow = {
   flowsHighWater: null,
   threatsHighWater: null,
   flowRetentionDays: 7,
+};
+
+const baseScope = {
+  id: 'scope-1', connectionId: 'conn-1', controllerHost: '192.168.1.1',
+  controllerPort: 443, siteId: 'default', flowsHighWater: null,
+  threatsHighWater: null, createdAt: new Date('2026-09-06T00:00:00Z'),
 };
 
 function flowFixture(id: string, time: number, overrides: Record<string, unknown> = {}) {
@@ -135,6 +143,10 @@ describe('syncFirewallTelemetry', () => {
     jest.clearAllMocks();
     mockLogin.mockResolvedValue(undefined);
     mockLogout.mockResolvedValue(undefined);
+    mockFlowsIterate.mockImplementation(() => iterArray([]));
+    mockThreatsIterate.mockImplementation(() => iterArray([]));
+    (mockedPrisma.telemetryScope.upsert as jest.Mock).mockResolvedValue({ ...baseScope });
+    (mockedPrisma.telemetryScope.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
   });
 
   it('throws when the connection does not exist', async () => {
@@ -170,9 +182,9 @@ describe('syncFirewallTelemetry', () => {
     expect(mockedPrisma.firewallFlowEvent.createMany).toHaveBeenCalledWith(
       expect.objectContaining({ skipDuplicates: true })
     );
-    expect(mockedPrisma.uniFiConnection.update).toHaveBeenCalledWith(
+    expect(mockedPrisma.telemetryScope.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 'conn-1' },
+        where: expect.objectContaining({ id: 'scope-1' }),
         data: expect.objectContaining({ flowsHighWater: expect.any(Date) }),
       })
     );
@@ -242,6 +254,7 @@ describe('syncFirewallTelemetry', () => {
       outNetworkName: 'Default',
       primaryPolicyName: 'Block: IOT > Internet',
       connectionId: 'conn-1',
+      scopeId: 'scope-1',
     });
     expect(capturedData.flowStartAt).toBeInstanceOf(Date);
     expect(capturedData.flowEndAt).toBeInstanceOf(Date);
@@ -275,14 +288,18 @@ describe('syncFirewallTelemetry', () => {
       dstIp: '198.51.100.5',
       deviceMac: '60:22:32:96:06:6d',
       deviceModel: 'UDM-Pro',
+      scopeId: 'scope-1',
     });
   });
 
-  it('starts from the existing watermark when one is set', async () => {
+  it('starts from the immutable scope watermark rather than the legacy connection watermark', async () => {
     const existingWatermark = new Date('2026-05-06T12:00:00Z');
     (mockedPrisma.uniFiConnection.findUnique as jest.Mock).mockResolvedValue({
       ...baseConnection,
-      flowsHighWater: existingWatermark,
+      flowsHighWater: new Date('2026-09-05T12:00:00Z'),
+    });
+    (mockedPrisma.telemetryScope.upsert as jest.Mock).mockResolvedValue({
+      ...baseScope, flowsHighWater: existingWatermark,
     });
     mockFlowsIterate.mockReturnValue(iterArray([]));
     mockThreatsIterate.mockReturnValue(iterArray([]));
@@ -303,6 +320,184 @@ describe('syncFirewallTelemetry', () => {
 
     await expect(syncFirewallTelemetry('conn-1')).rejects.toThrow(/controller blew up/);
     expect(mockLogout).toHaveBeenCalled();
+  });
+
+  it('does not inherit unknown legacy flow or threat cursors on the first scoped poll', async () => {
+    (mockedPrisma.uniFiConnection.findUnique as jest.Mock).mockResolvedValue({
+      ...baseConnection, flowsHighWater: new Date('2100-01-01'), threatsHighWater: new Date('2100-01-01'),
+    });
+    const before = Date.now() - baseConnection.flowRetentionDays * 86_400_000;
+    await syncFirewallTelemetry('conn-1');
+    const after = Date.now() - baseConnection.flowRetentionDays * 86_400_000;
+    for (const iterate of [mockFlowsIterate, mockThreatsIterate]) {
+      const { beginTime } = iterate.mock.calls[0][0];
+      expect(beginTime).toBeGreaterThanOrEqual(before);
+      expect(beginTime).toBeLessThanOrEqual(after);
+    }
+    expect(mockedPrisma.uniFiConnection.update).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['CONTROLLER.Example', 'controller.example'],
+    ['[2001:0db8:0000:0000:0000:0000:0000:0001]', '[2001:db8::1]'],
+  ])('canonicalizes the configured host %s without rewriting the client destination', async (host, canonical) => {
+    (mockedPrisma.uniFiConnection.findUnique as jest.Mock).mockResolvedValue({ ...baseConnection, host });
+    await syncFirewallTelemetry('conn-1');
+    expect(mockedPrisma.telemetryScope.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: { connectionId: 'conn-1', controllerHost: canonical, controllerPort: 443, siteId: 'default' },
+      update: {},
+    }));
+    const { UnifiClient } = jest.requireMock('@uguard/unifi-client');
+    expect(UnifiClient).toHaveBeenCalledWith(expect.objectContaining({ host }));
+  });
+
+  it.each(['https://controller.example', 'controller.example/', 'user:secret@controller.example',
+    'controller.example?token=secret', 'controller.example#secret'])('rejects malformed or credential-bearing host input before storing scope (%s)', async (host) => {
+    (mockedPrisma.uniFiConnection.findUnique as jest.Mock).mockResolvedValue({ ...baseConnection, host });
+    await expect(syncFirewallTelemetry('conn-1')).rejects.toThrow(/hostname/);
+    expect(mockedPrisma.telemetryScope.upsert).not.toHaveBeenCalled();
+    expect(mockLogin).not.toHaveBeenCalled();
+  });
+
+  it('converges on the existing scope when two first polls race to create it', async () => {
+    (mockedPrisma.uniFiConnection.findUnique as jest.Mock).mockResolvedValue(baseConnection);
+    (mockedPrisma.telemetryScope.upsert as jest.Mock).mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError('scope already inserted', { code: 'P2002', clientVersion: 'test' })
+    );
+    (mockedPrisma.telemetryScope.findUnique as jest.Mock).mockResolvedValueOnce(baseScope);
+    await syncFirewallTelemetry('conn-1');
+    expect(mockedPrisma.telemetryScope.findUnique).toHaveBeenCalledWith({
+      where: { connectionId_controllerHost_controllerPort_siteId: {
+        connectionId: 'conn-1', controllerHost: '192.168.1.1', controllerPort: 443, siteId: 'default',
+      } },
+    });
+    expect(mockLogin).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { host: '192.168.2.1' }, { port: 8443 }, { siteId: 'branch-office' },
+  ])('retargets into an independent scope and cursor for %p', async (change) => {
+    (mockedPrisma.uniFiConnection.findUnique as jest.Mock)
+      .mockResolvedValueOnce(baseConnection).mockResolvedValueOnce({ ...baseConnection, ...change });
+    (mockedPrisma.telemetryScope.upsert as jest.Mock)
+      .mockResolvedValueOnce({ ...baseScope, flowsHighWater: new Date('2026-09-05T00:00:00Z') })
+      .mockResolvedValueOnce({ ...baseScope, id: 'scope-2' });
+    const eventTime = Date.now();
+    mockFlowsIterate.mockImplementation(() => iterArray([flowFixture('same-upstream-id', eventTime)]));
+    (mockedPrisma.firewallFlowEvent.createMany as jest.Mock).mockResolvedValue({ count: 1 });
+    await syncFirewallTelemetry('conn-1');
+    await syncFirewallTelemetry('conn-1');
+    const scopeCalls = (mockedPrisma.telemetryScope.upsert as jest.Mock).mock.calls;
+    expect(scopeCalls[0][0].create).not.toEqual(scopeCalls[1][0].create);
+    const writes = (mockedPrisma.firewallFlowEvent.createMany as jest.Mock).mock.calls;
+    expect(writes[0][0].data[0]).toMatchObject({ unifiId: 'same-upstream-id', scopeId: 'scope-1' });
+    expect(writes[1][0].data[0]).toMatchObject({ unifiId: 'same-upstream-id', scopeId: 'scope-2' });
+    expect(mockFlowsIterate.mock.calls[1][0].beginTime).toBeLessThan(eventTime - 6 * 86_400_000);
+    expect(mockedPrisma.uniFiConnection.update).not.toHaveBeenCalled();
+  });
+
+  it('keeps an old in-flight sync on its captured scope after the connection is retargeted', async () => {
+    (mockedPrisma.uniFiConnection.findUnique as jest.Mock)
+      .mockResolvedValueOnce(baseConnection).mockResolvedValueOnce({ ...baseConnection, siteId: 'new-site' });
+    (mockedPrisma.telemetryScope.upsert as jest.Mock)
+      .mockResolvedValueOnce(baseScope).mockResolvedValueOnce({ ...baseScope, id: 'new-scope', siteId: 'new-site' });
+    let release!: () => void;
+    let started!: () => void;
+    const ready = new Promise<void>((resolve) => { started = resolve; });
+    const wait = new Promise<void>((resolve) => { release = resolve; });
+    const oldTime = Date.UTC(2026, 8, 5);
+    const newTime = Date.UTC(2026, 8, 6);
+    mockFlowsIterate.mockImplementationOnce(async function* () {
+      started();
+      await wait;
+      yield flowFixture('same-upstream-id', oldTime);
+    }).mockImplementationOnce(() => iterArray([flowFixture('same-upstream-id', newTime)]));
+    mockThreatsIterate.mockImplementation(() => iterArray([threatFixture('shared-threat-id', oldTime)]));
+    (mockedPrisma.firewallFlowEvent.createMany as jest.Mock).mockResolvedValue({ count: 1 });
+    (mockedPrisma.firewallThreatEvent.createMany as jest.Mock).mockResolvedValue({ count: 1 });
+    const oldSync = syncFirewallTelemetry('conn-1');
+    await ready;
+    await syncFirewallTelemetry('conn-1');
+    release();
+    await oldSync;
+    const flowWrites = (mockedPrisma.firewallFlowEvent.createMany as jest.Mock).mock.calls;
+    expect(flowWrites[0][0].data[0].scopeId).toBe('new-scope');
+    expect(flowWrites[1][0].data[0].scopeId).toBe('scope-1');
+    const threatWrites = (mockedPrisma.firewallThreatEvent.createMany as jest.Mock).mock.calls;
+    expect(threatWrites[0][0].data[0].scopeId).toBe('new-scope');
+    expect(threatWrites[1][0].data[0].scopeId).toBe('scope-1');
+    const cursorWrites = (mockedPrisma.telemetryScope.updateMany as jest.Mock).mock.calls;
+    expect(cursorWrites.map(([args]) => args.where.id)).toEqual(['new-scope', 'new-scope', 'scope-1', 'scope-1']);
+    expect(mockedPrisma.uniFiConnection.update).not.toHaveBeenCalled();
+  });
+
+  it('advances flow and threat cursors conditionally so a slower concurrent poll cannot move them backwards', async () => {
+    (mockedPrisma.uniFiConnection.findUnique as jest.Mock).mockResolvedValue(baseConnection);
+    const occurredAt = new Date('2026-09-06T12:00:00Z');
+    mockFlowsIterate.mockImplementation(() => iterArray([flowFixture('f1', occurredAt.getTime())]));
+    mockThreatsIterate.mockImplementation(() => iterArray([threatFixture('t1', occurredAt.getTime())]));
+    (mockedPrisma.firewallFlowEvent.createMany as jest.Mock).mockResolvedValue({ count: 1 });
+    (mockedPrisma.firewallThreatEvent.createMany as jest.Mock).mockResolvedValue({ count: 1 });
+    await syncFirewallTelemetry('conn-1');
+    for (const cursor of ['flowsHighWater', 'threatsHighWater']) {
+      expect(mockedPrisma.telemetryScope.updateMany).toHaveBeenCalledWith({
+        where: { id: 'scope-1', OR: [{ [cursor]: null }, { [cursor]: { lt: occurredAt } }] },
+        data: { [cursor]: occurredAt },
+      });
+    }
+  });
+
+  it('skips missing, malformed, and future event timestamps without inserting rows or advancing either cursor', async () => {
+    (mockedPrisma.uniFiConnection.findUnique as jest.Mock).mockResolvedValue(baseConnection);
+    const invalid = [undefined, null, NaN, Infinity, -Infinity, -1, 9e15, Date.now() + 86_400_000, '1700000000000'];
+    mockFlowsIterate.mockImplementation(() => iterArray(invalid.map((time, index) =>
+      flowFixture(`invalid-flow-${index}`, 1_700_000_000_000, { time, flow_start_time: undefined }))));
+    mockThreatsIterate.mockImplementation(() => iterArray(invalid.map((timestamp, index) => ({
+      ...threatFixture(`invalid-threat-${index}`, 1_700_000_000_000), timestamp,
+    }))));
+    const result = await syncFirewallTelemetry('conn-1');
+    expect(result).toEqual({
+      flowsInserted: 0, threatsInserted: 0, flowsSkipped: invalid.length, threatsSkipped: invalid.length,
+      flowsHighWater: null, threatsHighWater: null,
+    });
+    expect(mockedPrisma.firewallFlowEvent.createMany).not.toHaveBeenCalled();
+    expect(mockedPrisma.firewallThreatEvent.createMany).not.toHaveBeenCalled();
+    expect(mockedPrisma.telemetryScope.updateMany).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledTimes(2);
+  });
+
+  it('accepts a controller flow-start timestamp only when the primary event time is absent', async () => {
+    (mockedPrisma.uniFiConnection.findUnique as jest.Mock).mockResolvedValue(baseConnection);
+    const time = 1_700_000_000_000;
+    mockFlowsIterate.mockImplementation(() => iterArray([
+      flowFixture('valid-fallback', time, { time: undefined }),
+      flowFixture('invalid-primary', time, { time: NaN }),
+      flowFixture('null-primary', time, { time: null }),
+    ]));
+    (mockedPrisma.firewallFlowEvent.createMany as jest.Mock).mockResolvedValue({ count: 1 });
+    const result = await syncFirewallTelemetry('conn-1');
+    expect(result).toMatchObject({ flowsInserted: 1, flowsSkipped: 2, flowsHighWater: new Date(time) });
+    expect(mockedPrisma.firewallFlowEvent.createMany).toHaveBeenCalledWith({
+      data: [expect.objectContaining({ unifiId: 'valid-fallback', occurredAt: new Date(time) })], skipDuplicates: true,
+    });
+  });
+
+  it('advances only to observed valid events in a mixed batch', async () => {
+    (mockedPrisma.uniFiConnection.findUnique as jest.Mock).mockResolvedValue(baseConnection);
+    const time = 1_700_000_000_000;
+    const future = Date.now() + 86_400_000;
+    mockFlowsIterate.mockImplementation(() => iterArray([flowFixture('valid-flow', time), flowFixture('future-flow', future)]));
+    mockThreatsIterate.mockImplementation(() => iterArray([threatFixture('valid-threat', time), threatFixture('future-threat', future)]));
+    (mockedPrisma.firewallFlowEvent.createMany as jest.Mock).mockResolvedValue({ count: 1 });
+    (mockedPrisma.firewallThreatEvent.createMany as jest.Mock).mockResolvedValue({ count: 1 });
+    const result = await syncFirewallTelemetry('conn-1');
+    expect(result).toEqual({
+      flowsInserted: 1, threatsInserted: 1, flowsSkipped: 1, threatsSkipped: 1,
+      flowsHighWater: new Date(time), threatsHighWater: new Date(time),
+    });
+    for (const [args] of (mockedPrisma.telemetryScope.updateMany as jest.Mock).mock.calls) {
+      expect(Object.values(args.data)).toEqual([new Date(time)]);
+    }
   });
 });
 

@@ -96,6 +96,11 @@ jest.mock('@prisma/client', () => {
       deleteMany: jest.fn(),
       count: jest.fn(),
     },
+    telemetryScope: {
+      findUnique: jest.fn(),
+      upsert: jest.fn(),
+      updateMany: jest.fn(),
+    },
     firewallFlowEvent: {
       findUnique: jest.fn(),
       findFirst: jest.fn(),

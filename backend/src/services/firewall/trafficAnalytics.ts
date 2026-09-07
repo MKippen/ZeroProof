@@ -13,6 +13,10 @@ export interface TrafficSummary {
   byRisk: { low: number; medium: number; high: number; concerning: number };
   uniqueSrcMacs: number;
   threatCount: number;
+  // Totals are stored observations, not deduplicated across unknown sources.
+  unscopedFlowCount: number;
+  unscopedThreatCount: number;
+  sourceScopeCount: number;
 }
 
 export interface TopPolicy {
@@ -76,7 +80,7 @@ export async function getTrafficSummary({
 }: AnalyticsParams): Promise<TrafficSummary> {
   const cutoff = since(windowHours);
 
-  const [byRiskRows, uniqueSrcs, totalBlocked, threatCount] = await Promise.all([
+  const [byRiskRows, uniqueSrcs, flowScopes, threatScopes] = await Promise.all([
     prisma.firewallFlowEvent.groupBy({
       by: ['risk'],
       where: { connectionId, occurredAt: { gte: cutoff } },
@@ -87,11 +91,15 @@ export async function getTrafficSummary({
       select: { srcMac: true },
       distinct: ['srcMac'],
     }),
-    prisma.firewallFlowEvent.count({
+    prisma.firewallFlowEvent.groupBy({
+      by: ['scopeId'],
       where: { connectionId, occurredAt: { gte: cutoff } },
+      _count: { _all: true },
     }),
-    prisma.firewallThreatEvent.count({
+    prisma.firewallThreatEvent.groupBy({
+      by: ['scopeId'],
       where: { connectionId, occurredAt: { gte: cutoff } },
+      _count: { _all: true },
     }),
   ]);
 
@@ -104,13 +112,22 @@ export async function getTrafficSummary({
     else risk.concerning += row._count._all;
   }
 
+  // Grouping in PostgreSQL keeps work proportional to represented scopes,
+  // including threat-only scopes, rather than loading every event into memory.
+  const sourceScopes = new Set(
+    [...flowScopes, ...threatScopes].map((row) => row.scopeId).filter((id): id is string => id !== null)
+  );
+
   return {
     windowHours,
     since: cutoff.toISOString(),
-    totalBlocked,
+    totalBlocked: flowScopes.reduce((total, row) => total + row._count._all, 0),
     byRisk: risk,
     uniqueSrcMacs: uniqueSrcs.length,
-    threatCount,
+    threatCount: threatScopes.reduce((total, row) => total + row._count._all, 0),
+    unscopedFlowCount: flowScopes.find((row) => row.scopeId === null)?._count._all ?? 0,
+    unscopedThreatCount: threatScopes.find((row) => row.scopeId === null)?._count._all ?? 0,
+    sourceScopeCount: sourceScopes.size,
   };
 }
 

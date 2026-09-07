@@ -215,8 +215,9 @@ model UniFiConnection {
   configChanges UniFiConfigChange[]
   flowEvents    FirewallFlowEvent[]
   threatEvents  FirewallThreatEvent[]
+  telemetryScopes TelemetryScope[]
 
-  // High-water-mark cursors for incremental polling.
+  // Legacy cursors retained for compatibility. New polling uses TelemetryScope.
   flowsHighWater     DateTime?
   threatsHighWater   DateTime?
   // Retention window for flow + threat rows.
@@ -265,14 +266,33 @@ enum DnsAttributionStatus {
 
 // -------------------- UniFi firewall telemetry --------------------
 
+// Immutable controller/site provenance. A connection can be retargeted while
+// a previous sync is in flight, so cursor ownership belongs to this snapshot.
+model TelemetryScope {
+  id              String @id @default(cuid())
+  connectionId    String
+  connection      UniFiConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  controllerHost  String
+  controllerPort  Int
+  siteId          String
+  flowsHighWater  DateTime?
+  threatsHighWater DateTime?
+  createdAt       DateTime @default(now())
+
+  flowEvents      FirewallFlowEvent[]
+  threatEvents    FirewallThreatEvent[]
+
+  @@unique([connectionId, controllerHost, controllerPort, siteId], map: "TelemetryScope_source_key")
+}
+
 // Per-flow rows from UniFi's "Traffic & Flow" view. The controller exposes
 // these via POST /v2/api/site/{site}/traffic-flows. UniFi only surfaces
 // blocked flows here (allow flows are aggregated into DPI stats elsewhere),
 // so every row's `action` is "blocked".
 model FirewallFlowEvent {
   id                String   @id @default(cuid())
-  // UniFi's stable id — used for deduplication across polls.
-  unifiId           String   @unique
+  // UniFi IDs are unique only within their immutable source scope.
+  unifiId           String
   occurredAt        DateTime
   flowStartAt       DateTime?
   flowEndAt         DateTime?
@@ -324,6 +344,10 @@ model FirewallFlowEvent {
 
   connectionId      String
   connection        UniFiConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  // NULL means historical provenance is unknown; never infer it from the
+  // connection's current host/site. Legacy partial uniqueness lives in SQL.
+  scopeId           String?
+  scope             TelemetryScope? @relation(fields: [scopeId], references: [id], onDelete: Cascade)
 
   createdAt         DateTime @default(now())
 
@@ -331,6 +355,8 @@ model FirewallFlowEvent {
   @@index([connectionId, srcMac])
   @@index([connectionId, primaryPolicyName])
   @@index([connectionId, dstRegion])
+  @@unique([scopeId, unifiId])
+  @@index([scopeId, occurredAt])
 }
 
 // -------------------- Detection engine --------------------
@@ -411,7 +437,7 @@ model Detection {
 // matching policy entry.
 model FirewallThreatEvent {
   id          String   @id @default(cuid())
-  unifiId     String   @unique
+  unifiId     String
   occurredAt  DateTime
   category    String?
   subcategory String?
@@ -432,11 +458,16 @@ model FirewallThreatEvent {
 
   connectionId String
   connection   UniFiConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  // Historical rows keep unknown provenance instead of guessed site identity.
+  scopeId      String?
+  scope        TelemetryScope? @relation(fields: [scopeId], references: [id], onDelete: Cascade)
 
   createdAt    DateTime @default(now())
 
   @@index([connectionId, occurredAt])
   @@index([connectionId, severity])
+  @@unique([scopeId, unifiId])
+  @@index([scopeId, occurredAt])
 }
 
 enum SyncStatus {
