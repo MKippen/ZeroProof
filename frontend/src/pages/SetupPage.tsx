@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { verifySession } from '@/auth/session';
 import { Eye, EyeOff, Lock, Shield, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,9 +15,8 @@ export function SetupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const navigate = useNavigate();
   const { toast } = useToast();
-  const { setUser, setMustChangePassword } = useAuthStore();
+  const { setInitialized } = useAuthStore();
 
   const passwordTooShort = password.length > 0 && password.length < MIN_PASSWORD_LENGTH;
   const passwordsMismatch =
@@ -58,19 +57,17 @@ export function SetupPage() {
       // already logged in. Drop the cached CSRF token (session id rotated)
       // and route straight to the dashboard — no /login bounce.
       api.invalidateCsrfToken();
-      setUser(response.data.user);
-      setMustChangePassword(false);
+      await verifySession();
       toast({
         title: 'Admin account created',
         description: 'Welcome to ZeroProof.',
       });
-      navigate('/dashboard');
     } else if (response.error?.code === 'ALREADY_INITIALIZED') {
       toast({
         title: 'Already set up',
         description: 'An admin already exists. Sign in instead.',
       });
-      navigate('/login');
+      setInitialized(true);
     } else {
       toast({
         variant: 'destructive',

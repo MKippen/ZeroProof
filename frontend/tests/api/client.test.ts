@@ -49,6 +49,68 @@ describe('API client', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it('leaves an unauthenticated /me response to the account bootstrap without a retry or logout', async () => {
+    fetchMock.mockResolvedValueOnce(failure('UNAUTHORIZED', 401));
+    expect((await client.get('/auth/me')).error?.code).toBe('UNAUTHORIZED');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('requires password change after a privileged 403 without replaying the mutation', async () => {
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(failure('PASSWORD_CHANGE_REQUIRED', 403));
+    expect((await client.post('/devices/run')).error?.code).toBe('PASSWORD_CHANGE_REQUIRED');
+    expect(useAuthStore.getState().mustChangePassword).toBe(true);
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('reports password-change partial success distinctly and signs out without replay', async () => {
+    useAuthStore.getState().beginCredentialChange();
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(failure('PASSWORD_CHANGED_SESSION_EXPIRED', 401));
+    expect((await client.post('/auth/change-password', { currentPassword: 'old-password', newPassword: 'new-password' })).error?.code)
+      .toBe('PASSWORD_CHANGED_SESSION_EXPIRED');
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    expect(useAuthStore.getState().credentialChangePending).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('discards a delayed 401 from before password rotation without expiring the current session', async () => {
+    let resolve!: (response: Response) => void;
+    fetchMock.mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+    const oldRead = client.get('/dashboard');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    useAuthStore.getState().beginCredentialChange();
+    resolve(failure('UNAUTHORIZED', 401));
+    expect((await oldRead).error?.code).toBe('SESSION_CHANGED');
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('does not send background requests started during password rotation', async () => {
+    useAuthStore.getState().beginCredentialChange();
+    expect((await client.get('/dashboard')).error?.code).toBe('SESSION_CHANGED');
+    expect((await client.post('/devices/run')).error?.code).toBe('SESSION_CHANGED');
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+    fetchMock.mockResolvedValueOnce(csrf()).mockResolvedValueOnce(json({ success: true }));
+    expect((await client.post('/auth/change-password', { currentPassword: 'old-password', newPassword: 'new-password' })).success).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not submit a mutation waiting for CSRF if the account logs out', async () => {
+    let resolve!: (response: Response) => void;
+    fetchMock.mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+    const pending = client.post('/devices/run');
+    useAuthStore.getState().logout();
+    resolve(csrf());
+    expect((await pending).error?.code).toBe('SESSION_CHANGED');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('retries an expired read once, then clears the session', async () => {
     fetchMock.mockImplementation(async () => failure('UNAUTHORIZED', 401));
     const result = client.get('/dashboard');

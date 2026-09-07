@@ -81,10 +81,17 @@ export class ApiClient {
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
-    isRetry = false
+    isRetry = false,
+    sessionVersion = useAuthStore.getState().sessionVersion
   ): Promise<ApiResponse<T>> {
     const url = `${API_BASE}${endpoint}`;
     const method = (options.method ?? 'GET').toUpperCase();
+
+    // Password rotation is a short account transition. Background requests
+    // must not race its cookie update or invalidate the newly issued session.
+    if (useAuthStore.getState().credentialChangePending && !endpoint.startsWith('/auth/')) {
+      return this.sessionChanged();
+    }
 
     try {
       const config: RequestInit = {
@@ -93,25 +100,35 @@ export class ApiClient {
         headers: await this.buildHeaders(options),
         credentials: 'include',
       };
+      if (sessionVersion !== useAuthStore.getState().sessionVersion) return this.sessionChanged();
       const response = await fetch(url, config);
       const data = await this.parseResponse<T>(response);
+      if (sessionVersion !== useAuthStore.getState().sessionVersion) return this.sessionChanged();
 
       // A 401 can mean the submitted password is wrong, or the upstream
       // controller rejected its credentials. Only our session middleware's
       // explicit UNAUTHORIZED response means this browser must sign in again.
-      if (response.status === 401 && data.error?.code === 'UNAUTHORIZED') {
+      if (endpoint !== '/auth/me' && response.status === 401 && data.error?.code === 'UNAUTHORIZED') {
         // Allow a single read retry during backend restarts. Never replay a
         // mutation for an auth failure; only a verified CSRF rejection below
         // guarantees the handler has not run.
         if (!isRetry && SAFE_METHODS.has(method)) {
           await new Promise((resolve) => setTimeout(resolve, 1500));
-          return this.request<T>(endpoint, options, true);
+          return this.request<T>(endpoint, options, true, sessionVersion);
         }
         this.invalidateCsrfToken();
         useAuthStore.getState().logout();
-        if (window.location.pathname !== '/login') {
-          window.location.replace('/login');
-        }
+      }
+
+      if (response.status === 401 && data.error?.code === 'PASSWORD_CHANGED_SESSION_EXPIRED') {
+        this.invalidateCsrfToken();
+        useAuthStore.getState().logout();
+      }
+
+      // The server can require a change after this tab booted (for example,
+      // an administrator reset). The account boundary handles navigation.
+      if (response.status === 403 && data.error?.code === 'PASSWORD_CHANGE_REQUIRED') {
+        useAuthStore.getState().setMustChangePassword(true);
       }
 
       // CSRF token mismatch — most often after a login rotates the session
@@ -122,7 +139,7 @@ export class ApiClient {
         data.error?.code === 'CSRF_TOKEN_INVALID'
       ) {
         this.invalidateCsrfToken();
-        return this.request<T>(endpoint, options, true);
+        return this.request<T>(endpoint, options, true, sessionVersion);
       }
 
       if (!response.ok) {
@@ -143,6 +160,10 @@ export class ApiClient {
         },
       };
     }
+  }
+
+  private sessionChanged<T>(): ApiResponse<T> {
+    return { success: false, error: { code: 'SESSION_CHANGED', message: 'Your session changed. Please try again.' } };
   }
 
   async get<T>(endpoint: string): Promise<ApiResponse<T>> {

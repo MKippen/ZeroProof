@@ -9,6 +9,7 @@ declare module 'express-session' {
   interface SessionData {
     userId?: number;
     user?: SessionUser;
+    credentialVersion?: string;
   }
 }
 
@@ -18,3 +19,14 @@ declare module 'express-serve-static-core' {
   }
 }
 
+declare global {
+  namespace Express {
+    interface Request {
+      authAccount?: {
+        id: number;
+        mustChangePassword: boolean;
+        lastLogin: Date | null;
+      };
+    }
+  }
+}

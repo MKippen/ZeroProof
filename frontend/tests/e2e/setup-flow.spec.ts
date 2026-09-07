@@ -18,8 +18,9 @@ import { test, expect } from '@playwright/test';
  *   - Auth store update + Navigate('/dashboard')
  *   - Dashboard renders for an authenticated user
  *
+ * Also verifies session recovery on reload, rejection of forged local auth
+ * storage, existing-account login, and logout against the same live server.
  * Future Tier 3 tests (separate PRs):
- *   - Login flow (existing user → /login → /dashboard)
  *   - Settings → General shows version + Updates card
  *   - Settings → DNS Proxy form is interactive
  *   - Settings → UniFi Configuration form is interactive
@@ -31,7 +32,7 @@ test.describe('fresh install setup flow', () => {
   test.describe.configure({ retries: 0 });
   const password = process.env.E2E_SETUP_PASSWORD ?? 'playwright-e2e-setup-password-32+';
 
-  test('redirects to /setup, creates admin, lands on /dashboard', async ({ page }) => {
+  test('creates admin, restores the server session, and rejects forged browser auth', async ({ page, browser }) => {
     await page.goto('/');
 
     // CI runs browser setup before the API login scenarios. An existing
@@ -52,5 +53,41 @@ test.describe('fresh install setup flow', () => {
     // No /login bounce (regression target from v1.1.2).
     await page.waitForURL('**/dashboard', { timeout: 15_000 });
     expect(new URL(page.url()).pathname).toBe('/dashboard');
+
+    // The httpOnly cookie is sufficient after a reload; local auth hints are
+    // neither required nor authoritative.
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page.getByRole('button', { name: 'Logout', exact: true })).toBeVisible();
+
+    const anonymous = await browser.newContext({ ignoreHTTPSErrors: true });
+    try {
+      await anonymous.addInitScript(() => {
+        localStorage.setItem('auth-storage', JSON.stringify({
+          state: { user: { id: 999 }, isAuthenticated: true, mustChangePassword: false },
+          version: 0,
+        }));
+      });
+      const otherPage = await anonymous.newPage();
+      const sockets: string[] = [];
+      otherPage.on('websocket', (socket) => sockets.push(socket.url()));
+      await otherPage.goto(new URL('/dashboard', page.url()).href);
+      await expect(otherPage).toHaveURL(/\/login$/);
+      expect(sockets).toEqual([]);
+
+      await otherPage.getByLabel('Password', { exact: true }).fill(password);
+      await otherPage.getByRole('button', { name: 'Sign In', exact: true }).click();
+      await expect(otherPage).toHaveURL(/\/dashboard$/);
+      await otherPage.getByRole('button', { name: 'Logout', exact: true }).click();
+      await expect(otherPage).toHaveURL(/\/login$/);
+      await otherPage.reload();
+      await expect(otherPage).toHaveURL(/\/login$/);
+      // Ending one session must not end another independently logged-in one.
+      await page.reload();
+      await expect(page).toHaveURL(/\/dashboard$/);
+    } finally {
+      await anonymous.close();
+    }
   });
 });

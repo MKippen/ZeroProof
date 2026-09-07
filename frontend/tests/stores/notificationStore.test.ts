@@ -167,4 +167,25 @@ describe('Notification Store', () => {
     await useNotificationStore.getState().markAsRead('n1');
     expect(useNotificationStore.getState().unreadCount).toBe(2);
   });
+
+  it('does not restore private notifications from a request completed after logout reset', async () => {
+    let resolve!: (response: unknown) => void;
+    vi.mocked(api.get).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+    const pending = useNotificationStore.getState().fetchNotifications();
+    useNotificationStore.getState().reset();
+    resolve({ success: true, data: { notifications: [{ id: 'prior-account-private-notification' }] } });
+    await pending;
+    expect(useNotificationStore.getState().notifications).toEqual([]);
+    expect(useNotificationStore.getState().isLoading).toBe(false);
+  });
+
+  it('does not restore a mutation error from an earlier account after reset', async () => {
+    let resolve!: (response: unknown) => void;
+    vi.mocked(api.patch).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+    const pending = useNotificationStore.getState().markAsRead('old-account');
+    useNotificationStore.getState().reset();
+    resolve({ success: false, error: { code: 'DENIED', message: 'Old account details' } });
+    await pending;
+    expect(useNotificationStore.getState().mutationError).toBeNull();
+  });
 });

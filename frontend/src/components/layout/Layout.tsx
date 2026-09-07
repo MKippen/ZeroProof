@@ -45,13 +45,13 @@ export function Layout() {
   const [loggingOut, setLoggingOut] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { logout } = useAuthStore();
+  const { logout, isAuthenticated, mustChangePassword, verificationStatus, credentialChangePending, sessionVersion } = useAuthStore();
   const { connect, disconnect } = useWebSocketStore();
 
   useEffect(() => {
-    connect();
+    if (isAuthenticated && !mustChangePassword && verificationStatus === 'ready' && !credentialChangePending) connect();
     return disconnect;
-  }, [connect, disconnect]);
+  }, [connect, disconnect, isAuthenticated, mustChangePassword, verificationStatus, credentialChangePending, sessionVersion]);
 
   useEffect(() => {
     if (!sidebarOpen) {
@@ -65,22 +65,27 @@ export function Layout() {
   }, [sidebarOpen]);
 
   const handleLogout = async () => {
-    if (loggingOut) return;
+    if (loggingOut || useAuthStore.getState().logoutPending || useAuthStore.getState().credentialChangePending) return;
+    useAuthStore.getState().setLogoutPending(true);
     setLoggingOut(true);
-    const response = await api.post('/auth/logout');
-    setLoggingOut(false);
-    if (!response.success) {
-      toast({
-        variant: 'destructive',
-        title: 'Could not sign out',
-        description: response.error?.message || 'Please try again.',
-      });
-      return;
+    try {
+      const response = await api.post('/auth/logout');
+      if (!response.success) {
+        toast({
+          variant: 'destructive',
+          title: 'Could not sign out',
+          description: response.error?.message || 'Please try again.',
+        });
+        return;
+      }
+      disconnect();
+      api.invalidateCsrfToken();
+      logout();
+      navigate('/login');
+    } finally {
+      useAuthStore.getState().setLogoutPending(false);
+      setLoggingOut(false);
     }
-    disconnect();
-    api.invalidateCsrfToken();
-    logout();
-    navigate('/login');
   };
 
   return (
@@ -139,7 +144,7 @@ export function Layout() {
               size="sm"
               className="w-full border-border/50 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 transition-all duration-200"
               onClick={handleLogout}
-              disabled={loggingOut}
+              disabled={loggingOut || credentialChangePending}
             >
               <LogOut className="h-4 w-4 mr-2" />
               {loggingOut ? 'Signing out...' : 'Logout'}

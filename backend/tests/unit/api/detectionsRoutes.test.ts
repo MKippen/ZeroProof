@@ -12,6 +12,7 @@ import request from 'supertest';
 import detectionsRoutes from '../../../src/api/routes/detections';
 import prisma from '../../../src/services/database';
 import * as analytics from '../../../src/services/detection/detectionAnalytics';
+import { credentialVersion } from '../../../src/services/accountSession';
 
 const mockedPrisma = prisma as jest.Mocked<typeof prisma>;
 const mockedAnalytics = analytics as jest.Mocked<typeof analytics>;
@@ -20,14 +21,22 @@ function buildApp(authed = true): express.Express {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
-    (req as { session?: { userId?: number } }).session = authed ? { userId: 42 } : {};
+    req.session = {
+      ...(authed ? { userId: 42, credentialVersion: credentialVersion('test-account-hash') } : {}),
+      destroy: (done: (error?: Error) => void) => done(),
+    } as unknown as typeof req.session;
     next();
   });
   app.use('/api/v1/detections', detectionsRoutes);
   return app;
 }
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  (mockedPrisma.user.findUnique as jest.Mock).mockResolvedValue({
+    id: 42, passwordHash: 'test-account-hash', mustChangePassword: false, lastLogin: null,
+  } as any);
+});
 
 describe('auth', () => {
   it('returns 401 when not authenticated', async () => {
