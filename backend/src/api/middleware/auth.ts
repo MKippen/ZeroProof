@@ -12,7 +12,10 @@ export function rejectSession(
   req.session?.destroy((error) => {
     if (error) logger.warn('Failed to remove invalid session:', error);
   });
-  res.clearCookie('connect.sid', { path: '/' });
+  // An implicit rejection can be an older request arriving after a concurrent
+  // login/password rotation. Expiring the shared cookie here would delete that
+  // newer session. Destroy only this request's server session; /csrf replaces
+  // an obsolete cookie on the next sign-in, and explicit logout clears it.
   const response: ApiResponse = {
     success: false,
     error,

@@ -15,10 +15,11 @@ export function PasswordChangeForm() {
   const [error, setError] = useState<string | null>(null);
   const submitting = useRef(false);
   const { toast } = useToast();
+  const logoutPending = useAuthStore((state) => state.logoutPending);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (submitting.current) return;
+    if (submitting.current || useAuthStore.getState().logoutPending) return;
     setError(null);
     if (newPassword !== confirmPassword) {
       setError('Passwords do not match.');
@@ -65,26 +66,26 @@ export function PasswordChangeForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-w-md" aria-busy={pending}>
+    <form onSubmit={handleSubmit} className="space-y-4 max-w-md" aria-busy={pending || logoutPending}>
       {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
       <div className="space-y-2">
         <Label htmlFor="currentPassword">Current Password</Label>
         <Input id="currentPassword" type="password" autoComplete="current-password" value={currentPassword}
-          onChange={(event) => setCurrentPassword(event.target.value)} required disabled={pending} />
+          onChange={(event) => setCurrentPassword(event.target.value)} required disabled={pending || logoutPending} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="newPassword">New Password</Label>
         <Input id="newPassword" type="password" autoComplete="new-password" value={newPassword}
           onChange={(event) => setNewPassword(event.target.value)} required minLength={8} maxLength={100}
-          aria-describedby="new-password-help" disabled={pending} />
+          aria-describedby="new-password-help" disabled={pending || logoutPending} />
         <p id="new-password-help" className="text-xs text-muted-foreground">Minimum 8 characters. Use a different password from your current password.</p>
       </div>
       <div className="space-y-2">
         <Label htmlFor="confirmPassword">Confirm New Password</Label>
         <Input id="confirmPassword" type="password" autoComplete="new-password" value={confirmPassword}
-          onChange={(event) => setConfirmPassword(event.target.value)} required disabled={pending} />
+          onChange={(event) => setConfirmPassword(event.target.value)} required disabled={pending || logoutPending} />
       </div>
-      <Button type="submit" disabled={pending}>{pending ? 'Changing...' : 'Change Password'}</Button>
+      <Button type="submit" disabled={pending || logoutPending}>{pending ? 'Changing...' : 'Change Password'}</Button>
     </form>
   );
 }

@@ -13,6 +13,8 @@ interface AuthState {
   // Invalidates responses/cache work that belonged to an earlier account state.
   sessionVersion: number;
   credentialChangePending: boolean;
+  logoutPending: boolean;
+  setLogoutPending: (pending: boolean) => void;
   beginCredentialChange: () => void;
   finishCredentialChange: () => void;
   beginVerification: () => void;
@@ -35,6 +37,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   verificationError: null,
   sessionVersion: 0,
   credentialChangePending: false,
+  logoutPending: false,
+  setLogoutPending: (logoutPending) => set({ logoutPending }),
   beginCredentialChange: () => set((state) => ({ credentialChangePending: true, sessionVersion: state.sessionVersion + 1 })),
   finishCredentialChange: () => set({ credentialChangePending: false }),
   beginVerification: () => set({ verificationStatus: 'checking', verificationError: null }),
@@ -47,6 +51,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     verificationStatus: 'ready',
     verificationError: null,
     credentialChangePending: false,
+    logoutPending: false,
     sessionVersion: state.sessionVersion + 1,
   })),
   setAnonymous: (initialized) => set((state) => ({
@@ -57,6 +62,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     verificationStatus: 'ready',
     verificationError: null,
     credentialChangePending: false,
+    logoutPending: false,
     sessionVersion: state.sessionVersion + 1,
   })),
   setInitialized: (initialized) => set({ initialized }),
@@ -73,6 +79,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     verificationStatus: 'ready',
     verificationError: null,
     credentialChangePending: false,
+    logoutPending: false,
     sessionVersion: state.sessionVersion + 1,
   })),
 }));

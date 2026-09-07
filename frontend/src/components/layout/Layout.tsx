@@ -65,22 +65,27 @@ export function Layout() {
   }, [sidebarOpen]);
 
   const handleLogout = async () => {
-    if (loggingOut) return;
+    if (loggingOut || useAuthStore.getState().logoutPending || useAuthStore.getState().credentialChangePending) return;
+    useAuthStore.getState().setLogoutPending(true);
     setLoggingOut(true);
-    const response = await api.post('/auth/logout');
-    setLoggingOut(false);
-    if (!response.success) {
-      toast({
-        variant: 'destructive',
-        title: 'Could not sign out',
-        description: response.error?.message || 'Please try again.',
-      });
-      return;
+    try {
+      const response = await api.post('/auth/logout');
+      if (!response.success) {
+        toast({
+          variant: 'destructive',
+          title: 'Could not sign out',
+          description: response.error?.message || 'Please try again.',
+        });
+        return;
+      }
+      disconnect();
+      api.invalidateCsrfToken();
+      logout();
+      navigate('/login');
+    } finally {
+      useAuthStore.getState().setLogoutPending(false);
+      setLoggingOut(false);
     }
-    disconnect();
-    api.invalidateCsrfToken();
-    logout();
-    navigate('/login');
   };
 
   return (

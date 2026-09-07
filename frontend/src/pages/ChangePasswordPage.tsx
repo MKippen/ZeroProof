@@ -11,17 +11,22 @@ export function ChangePasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const credentialChangePending = useAuthStore((state) => state.credentialChangePending);
   const signOut = async () => {
-    if (loggingOut) return;
+    if (loggingOut || useAuthStore.getState().logoutPending || useAuthStore.getState().credentialChangePending) return;
+    useAuthStore.getState().setLogoutPending(true);
     setLoggingOut(true);
     setError(null);
-    const response = await api.post('/auth/logout');
-    setLoggingOut(false);
-    if (!response.success) {
-      setError(response.error?.message || 'Could not sign out. Please try again.');
-      return;
+    try {
+      const response = await api.post('/auth/logout');
+      if (!response.success) {
+        setError(response.error?.message || 'Could not sign out. Please try again.');
+        return;
+      }
+      api.invalidateCsrfToken();
+      useAuthStore.getState().logout();
+    } finally {
+      useAuthStore.getState().setLogoutPending(false);
+      setLoggingOut(false);
     }
-    api.invalidateCsrfToken();
-    useAuthStore.getState().logout();
   };
 
   return (

@@ -187,7 +187,7 @@ describe('production auth routes and real session lifecycle', () => {
     await agent.get('/fixture/legacy-session').expect(200);
     const response = await agent.get('/api/v1/auth/me').expect(401);
     expect(response.body.error.code).toBe('UNAUTHORIZED');
-    expect(response.headers['set-cookie'][0]).toContain('connect.sid=;');
+    expect(response.headers['set-cookie']).toBeUndefined();
   });
 
   it.each(['reset', 'delete'])('revokes existing sessions after an external account %s', async (operation) => {
@@ -264,6 +264,35 @@ describe('production auth routes and real session lifecycle', () => {
     expect(account.passwordHash).toBe('hashed:concurrent-reset-password');
   });
 
+  it('does not let a delayed old-session rejection expire the newly rotated browser cookie', async () => {
+    const app = buildApp();
+    const agent = request.agent(app);
+    await login(agent);
+    const csrf = await agent.get('/api/v1/auth/csrf').expect(200);
+    let releaseLookup!: (value: typeof account) => void;
+    let lookupStarted!: () => void;
+    const started = new Promise<void>((resolve) => { lookupStarted = resolve; });
+    (prisma.user.findUnique as jest.Mock).mockImplementationOnce(() => new Promise((resolve) => {
+      releaseLookup = resolve;
+      lookupStarted();
+    }));
+    const oldRequest = agent.get('/api/v1/privileged').expect(401).then((response) => response);
+    await started;
+
+    const changed = await agent.post('/api/v1/auth/change-password')
+      .set('X-CSRF-Token', csrf.body.data.csrfToken)
+      .send({ currentPassword: 'correct-password-123', newPassword: 'new-distinct-password' }).expect(200);
+    expect(changed.headers['set-cookie'][0]).toContain('connect.sid=');
+    await agent.get('/api/v1/privileged').expect(200);
+
+    releaseLookup({ ...account });
+    const delayed = await oldRequest;
+    expect(delayed.body.error.code).toBe('UNAUTHORIZED');
+    expect(delayed.headers['set-cookie']).toBeUndefined();
+    // The same cookie jar receives rotation first and the stale 401 second.
+    await agent.get('/api/v1/privileged').expect(200);
+  });
+
   it('reports the committed password accurately if renewing its session fails', async () => {
     const store = new session.MemoryStore();
     const app = buildApp(store);
@@ -276,7 +305,12 @@ describe('production auth routes and real session lifecycle', () => {
       .send({ currentPassword: 'correct-password-123', newPassword: 'new-distinct-password' }).expect(401);
     expect(response.body.error.code).toBe('PASSWORD_CHANGED_SESSION_EXPIRED');
     expect(account.passwordHash).toBe('hashed:new-distinct-password');
-    await login(request.agent(app), 'new-distinct-password');
+    expect(response.headers['set-cookie']).toBeUndefined();
+    await agent.get('/api/v1/privileged').expect(401);
+    // A browser still holding the obsolete cookie gets a replacement via
+    // /csrf and can sign in with the password that was committed successfully.
+    await login(agent, 'new-distinct-password');
+    await agent.get('/api/v1/privileged').expect(200);
   });
 
   it('keeps a successful password change successful when audit logging fails', async () => {

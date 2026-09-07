@@ -54,6 +54,7 @@ describe('authoritative account routing', () => {
       user: null, isAuthenticated: false, mustChangePassword: false, initialized: null,
       verificationStatus: 'checking', verificationError: null,
       credentialChangePending: false,
+      logoutPending: false,
       sessionVersion: useAuthStore.getState().sessionVersion + 1,
     });
     useNotificationStore.getState().reset();
@@ -132,6 +133,57 @@ describe('authoritative account routing', () => {
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
     expect(window.location.pathname).toBe('/change-password');
     expect(mocks.connect).not.toHaveBeenCalled();
+  });
+
+  it('blocks sign-out during a required password change, including a click before the disabled state rerenders', async () => {
+    vi.mocked(api.get).mockResolvedValue(currentUser(true));
+    renderApp();
+    const signOut = await screen.findByRole('button', { name: 'Sign out' });
+    act(() => {
+      useAuthStore.getState().beginCredentialChange();
+      fireEvent.click(signOut);
+    });
+    expect(api.post).not.toHaveBeenCalled();
+    expect(signOut).toBeDisabled();
+    act(() => useAuthStore.getState().finishCredentialChange());
+    await fillPasswordChange();
+    let resolve!: (value: { success: boolean; error: { code: string; message: string } }) => void;
+    vi.mocked(api.post).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+    await userEvent.click(screen.getByRole('button', { name: 'Change Password', exact: true }));
+    await userEvent.click(signOut);
+    expect(signOut).toBeDisabled();
+    expect(api.post).toHaveBeenCalledTimes(1);
+    expect(api.post).toHaveBeenCalledWith('/auth/change-password', expect.anything());
+    await act(async () => resolve({ success: false, error: { code: 'INVALID_PASSWORD', message: 'Current password is incorrect' } }));
+    expect(signOut).toBeEnabled();
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+  });
+
+  it.each([true, false])('blocks required password submission during logout and preserves its result (success=%s)', async (success) => {
+    vi.mocked(api.get).mockResolvedValue(currentUser(true));
+    let resolve!: (response: { success: boolean; error?: { code: string; message: string } }) => void;
+    vi.mocked(api.post).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+    renderApp();
+    await fillPasswordChange();
+    const version = useAuthStore.getState().sessionVersion;
+    const changePassword = screen.getByRole('button', { name: 'Change Password', exact: true });
+    await userEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    expect(changePassword).toBeDisabled();
+    expect(screen.getByLabelText('Current Password', { exact: true })).toBeDisabled();
+    fireEvent.submit(changePassword.closest('form')!);
+    expect(api.post).toHaveBeenCalledTimes(1);
+    expect(api.post).toHaveBeenCalledWith('/auth/logout');
+    expect(useAuthStore.getState().sessionVersion).toBe(version);
+    expect(useAuthStore.getState().credentialChangePending).toBe(false);
+    await act(async () => resolve(success ? { success } : { success, error: { code: 'NETWORK_ERROR', message: 'Connection lost' } }));
+    expect(useAuthStore.getState().logoutPending).toBe(false);
+    expect(useAuthStore.getState().isAuthenticated).toBe(!success);
+    if (success) {
+      expect(await screen.findByRole('button', { name: 'Sign In' })).toBeInTheDocument();
+    } else {
+      expect(changePassword).toBeEnabled();
+      expect(await screen.findByRole('alert')).toHaveTextContent('Connection lost');
+    }
   });
 
   it('opens the console only after a password change is authoritatively verified', async () => {
