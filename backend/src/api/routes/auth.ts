@@ -2,19 +2,20 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import rateLimit from 'express-rate-limit';
 import prisma from '../../services/database';
-import { requireAuth } from '../middleware/auth';
+import { requireAuth, rejectSession } from '../middleware/auth';
 import { ensureCsrfToken } from '../middleware/csrf';
 import { validate } from '../middleware/validate';
 import { LoginSchema, ChangePasswordSchema, ApiResponse, SessionUser } from '../../types';
 import { isProd } from '../../config';
 import logger from '../../utils/logger';
 import { createInitialAdmin } from '../../services/adminAccount';
-import { closeSessionWebSockets } from '../middleware/websocket';
+import { closeAccountWebSockets, closeSessionWebSockets } from '../middleware/websocket';
+import { credentialVersion } from '../../services/accountSession';
 
 const router = Router();
 const BCRYPT_ROUNDS = 12;
 
-async function establishSession(req: Request, userId: number): Promise<SessionUser> {
+async function establishSession(req: Request, userId: number, passwordHash: string): Promise<SessionUser> {
   // Discard the anonymous session and its CSRF token at the privilege boundary.
   const previousSessionId = req.sessionID;
   await new Promise<void>((resolve, reject) => {
@@ -24,6 +25,7 @@ async function establishSession(req: Request, userId: number): Promise<SessionUs
   const user: SessionUser = { id: userId };
   req.session.userId = userId;
   req.session.user = user;
+  req.session.credentialVersion = credentialVersion(passwordHash);
   await new Promise<void>((resolve, reject) => {
     req.session.save((err) => err ? reject(err) : resolve());
   });
@@ -85,7 +87,7 @@ router.post('/login', loginLimiter, validate(LoginSchema), async (req: Request, 
       data: { lastLogin: new Date() },
     });
 
-    const sessionUser = await establishSession(req, user.id);
+    const sessionUser = await establishSession(req, user.id, user.passwordHash);
 
     // Audit log
     await prisma.auditLog.create({
@@ -149,20 +151,7 @@ router.post('/logout', requireAuth, async (req: Request, res: Response) => {
 // GET /api/v1/auth/me
 router.get('/me', requireAuth, async (req: Request, res: Response) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.session.userId },
-      select: { id: true, mustChangePassword: true, lastLogin: true },
-    });
-
-    if (!user) {
-      const response: ApiResponse = {
-        success: false,
-        error: { code: 'USER_NOT_FOUND', message: 'User not found' },
-      };
-      res.status(404).json(response);
-      return;
-    }
-
+    const user = req.authAccount!;
     const response: ApiResponse = { success: true, data: { user } };
     res.json(response);
   } catch (error) {
@@ -202,11 +191,7 @@ router.post(
       });
 
       if (!user) {
-        const response: ApiResponse = {
-          success: false,
-          error: { code: 'USER_NOT_FOUND', message: 'User not found' },
-        };
-        res.status(404).json(response);
+        rejectSession(req, res);
         return;
       }
 
@@ -220,11 +205,37 @@ router.post(
         return;
       }
 
+      if (await bcrypt.compare(newPassword, user.passwordHash)) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'PASSWORD_UNCHANGED', message: 'Choose a different password' },
+        });
+        return;
+      }
+
       const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
-      await prisma.user.update({
-        where: { id: userId },
+      const updated = await prisma.user.updateMany({
+        // A concurrent reset/change must win over a request that verified the
+        // older password. Only one request can replace this exact hash.
+        where: { id: userId, passwordHash: user.passwordHash },
         data: { passwordHash: newHash, mustChangePassword: false },
       });
+      if (updated.count !== 1) {
+        rejectSession(req, res);
+        return;
+      }
+      closeAccountWebSockets(userId);
+      let sessionUser: SessionUser;
+      try {
+        sessionUser = await establishSession(req, userId, newHash);
+      } catch (error) {
+        logger.error('Password changed but session renewal failed:', error);
+        rejectSession(req, res, {
+          code: 'PASSWORD_CHANGED_SESSION_EXPIRED',
+          message: 'Password changed. Sign in with your new password.',
+        });
+        return;
+      }
 
       await prisma.auditLog.create({
         data: {
@@ -232,11 +243,11 @@ router.post(
           action: 'PASSWORD_CHANGE',
           ipAddress: req.ip,
         },
-      });
+      }).catch((error: unknown) => logger.error('Password change audit error:', error));
 
       logger.info(`Admin password changed (user id ${user.id})`);
 
-      const response: ApiResponse = { success: true };
+      const response: ApiResponse = { success: true, data: { user: sessionUser, mustChangePassword: false } };
       res.json(response);
     } catch (error) {
       logger.error('Change password error:', error);
@@ -317,7 +328,7 @@ router.post('/setup', setupLimiter, async (req: Request, res: Response) => {
     // Auto-login the just-created admin: stamp the session and persist it
     // before responding so the frontend can route straight to the dashboard
     // instead of bouncing through the login page.
-    await establishSession(req, user.id);
+    await establishSession(req, user.id, hash);
 
     const response: ApiResponse<{ user: { id: number } }> = {
       success: true,

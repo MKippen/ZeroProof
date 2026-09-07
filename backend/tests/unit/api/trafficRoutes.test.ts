@@ -17,6 +17,7 @@ import request from 'supertest';
 import trafficRoutes from '../../../src/api/routes/traffic';
 import prisma from '../../../src/services/database';
 import * as analytics from '../../../src/services/firewall/trafficAnalytics';
+import { credentialVersion } from '../../../src/services/accountSession';
 
 const mockedPrisma = prisma as jest.Mocked<typeof prisma>;
 const mockedAnalytics = analytics as jest.Mocked<typeof analytics>;
@@ -32,7 +33,10 @@ function buildApp(authed = true): express.Express {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
-    (req as { session?: { userId?: number } }).session = authed ? { userId: 42 } : {};
+    req.session = {
+      ...(authed ? { userId: 42, credentialVersion: credentialVersion('test-account-hash') } : {}),
+      destroy: (done: (error?: Error) => void) => done(),
+    } as unknown as typeof req.session;
     next();
   });
   app.use('/api/v1/traffic', trafficRoutes);
@@ -40,7 +44,12 @@ function buildApp(authed = true): express.Express {
 }
 
 describe('GET /api/v1/traffic/analytics', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (mockedPrisma.user.findUnique as jest.Mock).mockResolvedValue({
+      id: 42, passwordHash: 'test-account-hash', mustChangePassword: false, lastLogin: null,
+    } as any);
+  });
 
   it('returns 401 when not authenticated', async () => {
     const app = buildApp(false);

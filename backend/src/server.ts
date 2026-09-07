@@ -97,9 +97,19 @@ export function createServer(): Express {
   app.use('/api/v1', routes);
 
   // WebSocket endpoint
-  const wsHandler: WebsocketRequestHandler = (ws, req) => {
+  const wsHandler: WebsocketRequestHandler = async (ws, req) => {
+    // Install lifecycle handlers before awaiting account lookup. A peer may
+    // disconnect or send invalid frames while authorization is in flight.
+    ws.on('close', () => {
+      logger.debug('WebSocket client disconnected');
+      mqttClient.removeWebSocketClient(ws as unknown as WebSocket);
+    });
+    ws.on('error', (error: Error) => {
+      logger.error('WebSocket error:', error);
+      mqttClient.removeWebSocketClient(ws as unknown as WebSocket);
+    });
     const allowedOrigins = typeof corsOrigin === 'string' ? [corsOrigin] : corsOrigin || [];
-    if (!protectWebSocket(ws, req, allowedOrigins)) return;
+    if (!await protectWebSocket(ws, req, allowedOrigins)) return;
     logger.debug('WebSocket client connected');
     mqttClient.addWebSocketClient(ws as unknown as WebSocket);
 
@@ -114,15 +124,6 @@ export function createServer(): Express {
       }
     });
 
-    ws.on('close', () => {
-      logger.debug('WebSocket client disconnected');
-      mqttClient.removeWebSocketClient(ws as unknown as WebSocket);
-    });
-
-    ws.on('error', (error: Error) => {
-      logger.error('WebSocket error:', error);
-      mqttClient.removeWebSocketClient(ws as unknown as WebSocket);
-    });
   };
   (app as unknown as expressWs.Application).ws('/ws', wsHandler);
 
