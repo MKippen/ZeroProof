@@ -190,14 +190,14 @@ importers:
         specifier: ^2.1.1
         version: 2.1.1
       cytoscape:
-        specifier: ^3.34.2
-        version: 3.34.2
+        specifier: ^3.34.3
+        version: 3.34.3
       date-fns:
         specifier: ^3.6.0
         version: 3.6.0
       esptool-js:
-        specifier: ^0.4.7
-        version: 0.4.7
+        specifier: ^0.6.1
+        version: 0.6.1
       lucide-react:
         specifier: ^0.334.0
         version: 0.334.0(react@18.3.1)
@@ -206,7 +206,7 @@ importers:
         version: 18.3.1
       react-cytoscapejs:
         specifier: ^2.0.0
-        version: 2.0.0(cytoscape@3.34.2)(react@18.3.1)
+        version: 2.0.0(cytoscape@3.34.3)(react@18.3.1)
       react-dom:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
@@ -2402,8 +2402,8 @@ packages:
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
 
-  cytoscape@3.34.2:
-    resolution: {integrity: sha512-Cm2jaj1X/PBNlzV9yH8zcfGOxO7U+CJ/+mxSBVPSchLaugdp4jtlGx5qaHtPRZ6tgiZ5P+o1XoRfJA+ba6KM3g==}
+  cytoscape@3.34.3:
+    resolution: {integrity: sha512-yfYGhRcGAntq6YBD583j4n0Eg3jIxvWmZtz/5uz9UYkeIStSlMxuUja+ec5j3iBD8nv1rwaOAYMW09tBdkSeaQ==}
     engines: {node: '>=0.10'}
 
   d3-array@3.2.4:
@@ -2712,8 +2712,8 @@ packages:
     engines: {node: '>=4'}
     hasBin: true
 
-  esptool-js@0.4.7:
-    resolution: {integrity: sha512-xVwtSVDRsvjXSEvNFrorgJfB71RFFkZkL+hs7O7gW5hgPrKGywZxo2U5LJddzkJ6eE31QinNVyywc0OaSntZCw==}
+  esptool-js@0.6.1:
+    resolution: {integrity: sha512-WNgQTfaEIgHyEiT56pI5v7Tq6Pzjc2XaibLxAtWY4v3zE2Ofk5ImkJY5foEUr0JrdkfHWf6rNizAewN4/kSpHw==}
 
   esquery@1.7.0:
     resolution: {integrity: sha512-Ap6G0WQwcU/LHsvLwON1fAQX9Zp0A2Y6Y/cJBl9r/JbW90Zyg4/zbG6zzKa2OTALELarYHmKu0GhpM5EO+7T0g==}
@@ -7072,7 +7072,7 @@ snapshots:
 
   csstype@3.2.3: {}
 
-  cytoscape@3.34.2: {}
+  cytoscape@3.34.3: {}
 
   d3-array@3.2.4:
     dependencies:
@@ -7504,7 +7504,7 @@ snapshots:
 
   esprima@4.0.1: {}
 
-  esptool-js@0.4.7:
+  esptool-js@0.6.1:
     dependencies:
       atob-lite: 2.0.0
       pako: 2.2.0
@@ -9022,9 +9022,9 @@ snapshots:
       iconv-lite: 0.4.24
       unpipe: 1.0.0
 
-  react-cytoscapejs@2.0.0(cytoscape@3.34.2)(react@18.3.1):
+  react-cytoscapejs@2.0.0(cytoscape@3.34.3)(react@18.3.1):
     dependencies:
-      cytoscape: 3.34.2
+      cytoscape: 3.34.3
       prop-types: 15.8.1
       react: 18.3.1
 
