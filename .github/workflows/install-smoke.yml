@@ -78,7 +78,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Pre-flight — verify install prerequisites are documented
         run: |
@@ -238,7 +238,7 @@ jobs:
           bash scripts/upgrade.sh --check
 
       - name: Setup Node for Playwright tests
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
 
@@ -265,7 +265,7 @@ jobs:
 
       - name: Upload Playwright report on failure
         if: failure()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: frontend/playwright-report/
@@ -418,7 +418,7 @@ jobs:
 
       - name: Upload password policy browser report on failure
         if: failure()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: password-policy-playwright-report
           path: frontend/playwright-report/
@@ -442,7 +442,7 @@ jobs:
 
     steps:
       - name: Checkout PR head with full tag history
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0  # Need tags + history for upgrade.sh's plan
 
@@ -746,7 +746,7 @@ jobs:
     # tag's copy) in --check mode so we never reach docker compose.
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -859,7 +859,7 @@ jobs:
     # orphan seeding.
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -1101,7 +1101,7 @@ jobs:
     timeout-minutes: 4
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
