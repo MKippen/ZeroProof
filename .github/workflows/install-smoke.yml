@@ -944,6 +944,17 @@ jobs:
           done
           [ "$ready" = true ] || { echo "Backend readiness timed out"; exit 1; }
 
+      - name: Pull orphan-test image with bounded retries
+        if: steps.baseline.outputs.baseline != ''
+        run: |
+          for attempt in 1 2 3; do
+            if docker pull alpine:3; then
+              exit 0
+            fi
+            sleep "$((attempt * 5))"
+          done
+          exit 1
+
       - name: Seed an orphan container with our hardcoded name
         if: steps.baseline.outputs.baseline != ''
         run: |
