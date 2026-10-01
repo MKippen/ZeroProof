@@ -15,12 +15,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Check commit messages
         uses: wagoid/commitlint-github-action@v6
+        with:
+          configFile: commitlint.config.cjs
 
       - name: Check for large files
         run: |
@@ -31,7 +33,7 @@ jobs:
           done
 
       - name: Check for secrets
-        uses: trufflesecurity/trufflehog@v3.95.2
+        uses: trufflesecurity/trufflehog@v3.97.4
         with:
           extra_args: --only-verified
 
@@ -46,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install shellcheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck

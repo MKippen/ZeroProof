@@ -23,7 +23,20 @@ updates:
       time: "09:00"
       timezone: "America/Los_Angeles"
     open-pull-requests-limit: 5
+    ignore:
+      # Match the Node 24 runtime used by CI and all Dockerfiles.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # React and its types need a coordinated application migration.
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react*"
+        update-types: ["version-update:semver-major"]
     groups:
+      typescript-eslint:
+        patterns: ["@typescript-eslint/*"]
       workspace-production:
         dependency-type: "production"
         update-types: ["minor", "patch"]
@@ -40,6 +53,16 @@ updates:
       time: "09:00"
       timezone: "America/Los_Angeles"
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # ts-jest currently uses Jest 29 and TypeScript 5; migrate together.
+      - dependency-name: "jest"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/jest"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     groups:
       updater:
         patterns: ["*"]
@@ -53,6 +76,9 @@ updates:
       time: "09:00"
       timezone: "America/Los_Angeles"
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
     groups:
       runtime-images:
         patterns: ["*"]
