@@ -43,7 +43,7 @@ jobs:
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
 
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # Manual dispatch must build the release tag, not default-branch
           # code attached to an unrelated version's release assets.
