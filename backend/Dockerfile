@@ -1,6 +1,6 @@
 # Backend image — built from the repo root so the build context can see
 # `packages/*` workspace dependencies (e.g. @uguard/unifi-client).
-FROM node:24-alpine
+FROM node:26-alpine
 
 WORKDIR /repo
 
