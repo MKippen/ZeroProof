@@ -1,56 +1,20 @@
 import prisma from './database';
+import type { Prisma } from '@prisma/client';
 import logger from '../utils/logger';
 import { objectIdToDate } from '../utils/objectId';
-import { UniFiClient, UniFiFullConfig } from './unifiClient';
+import type { UniFiClient, UniFiFullConfig } from './unifiClient';
 
-/**
- * Bootstrap historical timeline entries from UniFi data on first sync.
- *
- * Uses three sources:
- * 1. MongoDB ObjectId creation dates on all config objects (networks, WLANs,
- *    firewall rules, devices, traffic rules, etc.)
- * 2. Device timestamp fields (connected_at, provisioned_at, etc.)
- * 3. UniFi event log (/stat/event) for firmware upgrades, WAN transitions, etc.
- * 4. UniFi alarm log (/stat/alarm) for AP disconnections, security events
- */
-export async function bootstrapHistoricalTimeline(
+type HistoryClient = Pick<UniFiClient, 'getEvents' | 'getAlarms'>;
+type HistoryDatabase = Pick<Prisma.TransactionClient, 'uniFiConfigChange'>;
+export type HistoricalTimelineRow = Prisma.UniFiConfigChangeCreateManyInput;
+
+/** Read controller history and assemble rows without publishing database state. */
+export async function collectHistoricalTimeline(
   connectionId: string,
   config: UniFiFullConfig,
-  client: UniFiClient
-): Promise<number> {
-  // Only bootstrap if this connection has no config changes yet
-  const existingChanges = await prisma.uniFiConfigChange.count({
-    where: { connectionId },
-  });
-
-  if (existingChanges > 0) {
-    logger.debug('Skipping history bootstrap — timeline already has entries');
-    return 0;
-  }
-
-  logger.info('Bootstrapping historical timeline from UniFi data...');
-  let totalEntries = 0;
-
-  // 1. Config object creation dates from ObjectIds
-  totalEntries += await bootstrapConfigObjects(connectionId, config);
-
-  // 2. Events and alarms from the API
-  totalEntries += await bootstrapEvents(connectionId, client);
-  totalEntries += await bootstrapAlarms(connectionId, client);
-
-  logger.info(`Bootstrap complete: ${totalEntries} historical timeline entries created`);
-  return totalEntries;
-}
-
-/**
- * Create CREATED entries for all config objects using their ObjectId creation dates.
- */
-async function bootstrapConfigObjects(
-  connectionId: string,
-  config: UniFiFullConfig
-): Promise<number> {
-  let count = 0;
-
+  client: HistoryClient
+): Promise<HistoricalTimelineRow[]> {
+  const rows: HistoricalTimelineRow[] = [];
   const entries: {
     resourceType: string;
     items: { _id: string; name?: string; [key: string]: any }[];
@@ -104,57 +68,91 @@ async function bootstrapConfigObjects(
   ];
 
   for (const { resourceType, items, getName } of entries) {
-    for (const item of items) {
-      const createdAt = objectIdToDate(item._id);
-      if (!createdAt) continue;
-
-      await prisma.uniFiConfigChange.create({
-        data: {
-          connectionId,
-          changeType: 'CREATED',
-          resourceType,
-          resourceId: item._id,
-          resourceName: getName(item),
-          newValue: item,
-          detectedAt: createdAt,
-        },
+    for (const item of items || []) {
+      const detectedAt = objectIdToDate(item._id);
+      if (!detectedAt) continue;
+      rows.push({
+        connectionId, changeType: 'CREATED', resourceType,
+        resourceId: item._id, resourceName: getName(item),
+        newValue: item as Prisma.InputJsonValue, detectedAt,
       });
-      count++;
     }
   }
-
-  // Bootstrap client first-seen dates from UniFi client data
-  const clients = config.clients || [];
-  for (const client of clients) {
-    if (!client.mac) continue;
-    // Use first_seen (unix seconds) if available, otherwise skip
-    const firstSeen = client.first_seen ? new Date(client.first_seen * 1000) : null;
-    if (!firstSeen || isNaN(firstSeen.getTime())) continue;
-
-    await prisma.uniFiConfigChange.create({
-      data: {
-        connectionId,
-        changeType: 'CREATED',
-        resourceType: 'client',
-        resourceId: client.mac,
-        resourceName: client.name || client.hostname || client.mac,
-        newValue: {
-          mac: client.mac,
-          hostname: client.hostname,
-          name: client.name,
-          oui: client.oui,
-          ip: client.ip,
-          is_wired: client.is_wired,
-          network_id: client.network_id,
-        },
-        detectedAt: firstSeen,
-      },
+  for (const observed of config.clients || []) {
+    const detectedAt = observed.first_seen ? new Date(observed.first_seen * 1000) : null;
+    if (!observed.mac || !detectedAt || !Number.isFinite(detectedAt.getTime())) continue;
+    rows.push({
+      connectionId, changeType: 'CREATED', resourceType: 'client', resourceId: observed.mac,
+      resourceName: observed.name || observed.hostname || observed.mac,
+      newValue: { mac: observed.mac, hostname: observed.hostname, name: observed.name,
+        oui: observed.oui, ip: observed.ip, is_wired: observed.is_wired,
+        network_id: observed.network_id } as Prisma.InputJsonValue,
+      detectedAt,
     });
-    count++;
   }
 
-  logger.info(`Bootstrapped ${count} config object and client creation dates`);
-  return count;
+  // Only remote collection failures are optional; publication failures must
+  // propagate so a fenced transaction can roll back every local result.
+  let events: Awaited<ReturnType<HistoryClient['getEvents']>> = [];
+  let alarms: Awaited<ReturnType<HistoryClient['getAlarms']>> = [];
+  try { events = await client.getEvents(3000); }
+  catch (error) { logger.warn('Failed to fetch events for bootstrap:', error); }
+  try { alarms = await client.getAlarms(3000); }
+  catch (error) { logger.warn('Failed to fetch alarms for bootstrap:', error); }
+
+  for (const event of events) {
+    if (!TIMELINE_EVENT_KEYS.has(event.key)) continue;
+    const detectedAt = new Date(event.time);
+    if (!Number.isFinite(detectedAt.getTime())) continue;
+    rows.push({
+      connectionId, changeType: 'MODIFIED', resourceType: eventToResourceType(event.key),
+      resourceId: event._id, resourceName: eventToResourceName(event),
+      newValue: { eventKey: event.key, message: event.msg, datetime: event.datetime,
+        subsystem: event.subsystem,
+        ...(event.version_from && { versionFrom: event.version_from }),
+        ...(event.version_to && { versionTo: event.version_to }),
+      } as Prisma.InputJsonValue,
+      detectedAt,
+    });
+  }
+  for (const alarm of alarms) {
+    const detectedAt = new Date(alarm.time);
+    if (!Number.isFinite(detectedAt.getTime())) continue;
+    rows.push({
+      connectionId, changeType: 'MODIFIED', resourceType: 'alarm',
+      resourceId: alarm._id, resourceName: eventToResourceName(alarm),
+      newValue: { eventKey: alarm.key, message: alarm.msg, datetime: alarm.datetime,
+        subsystem: alarm.subsystem, archived: alarm.archived } as Prisma.InputJsonValue,
+      detectedAt,
+    });
+  }
+  return rows;
+}
+
+/** Publish the already-collected baseline through the caller's transaction. */
+export async function persistHistoricalTimeline(
+  connectionId: string,
+  rows: HistoricalTimelineRow[],
+  db: HistoryDatabase = prisma
+): Promise<number> {
+  if (!rows.length || await db.uniFiConfigChange.count({ where: { connectionId } })) return 0;
+  let inserted = 0;
+  for (let offset = 0; offset < rows.length; offset += 500) {
+    const batch = await db.uniFiConfigChange.createMany({ data: rows.slice(offset, offset + 500) });
+    inserted += batch.count;
+  }
+  return inserted;
+}
+
+/** Compatibility wrapper for callers that do not manage a publication lease. */
+export async function bootstrapHistoricalTimeline(
+  connectionId: string,
+  config: UniFiFullConfig,
+  client: HistoryClient
+): Promise<number> {
+  if (await prisma.uniFiConfigChange.count({ where: { connectionId } })) return 0;
+  const rows = await collectHistoricalTimeline(connectionId, config, client);
+  return persistHistoricalTimeline(connectionId, rows);
 }
 
 // Event types we care about for the timeline
@@ -201,98 +199,4 @@ function eventToResourceName(event: any): string {
   if (event.ap) return `AP ${event.ap}`;
   if (event.sw) return `Switch ${event.sw}`;
   return event.key;
-}
-
-/**
- * Pull events from UniFi and create timeline entries for significant ones.
- */
-async function bootstrapEvents(
-  connectionId: string,
-  client: UniFiClient
-): Promise<number> {
-  let count = 0;
-
-  try {
-    const events = await client.getEvents(3000);
-    logger.info(`Fetched ${events.length} events from UniFi for bootstrap`);
-
-    for (const event of events) {
-      if (!TIMELINE_EVENT_KEYS.has(event.key)) continue;
-
-      const detectedAt = new Date(event.time);
-      // Sanity: skip events with bad timestamps
-      if (isNaN(detectedAt.getTime())) continue;
-
-      const resourceType = eventToResourceType(event.key);
-
-      await prisma.uniFiConfigChange.create({
-        data: {
-          connectionId,
-          changeType: 'MODIFIED', // Events represent state changes, not creation
-          resourceType,
-          resourceId: event._id,
-          resourceName: eventToResourceName(event),
-          newValue: {
-            eventKey: event.key,
-            message: event.msg,
-            datetime: event.datetime,
-            subsystem: event.subsystem,
-            ...(event.version_from && { versionFrom: event.version_from }),
-            ...(event.version_to && { versionTo: event.version_to }),
-          },
-          detectedAt,
-        },
-      });
-      count++;
-    }
-  } catch (error: any) {
-    logger.warn(`Failed to fetch events for bootstrap: ${error.message}`);
-  }
-
-  logger.info(`Bootstrapped ${count} events from UniFi event log`);
-  return count;
-}
-
-/**
- * Pull alarms from UniFi and create timeline entries.
- */
-async function bootstrapAlarms(
-  connectionId: string,
-  client: UniFiClient
-): Promise<number> {
-  let count = 0;
-
-  try {
-    const alarms = await client.getAlarms(3000);
-    logger.info(`Fetched ${alarms.length} alarms from UniFi for bootstrap`);
-
-    for (const alarm of alarms) {
-      const detectedAt = new Date(alarm.time);
-      if (isNaN(detectedAt.getTime())) continue;
-
-      await prisma.uniFiConfigChange.create({
-        data: {
-          connectionId,
-          changeType: 'MODIFIED',
-          resourceType: 'alarm',
-          resourceId: alarm._id,
-          resourceName: eventToResourceName(alarm),
-          newValue: {
-            eventKey: alarm.key,
-            message: alarm.msg,
-            datetime: alarm.datetime,
-            subsystem: alarm.subsystem,
-            archived: alarm.archived,
-          },
-          detectedAt,
-        },
-      });
-      count++;
-    }
-  } catch (error: any) {
-    logger.warn(`Failed to fetch alarms for bootstrap: ${error.message}`);
-  }
-
-  logger.info(`Bootstrapped ${count} alarms from UniFi alarm log`);
-  return count;
 }

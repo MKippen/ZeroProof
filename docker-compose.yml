@@ -222,6 +222,8 @@ services:
       - "component=updater"
 
   scheduler:
+    # Allow the scheduler's 20s drain and 5s dependency shutdown to finish.
+    stop_grace_period: 30s
     build:
       context: .
       dockerfile: backend/Dockerfile

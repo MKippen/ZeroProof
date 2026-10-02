@@ -1,13 +1,11 @@
 import { connectDatabase, disconnectDatabase, prisma } from './services/database';
 import { mqttClient } from './mqtt';
-import { UniFiClient, UniFiCredentials, UniFiClient_t } from './services/unifiClient';
-import { analyzeConfiguration } from './analyzers';
-import { decrypt, hashConfig } from './utils/encryption';
+import { syncUniFiConfiguration } from './services/unifiSyncService';
+import { JobLeaseBusyError } from './services/jobLease';
+import { createSchedulerRuntime } from './services/schedulerRuntime';
 import logger from './utils/logger';
 import { runScheduledVlanValidation } from './services/autoValidationService';
-import { detectConfigChanges } from './services/configChangeService';
-import { createNotification, cleanupOldNotifications } from './services/notificationService';
-import { bootstrapHistoricalTimeline } from './services/historyBootstrapService';
+import { cleanupOldNotifications } from './services/notificationService';
 import { ensureServerDevice } from './services/localTestExecutor';
 import { cleanupExpiredDnsProxyData, syncActiveDnsProxyConnections } from './services/dnsProxyService';
 import {
@@ -241,399 +239,22 @@ async function serverHeartbeat(): Promise<void> {
 }
 
 async function syncUniFiConnections(): Promise<void> {
-  try {
-    // Find connections that need syncing
-    const connections = await prisma.uniFiConnection.findMany({
-      where: {
-        isActive: true,
-        autoSync: true,
-      },
-    });
-
-    for (const connection of connections) {
-      // Check if it's time to sync
-      const lastSync = connection.lastSyncAt?.getTime() || 0;
-      const syncIntervalMs = connection.syncIntervalMin * 60 * 1000;
-      const nextSyncTime = lastSync + syncIntervalMs;
-
-      if (Date.now() < nextSyncTime) {
-        continue; // Not time yet
-      }
-
-      // Skip if already syncing
-      if (connection.lastSyncStatus === 'IN_PROGRESS') {
-        continue;
-      }
-
-      logger.info(`Auto-syncing UniFi connection: ${connection.name}`);
-
-      // Create sync history entry
-      const syncRecord = await prisma.uniFiSyncHistory.create({
-        data: {
-          connectionId: connection.id,
-          status: 'IN_PROGRESS',
-        },
-      });
-
-      await prisma.uniFiConnection.update({
-        where: { id: connection.id },
-        data: { lastSyncStatus: 'IN_PROGRESS' },
-      });
-
-      try {
-        // Decrypt credentials
-        const credentials: UniFiCredentials = {
-          host: connection.host,
-          port: connection.port,
-          username: decrypt(connection.usernameEnc),
-          password: decrypt(connection.passwordEnc),
-          siteId: connection.siteId,
-        };
-
-        const client = new UniFiClient(credentials);
-        const loggedIn = await client.login();
-
-        if (!loggedIn) {
-          throw new Error('Failed to login to UniFi Controller');
-        }
-
-        // Fetch full configuration
-        const fullConfig = await client.getFullConfig();
-
-        // Convert to analysis format (clients excluded from hash - they're volatile)
-        const configForAnalysis: any = {
-          firewallRules: fullConfig.firewallRules,
-          firewallGroups: fullConfig.firewallGroups,
-          networkConf: fullConfig.networks,
-          wlanConf: fullConfig.wlans,
-          portForward: fullConfig.portForwards,
-          routing: fullConfig.routingRules,
-          settings: fullConfig.settings,
-          site: fullConfig.sites[0],
-          devices: fullConfig.devices,
-          clients: fullConfig.clients,
-          trafficRules: fullConfig.trafficRules,
-          firewallPolicies: fullConfig.firewallPolicies,
-          vpnServers: fullConfig.vpnServers,
-          firewallZones: fullConfig.firewallZones,
-          trafficMatchingLists: fullConfig.trafficMatchingLists,
-          aclRules: fullConfig.aclRules,
-          rawNetworkConfig: fullConfig.rawNetworkConfig,
-          sysInfo: fullConfig.sysInfo
-            ? {
-                version: fullConfig.sysInfo.version,
-                udm_version: fullConfig.sysInfo.udm_version,
-                build: fullConfig.sysInfo.build,
-              }
-            : null,
-          version: 'live',
-        };
-
-        // Hash based on infrastructure config only (exclude volatile client data)
-        const configForHash = {
-          firewallRules: fullConfig.firewallRules,
-          firewallPolicies: fullConfig.firewallPolicies,
-          firewallGroups: fullConfig.firewallGroups,
-          networkConf: fullConfig.networks,
-          wlanConf: fullConfig.wlans,
-          portForward: fullConfig.portForwards,
-          trafficRules: fullConfig.trafficRules,
-          routing: fullConfig.routingRules,
-          settings: fullConfig.settings,
-          site: fullConfig.sites[0],
-          devices: fullConfig.devices,
-          vpnServers: fullConfig.vpnServers,
-          firewallZones: fullConfig.firewallZones,
-          trafficMatchingLists: fullConfig.trafficMatchingLists,
-          aclRules: fullConfig.aclRules,
-          version: 'live',
-        };
-
-        const configHash = hashConfig(configForHash);
-
-        // Check for existing config
-        let existingConfig = await prisma.configuration.findUnique({
-          where: { configHash },
-        });
-
-        let vulnCount = 0;
-        let changesDetected = 0;
-
-        // Get previous config for change detection
-        const previousConfig = await prisma.configuration.findFirst({
-          where: { isActive: true },
-          orderBy: { importedAt: 'desc' },
-        });
-
-        if (!existingConfig) {
-          // Config changed - create new one
-          await prisma.configuration.updateMany({
-            where: { isActive: true },
-            data: { isActive: false },
-          });
-
-          existingConfig = await prisma.configuration.create({
-            data: {
-              configHash,
-              siteName: fullConfig.sites[0]?.desc || connection.name,
-              controllerVersion: 'live',
-              configJson: configForAnalysis as object,
-              notes: `Auto-synced from ${connection.name}`,
-              isActive: true,
-            },
-          });
-
-          // Run analysis
-          const vulnerabilities = await analyzeConfiguration(configForAnalysis as any, existingConfig.id);
-          vulnCount = vulnerabilities.length;
-
-          // Detect specific changes against previous config
-          if (previousConfig && previousConfig.id !== existingConfig.id) {
-            changesDetected = await detectConfigChanges(
-              connection.id,
-              previousConfig.configJson as any,
-              configForAnalysis
-            );
-          } else if (!previousConfig) {
-            // First sync — bootstrap historical timeline from UniFi data
-            const bootstrapped = await bootstrapHistoricalTimeline(
-              connection.id,
-              fullConfig,
-              client
-            );
-            if (bootstrapped > 0) {
-              changesDetected = bootstrapped;
-            }
-          }
-
-          // Notify about config changes
-          if (changesDetected > 0) {
-            await createNotification({
-              type: 'CONFIG_CHANGED',
-              severity: 'INFO',
-              title: 'Configuration Changed',
-              message: `${changesDetected} change(s) detected during sync of ${connection.name}.`,
-              resourceType: 'connection',
-              resourceId: connection.id,
-            });
-          }
-
-          // Notify about vulnerabilities
-          if (vulnCount > 0) {
-            const critCount = vulnerabilities.filter((v: any) => v.severity === 'CRITICAL').length;
-            const highCount = vulnerabilities.filter((v: any) => v.severity === 'HIGH').length;
-            if (critCount > 0 || highCount > 0) {
-              await createNotification({
-                type: 'NEW_VULNERABILITIES',
-                severity: critCount > 0 ? 'CRITICAL' : 'HIGH',
-                title: 'Security Issues Found',
-                message: `Found ${vulnCount} vulnerabilities (${critCount} critical, ${highCount} high) in ${connection.name}.`,
-                resourceType: 'configuration',
-                resourceId: existingConfig.id,
-              });
-            }
-          }
-        } else {
-          // Infrastructure hash matches — update the stored config with fresh client data
-          // so future comparisons have accurate client lists
-          await prisma.configuration.update({
-            where: { id: existingConfig.id },
-            data: {
-              configJson: configForAnalysis as object,
-            },
-          });
-
-          // Detect client changes even when infrastructure hasn't changed
-          if (previousConfig) {
-            const prevConfigJson = previousConfig.configJson as any;
-            const { compareResources, normalizeClientForTimeline } = await import('./services/configChangeService');
-            changesDetected += await compareResources(
-              connection.id,
-              'client',
-              (prevConfigJson.clients || []).map(normalizeClientForTimeline),
-              (fullConfig.clients || []).map(normalizeClientForTimeline),
-              (r) => r.mac,
-              (r) => r.name || r.hostname || r.mac
-            );
-          }
-        }
-
-        // Sync network clients (always, regardless of config hash)
-        const newDeviceCount = await syncNetworkClients(connection.id, fullConfig.clients, previousConfig);
-
-        if (newDeviceCount > 5) {
-          await createNotification({
-            type: 'NEW_DEVICES',
-            severity: 'INFO',
-            title: 'New Devices Detected',
-            message: `${newDeviceCount} new device(s) joined the network on ${connection.name}.`,
-            resourceType: 'connection',
-            resourceId: connection.id,
-          });
-        }
-
-        // Update sync record
-        await prisma.uniFiSyncHistory.update({
-          where: { id: syncRecord.id },
-          data: {
-            status: 'SUCCESS',
-            completedAt: new Date(),
-            devicesFound: fullConfig.devices.length,
-            networksFound: fullConfig.networks.length,
-            rulesFound: fullConfig.firewallRules.length,
-            wlansFound: fullConfig.wlans.length,
-            changesDetected,
-            vulnerabilitiesFound: vulnCount,
-            configId: existingConfig.id,
-          },
-        });
-
-        await prisma.uniFiConnection.update({
-          where: { id: connection.id },
-          data: {
-            lastSyncAt: new Date(),
-            lastSyncStatus: 'SUCCESS',
-            lastSyncError: null,
-          },
-        });
-
-        await client.logout();
-
-        // Notify sync completed
-        await createNotification({
-          type: 'SYNC_COMPLETED',
-          severity: 'INFO',
-          title: 'Sync Completed',
-          message: `Auto-sync of ${connection.name} completed. ${fullConfig.devices.length} devices, ${changesDetected} changes.`,
-          resourceType: 'connection',
-          resourceId: connection.id,
-        });
-
-        logger.info(`Auto-sync completed for ${connection.name}`);
-      } catch (syncError: any) {
-        await prisma.uniFiSyncHistory.update({
-          where: { id: syncRecord.id },
-          data: {
-            status: 'FAILED',
-            completedAt: new Date(),
-            errorMessage: syncError.message,
-          },
-        });
-
-        await prisma.uniFiConnection.update({
-          where: { id: connection.id },
-          data: {
-            lastSyncAt: new Date(),
-            lastSyncStatus: 'FAILED',
-            lastSyncError: syncError.message,
-          },
-        });
-
-        logger.error(`Auto-sync failed for ${connection.name}:`, syncError.message);
-
-        await createNotification({
-          type: 'SYNC_FAILED',
-          severity: 'HIGH',
-          title: 'Sync Failed',
-          message: `Auto-sync of ${connection.name} failed: ${syncError.message}`,
-          resourceType: 'connection',
-          resourceId: connection.id,
-        });
-      }
-    }
-  } catch (error) {
-    logger.error('UniFi sync check error:', error);
-  }
-}
-
-/**
- * Sync network client inventory from UniFi to the NetworkClient table.
- * Returns the count of newly discovered clients.
- */
-async function syncNetworkClients(
-  _connectionId: string,
-  clients: UniFiClient_t[],
-  previousConfig: any
-): Promise<number> {
-  let newDeviceCount = 0;
-
-  // Build set of previous client MACs for new device detection
-  const prevClientMacs = new Set<string>();
-  if (previousConfig) {
-    const prevClients = (previousConfig.configJson as any)?.clients || [];
-    for (const c of prevClients) {
-      prevClientMacs.add(c.mac);
+  const connections = await prisma.uniFiConnection.findMany({
+    where: { isActive: true, autoSync: true },
+    select: { id: true, name: true },
+  });
+  for (const connection of connections) {
+    try {
+      // The shared service re-reads due/active settings after claiming ownership;
+      // this list is not an authority to start a stale or duplicate run.
+      await syncUniFiConfiguration({ connectionId: connection.id, trigger: 'scheduled' });
+    } catch (error) {
+      // All UniFi config syncs share one active snapshot. A manual/other-process
+      // owner gets to finish; a later timer tick will recheck remaining work.
+      if (error instanceof JobLeaseBusyError) return;
+      logger.error(`Auto-sync failed for ${connection.name}`, error);
     }
   }
-
-  for (const client of clients) {
-    if (!client.mac) continue;
-
-    // Find network name from active config for display
-    let networkName: string | undefined;
-    if (client.network_id) {
-      try {
-        const activeConfig = await prisma.configuration.findFirst({
-          where: { isActive: true },
-          select: { configJson: true },
-        });
-        if (activeConfig) {
-          const nets = (activeConfig.configJson as any)?.networkConf || [];
-          const net = nets.find((n: any) => n._id === client.network_id);
-          if (net) networkName = net.name;
-        }
-      } catch {
-        // ignore enrichment errors
-      }
-    }
-
-    await prisma.networkClient.upsert({
-      where: { mac: client.mac },
-      create: {
-        mac: client.mac,
-        hostname: client.hostname,
-        displayName: client.name,
-        oui: client.oui,
-        lastIp: client.ip,
-        lastNetworkId: client.network_id,
-        lastNetworkName: networkName,
-        isWired: client.is_wired || false,
-        unifiFirstSeen: client.first_seen ? new Date(client.first_seen * 1000) : undefined,
-        unifiLastSeen: client.last_seen ? new Date(client.last_seen * 1000) : undefined,
-      },
-      update: {
-        hostname: client.hostname,
-        displayName: client.name,
-        oui: client.oui,
-        lastIp: client.ip,
-        lastNetworkId: client.network_id,
-        lastNetworkName: networkName,
-        isWired: client.is_wired || false,
-        unifiLastSeen: client.last_seen ? new Date(client.last_seen * 1000) : undefined,
-      },
-    });
-
-    // Track if this is a new device
-    if (!prevClientMacs.has(client.mac) && prevClientMacs.size > 0) {
-      newDeviceCount++;
-    }
-  }
-
-  if (newDeviceCount > 0) {
-    logger.info(`Synced ${clients.length} network clients, ${newDeviceCount} new`);
-  }
-
-  return newDeviceCount;
-}
-
-async function runScheduledTasks(): Promise<void> {
-  logger.info('Running scheduled tasks...');
-  await cleanupOfflineDevices();
-  await retryQueuedTests();
-  await cleanupStaleTests();
-  await syncUniFiConnections();
-  await syncActiveDnsProxyConnections();
-  await pollFirewallTelemetry();
 }
 
 /**
@@ -665,66 +286,41 @@ async function pollFirewallTelemetry(): Promise<void> {
   }
 }
 
-async function main(): Promise<void> {
+function main(): void {
   logger.info('Starting scheduler...');
-
-  try {
-    await connectDatabase();
-
-    // Register baseline DNS indicators (campaigns register their own at load)
-    registerBaselineDnsIndicators();
-
-    // Register built-in DNS proxy config adapters (AdGuard Home today; more later)
-    registerBuiltinDnsProxyConfigAdapters();
-
-    // Wire up the detection engine (detectors + their YAML rule metadata)
-    // and the threat-intel feed registry. Both are idempotent.
-    bootstrapDetectors();
-    bootstrapThreatIntel();
-
-    try {
-      await mqttClient.connect();
-    } catch {
-      logger.warn('MQTT connection failed, scheduler continuing without MQTT');
-    }
-
-    // Run initial tasks
-    await runScheduledTasks();
-    await serverHeartbeat(); // Keep server-local device online immediately
-
-    // Set up intervals
-    setInterval(cleanupOfflineDevices, INTERVALS.DEVICE_CLEANUP);
-    setInterval(retryQueuedTests, INTERVALS.RETRY_QUEUED_TESTS);
-    setInterval(cleanupStaleTests, INTERVALS.STALE_TEST_CLEANUP);
-    setInterval(cleanupOldData, INTERVALS.DB_CLEANUP);
-    setInterval(syncUniFiConnections, INTERVALS.UNIFI_SYNC_CHECK);
-    setInterval(syncActiveDnsProxyConnections, INTERVALS.DNS_PROXY_POLL);
-    setInterval(pollFirewallTelemetry, INTERVALS.FIREWALL_TELEMETRY_POLL);
-    setInterval(runScheduledVlanValidation, INTERVALS.VLAN_VALIDATION);
-    setInterval(serverHeartbeat, INTERVALS.SERVER_HEARTBEAT);
-    setInterval(runDetectors, INTERVALS.DETECTOR_RUN);
-    setInterval(refreshIocFeeds, INTERVALS.IOC_FEED_REFRESH);
-
-    // Refresh IOC feeds on boot so detectors have a populated cache before
-    // their first run; do not block startup if it fails.
-    void refreshIocFeeds();
-
-    logger.info('Scheduler running with UniFi auto-sync, DNS proxy polling, VLAN validation, server heartbeat, and detection engine enabled');
-
-    // Graceful shutdown
-    const shutdown = async (signal: string) => {
-      logger.info(`${signal} received, shutting down scheduler...`);
+  const runtime = createSchedulerRuntime({
+    connect: connectDatabase,
+    initialize: () => {
+      registerBaselineDnsIndicators();
+      registerBuiltinDnsProxyConfigAdapters();
+      bootstrapDetectors();
+      bootstrapThreatIntel();
+    },
+    jobs: [
+      { name: 'mqtt-connect', run: () => mqttClient.connect(), runOnStart: true },
+      { name: 'device-cleanup', run: cleanupOfflineDevices, intervalMs: INTERVALS.DEVICE_CLEANUP, runOnStart: true },
+      { name: 'queued-tests', run: retryQueuedTests, intervalMs: INTERVALS.RETRY_QUEUED_TESTS, runOnStart: true },
+      { name: 'stale-tests', run: cleanupStaleTests, intervalMs: INTERVALS.STALE_TEST_CLEANUP, runOnStart: true },
+      { name: 'data-cleanup', run: cleanupOldData, intervalMs: INTERVALS.DB_CLEANUP },
+      { name: 'unifi-sync', run: syncUniFiConnections, intervalMs: INTERVALS.UNIFI_SYNC_CHECK, runOnStart: true },
+      { name: 'dns-poll', run: syncActiveDnsProxyConnections, intervalMs: INTERVALS.DNS_PROXY_POLL, runOnStart: true },
+      { name: 'firewall-telemetry', run: pollFirewallTelemetry, intervalMs: INTERVALS.FIREWALL_TELEMETRY_POLL, runOnStart: true },
+      { name: 'vlan-validation', run: runScheduledVlanValidation, intervalMs: INTERVALS.VLAN_VALIDATION },
+      { name: 'server-heartbeat', run: serverHeartbeat, intervalMs: INTERVALS.SERVER_HEARTBEAT, runOnStart: true },
+      { name: 'detectors', run: runDetectors, intervalMs: INTERVALS.DETECTOR_RUN },
+      { name: 'ioc-refresh', run: refreshIocFeeds, intervalMs: INTERVALS.IOC_FEED_REFRESH, runOnStart: true },
+    ],
+    disconnect: async () => {
       await mqttClient.disconnect();
       await disconnectDatabase();
-      process.exit(0);
-    };
-
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
-    process.on('SIGINT', () => shutdown('SIGINT'));
-  } catch (error) {
-    logger.error('Scheduler failed to start:', error);
-    process.exit(1);
-  }
+    },
+    exit: (code) => process.exit(code),
+    log: logger,
+  });
+  // Install lifecycle handling before connecting or starting controller work.
+  process.once('SIGTERM', () => { void runtime.shutdown('SIGTERM'); });
+  process.once('SIGINT', () => { void runtime.shutdown('SIGINT'); });
+  void runtime.start();
 }
 
-main();
+if (require.main === module) main();

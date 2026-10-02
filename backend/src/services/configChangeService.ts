@@ -1,4 +1,7 @@
 import prisma from './database';
+import type { Prisma } from '@prisma/client';
+
+type ChangeDatabase = Pick<Prisma.TransactionClient, 'uniFiConfigChange'>;
 import logger from '../utils/logger';
 
 /**
@@ -48,7 +51,8 @@ export async function compareResources(
   current: any[],
   getId: (r: any) => string,
   getName: (r: any) => string,
-  detectedAt?: Date
+  detectedAt?: Date,
+  db: ChangeDatabase = prisma
 ): Promise<number> {
   let changes = 0;
   const previousMap = new Map(previous.map((r) => [getId(r), r]));
@@ -58,7 +62,7 @@ export async function compareResources(
   for (const [id, resource] of currentMap) {
     const prev = previousMap.get(id);
     if (!prev) {
-      await prisma.uniFiConfigChange.create({
+      await db.uniFiConfigChange.create({
         data: {
           connectionId,
           changeType: 'CREATED',
@@ -71,7 +75,7 @@ export async function compareResources(
       });
       changes++;
     } else if (stableStringify(prev) !== stableStringify(resource)) {
-      await prisma.uniFiConfigChange.create({
+      await db.uniFiConfigChange.create({
         data: {
           connectionId,
           changeType: 'MODIFIED',
@@ -90,7 +94,7 @@ export async function compareResources(
   // Check for deleted
   for (const [id, resource] of previousMap) {
     if (!currentMap.has(id)) {
-      await prisma.uniFiConfigChange.create({
+      await db.uniFiConfigChange.create({
         data: {
           connectionId,
           changeType: 'DELETED',
@@ -115,11 +119,12 @@ export async function compareResources(
  */
 async function seedAclRuleBaselineIfMissing(
   connectionId: string,
-  aclRules: any[]
+  aclRules: any[],
+  db: ChangeDatabase
 ): Promise<number> {
   if (!Array.isArray(aclRules) || aclRules.length === 0) return 0;
 
-  const existingAclChanges = await prisma.uniFiConfigChange.count({
+  const existingAclChanges = await db.uniFiConfigChange.count({
     where: {
       connectionId,
       resourceType: 'aclRule',
@@ -133,7 +138,7 @@ async function seedAclRuleBaselineIfMissing(
     const resourceId = rule?._id || rule?.id;
     if (!resourceId) continue;
 
-    await prisma.uniFiConfigChange.create({
+    await db.uniFiConfigChange.create({
       data: {
         connectionId,
         changeType: 'CREATED',
@@ -161,7 +166,8 @@ export async function detectConfigChanges(
   connectionId: string,
   previousConfig: any,
   newConfig: any,
-  detectedAt?: Date
+  detectedAt?: Date,
+  db: ChangeDatabase = prisma
 ): Promise<number> {
   let changesDetected = 0;
 
@@ -173,7 +179,8 @@ export async function detectConfigChanges(
     newConfig.firewallRules || [],
     (r) => r._id,
     (r) => r.name,
-    detectedAt
+    detectedAt,
+    db
   );
 
   // Compare networks
@@ -184,7 +191,8 @@ export async function detectConfigChanges(
     newConfig.networkConf || [],
     (r) => r._id,
     (r) => r.name,
-    detectedAt
+    detectedAt,
+    db
   );
 
   // Compare WLANs
@@ -195,7 +203,8 @@ export async function detectConfigChanges(
     newConfig.wlanConf || [],
     (r) => r._id,
     (r) => r.name,
-    detectedAt
+    detectedAt,
+    db
   );
 
   // Compare port forwards
@@ -206,7 +215,8 @@ export async function detectConfigChanges(
     newConfig.portForward || [],
     (r) => r._id,
     (r) => r.name,
-    detectedAt
+    detectedAt,
+    db
   );
 
   // Compare traffic rules
@@ -217,7 +227,8 @@ export async function detectConfigChanges(
     newConfig.trafficRules || [],
     (r) => r._id,
     (r) => r.name || r.description || r._id,
-    detectedAt
+    detectedAt,
+    db
   );
 
   // Compare firewall policies
@@ -228,7 +239,8 @@ export async function detectConfigChanges(
     newConfig.firewallPolicies || [],
     (r) => r._id,
     (r) => r.name,
-    detectedAt
+    detectedAt,
+    db
   );
 
   // Compare ACL rules (Settings > Security > ACL)
@@ -239,13 +251,14 @@ export async function detectConfigChanges(
     newConfig.aclRules || [],
     (r) => r._id,
     (r) => r.name || r._id,
-    detectedAt
+    detectedAt,
+    db
   );
   changesDetected += aclChangesDetected;
 
   // If ACL rules already existed before ACL tracking was introduced, seed baseline entries once.
   if (aclChangesDetected === 0) {
-    changesDetected += await seedAclRuleBaselineIfMissing(connectionId, newConfig.aclRules || []);
+    changesDetected += await seedAclRuleBaselineIfMissing(connectionId, newConfig.aclRules || [], db);
   }
 
   // Compare VPN servers
@@ -256,7 +269,8 @@ export async function detectConfigChanges(
     newConfig.vpnServers || [],
     (r) => r._id,
     (r) => r.name,
-    detectedAt
+    detectedAt,
+    db
   );
 
   // Compare clients (by MAC address)
@@ -269,7 +283,8 @@ export async function detectConfigChanges(
     currentClients,
     (r) => r.mac,
     (r) => r.name || r.hostname || r.mac,
-    detectedAt
+    detectedAt,
+    db
   );
 
   // Compare devices (adopted/removed/renamed)
@@ -282,7 +297,8 @@ export async function detectConfigChanges(
     currentDevices,
     (r) => r.mac,
     (r) => r.name || r.model || r.mac,
-    detectedAt
+    detectedAt,
+    db
   );
 
   // Compare device firmware versions (separate resource type for clarity)
@@ -291,7 +307,7 @@ export async function detectConfigChanges(
   for (const newDev of newDevices) {
     const prevDev = prevDevices.find((d: any) => d.mac === newDev.mac);
     if (prevDev && prevDev.version !== newDev.version) {
-      await prisma.uniFiConfigChange.create({
+      await db.uniFiConfigChange.create({
         data: {
           connectionId,
           changeType: 'MODIFIED',
