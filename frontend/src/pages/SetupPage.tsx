@@ -11,6 +11,7 @@ import api from '@/api/client';
 const MIN_PASSWORD_LENGTH = 12;
 
 export function SetupPage() {
+  const [setupToken, setSetupToken] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -23,13 +24,16 @@ export function SetupPage() {
     confirmPassword.length > 0 && password !== confirmPassword;
 
   const canSubmit =
+    /^[a-f0-9]{64}$/.test(setupToken) &&
     password.length >= MIN_PASSWORD_LENGTH &&
     password === confirmPassword &&
     !submitting;
 
   // What's blocking submit, in priority order. Surfaced beneath the button
   // when it's disabled so the user isn't left guessing which field is wrong.
-  const submitBlocker = password.length === 0
+  const submitBlocker = !/^[a-f0-9]{64}$/.test(setupToken)
+    ? 'Enter the setup token from your installer.'
+    : password.length === 0
     ? 'Choose a password.'
     : passwordTooShort
       ? `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
@@ -47,7 +51,7 @@ export function SetupPage() {
 
     const response = await api.post<{ user: { id: number } }>(
       '/auth/setup',
-      { password }
+      { password, setupToken }
     );
 
     setSubmitting(false);
@@ -107,6 +111,12 @@ export function SetupPage() {
           onSubmit={handleSubmit}
           className="space-y-4 rounded-xl border border-border/50 bg-background/40 backdrop-blur-md p-6"
         >
+          <div className="space-y-2">
+            <Label htmlFor="setup-token">Installer setup token</Label>
+            <Input id="setup-token" type="password" autoComplete="off"
+              value={setupToken} onChange={(e) => setSetupToken(e.target.value.trim())} />
+            <p className="text-xs text-muted-foreground">Use ADMIN_SETUP_TOKEN from the private .env file on your ZeroProof host.</p>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="setup-password">Password</Label>
             <div className="relative">

@@ -261,7 +261,11 @@ jobs:
         env:
           PLAYWRIGHT_BASE_URL: https://localhost
           CI: 'true'
-        run: pnpm test:e2e tests/e2e/setup-flow.spec.ts
+        run: |
+          ADMIN_SETUP_TOKEN=$(sed -n 's/^ADMIN_SETUP_TOKEN=//p' ../.env)
+          echo "::add-mask::$ADMIN_SETUP_TOKEN"
+          export ADMIN_SETUP_TOKEN
+          pnpm test:e2e tests/e2e/setup-flow.spec.ts
 
       - name: Upload Playwright report on failure
         if: failure()

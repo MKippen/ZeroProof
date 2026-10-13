@@ -250,7 +250,8 @@ describe('authoritative account routing', () => {
     vi.mocked(api.get).mockResolvedValueOnce(unauthorized).mockResolvedValueOnce({ success: true, data: { initialized: false } });
     vi.mocked(api.post).mockResolvedValue({ success: false, error: { code: 'ALREADY_INITIALIZED', message: 'Setup has already been completed' } });
     renderApp('/setup');
-    await userEvent.type(await screen.findByLabelText('Password', { exact: true }), 'first-admin-password');
+    await userEvent.type(await screen.findByLabelText('Installer setup token'), 'a'.repeat(64));
+    await userEvent.type(screen.getByLabelText('Password', { exact: true }), 'first-admin-password');
     await userEvent.type(screen.getByLabelText('Confirm password'), 'first-admin-password');
     await userEvent.click(screen.getByRole('button', { name: 'Create administrator account' }));
     expect(await screen.findByRole('button', { name: 'Sign In' })).toBeInTheDocument();
@@ -319,3 +320,4 @@ describe('authoritative account routing', () => {
     expect(queryClient.getQueryData(['private-findings'])).toEqual({ lastGood: true });
   });
 });
+

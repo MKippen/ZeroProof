@@ -7,7 +7,9 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "jest --no-coverage"
+    "test": "jest --no-coverage",
+    "postinstall": "node ../scripts/patch-braces.cjs",
+    "audit:deps": "node ../scripts/security-audit.cjs"
   },
   "dependencies": {},
   "devDependencies": {
@@ -19,5 +21,8 @@
   },
   "engines": {
     "node": ">=24.0.0 <25"
+  },
+  "overrides": {
+    "handlebars": "^4.7.10"
   }
 }

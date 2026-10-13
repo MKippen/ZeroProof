@@ -42,6 +42,9 @@ test.describe('fresh install setup flow', () => {
 
     await expect(page.getByRole('heading', { name: /Welcome to ZeroProof/i })).toBeVisible();
 
+    const setupToken = process.env.ADMIN_SETUP_TOKEN;
+    expect(setupToken).toMatch(/^[a-f0-9]{64}$/);
+    await page.locator('#setup-token').fill(setupToken!);
     await page.locator('#setup-password').fill(password);
     await page.locator('#setup-password-confirm').fill(password);
 

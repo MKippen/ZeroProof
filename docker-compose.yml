@@ -103,6 +103,7 @@ services:
       - SESSION_SECRET=${SESSION_SECRET}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - DEFAULT_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD:-}
+      - ADMIN_SETUP_TOKEN=${ADMIN_SETUP_TOKEN:-}
       - RULES_DIR=/rules
       - PORT=3000
       # Updater integration — backend signs apply requests with this secret

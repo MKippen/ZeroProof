@@ -12,7 +12,10 @@
     ],
     "overrides": {
       "qs@>=6 <6.16.0": "^6.16.0",
-      "tsup>esbuild": "^0.28.2"
+      "tsup>esbuild": "^0.28.2",
+      "handlebars": "^4.7.10",
+      "proxy-addr": "^2.0.8",
+      "source-map-js": "^1.2.2"
     }
   },
   "engines": {
@@ -22,7 +25,9 @@
     "build": "pnpm --filter zeroproof-backend prisma:generate && pnpm -r build && npm --prefix updater run build",
     "lint": "pnpm --filter zeroproof-backend lint && pnpm --filter zeroproof-frontend lint",
     "test": "pnpm --filter @uguard/unifi-client test && pnpm --filter zeroproof-backend test --runInBand && pnpm --filter zeroproof-frontend test run && npm --prefix updater test -- --runInBand",
-    "audit:deps": "pnpm audit --audit-level=high && npm --prefix updater audit --audit-level=high",
-    "check": "pnpm audit:deps && pnpm lint && pnpm build && pnpm --filter @uguard/unifi-client typecheck && pnpm test"
+    "audit:deps": "pnpm run audit:workspace && npm --prefix updater run audit:deps",
+    "check": "pnpm audit:deps && pnpm lint && pnpm build && pnpm --filter @uguard/unifi-client typecheck && pnpm test",
+    "postinstall": "node scripts/patch-braces.cjs",
+    "audit:workspace": "node scripts/security-audit.cjs"
   }
 }

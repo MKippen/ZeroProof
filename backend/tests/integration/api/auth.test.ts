@@ -50,10 +50,16 @@ function buildApp(store = new session.MemoryStore()) {
 describe('production auth routes and real session lifecycle', () => {
   let account: any;
   const originalEnv = process.env.NODE_ENV;
+  const originalSetupToken = process.env.ADMIN_SETUP_TOKEN;
   beforeAll(() => { process.env.NODE_ENV = 'production'; });
-  afterAll(() => { process.env.NODE_ENV = originalEnv; });
+  afterAll(() => {
+    process.env.NODE_ENV = originalEnv;
+    if (originalSetupToken === undefined) delete process.env.ADMIN_SETUP_TOKEN;
+    else process.env.ADMIN_SETUP_TOKEN = originalSetupToken;
+  });
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.ADMIN_SETUP_TOKEN = 'a'.repeat(64);
     account = { id: 1, passwordHash: 'hashed:correct-password-123', mustChangePassword: false, lastLogin: null };
     (prisma.user.findFirst as jest.Mock).mockImplementation(async () => account);
     (prisma.user.findUnique as jest.Mock).mockImplementation(async () => account);
@@ -142,13 +148,33 @@ describe('production auth routes and real session lifecycle', () => {
     expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
+  it.each([undefined, '', 'b'.repeat(64), {}, 'a'.repeat(65)])('rejects unauthorized bootstrap (%p)', async (setupToken) => {
+    account = null;
+    const agent = request.agent(buildApp());
+    const csrf = await agent.get('/api/v1/auth/csrf');
+    await agent.post('/api/v1/auth/setup').set('X-CSRF-Token', csrf.body.data.csrfToken)
+      .send({ password: 'correct-password-123', setupToken }).expect(403);
+    expect(prisma.user.create).not.toHaveBeenCalled();
+    await agent.get('/api/v1/auth/me').expect(401);
+  });
+
+  it('disables bootstrap when no installer token is configured', async () => {
+    account = null;
+    delete process.env.ADMIN_SETUP_TOKEN;
+    const agent = request.agent(buildApp());
+    const csrf = await agent.get('/api/v1/auth/csrf');
+    await agent.post('/api/v1/auth/setup').set('X-CSRF-Token', csrf.body.data.csrfToken)
+      .send({ password: 'correct-password-123', setupToken: 'a'.repeat(64) }).expect(403);
+    expect(prisma.user.create).not.toHaveBeenCalled();
+  });
+
   it('creates the first admin under a database lock and rotates the setup session', async () => {
     account = null;
     const agent = request.agent(buildApp());
     const csrf = await agent.get('/api/v1/auth/csrf').expect(200);
     const response = await agent.post('/api/v1/auth/setup')
       .set('X-CSRF-Token', csrf.body.data.csrfToken)
-      .send({ password: 'correct-password-123' }).expect(201);
+      .send({ password: 'correct-password-123', setupToken: 'a'.repeat(64) }).expect(201);
     expect(response.headers['set-cookie'][0]).not.toBe(csrf.headers['set-cookie'][0]);
     expect(prisma.$executeRaw).toHaveBeenCalledWith(['LOCK TABLE "User" IN EXCLUSIVE MODE']);
     const lockedAt = jest.mocked(prisma.$executeRaw).mock.invocationCallOrder[0];
@@ -157,6 +183,10 @@ describe('production auth routes and real session lifecycle', () => {
     expect(lockedAt).toBeLessThan(recheckedAt);
     expect(recheckedAt).toBeLessThan(createdAt);
     await agent.get('/api/v1/auth/me').expect(200);
+    const fresh = await agent.get('/api/v1/auth/csrf');
+    await agent.post('/api/v1/auth/setup').set('X-CSRF-Token', fresh.body.data.csrfToken)
+      .send({ password: 'correct-password-123', setupToken: 'a'.repeat(64) }).expect(409);
+    expect(prisma.user.create).toHaveBeenCalledTimes(1);
   });
 
   it('rejects a setup request if another admin was created while its password was hashing', async () => {
@@ -165,7 +195,7 @@ describe('production auth routes and real session lifecycle', () => {
     const csrf = await agent.get('/api/v1/auth/csrf').expect(200);
     const response = await agent.post('/api/v1/auth/setup')
       .set('X-CSRF-Token', csrf.body.data.csrfToken)
-      .send({ password: 'correct-password-123' }).expect(409);
+      .send({ password: 'correct-password-123', setupToken: 'a'.repeat(64) }).expect(409);
     expect(response.body.error.code).toBe('ALREADY_INITIALIZED');
     expect(prisma.user.create).not.toHaveBeenCalled();
     await agent.get('/api/v1/auth/me').expect(401);
@@ -177,7 +207,7 @@ describe('production auth routes and real session lifecycle', () => {
       const agent = request.agent(buildApp());
       const csrf = await agent.get('/api/v1/auth/csrf').expect(200);
       await agent.post('/api/v1/auth/setup').set('X-CSRF-Token', csrf.body.data.csrfToken)
-        .send({ password }).expect(400);
+        .send({ password, setupToken: 'a'.repeat(64) }).expect(400);
       expect(prisma.user.create).not.toHaveBeenCalled();
     }
   );
