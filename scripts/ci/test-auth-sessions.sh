@@ -40,6 +40,7 @@ export NODE_ENV=production
 SESSION_SECRET=$(openssl rand -hex 32)
 ENCRYPTION_KEY=$(openssl rand -hex 32)
 export SESSION_SECRET ENCRYPTION_KEY
+export ADMIN_SETUP_TOKEN=$(openssl rand -hex 32)
 export DEFAULT_ADMIN_PASSWORD=
 export MQTT_BROKER=127.0.0.1 MQTT_PORT=1 MQTT_USERNAME=fixture MQTT_PASSWORD=fixture-unused
 export CORS_ORIGIN=

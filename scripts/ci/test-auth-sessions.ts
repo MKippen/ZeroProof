@@ -172,14 +172,14 @@ async function main() {
     assert.equal((await anonymous.call('GET', '/api/v1/auth/setup-status')).body.data.initialized, false);
     await expectError(anonymous, '/api/v1/devices', 401, 'UNAUTHORIZED');
     await expectClosed(openSocket(anonymous), 1008);
-    const withoutCsrf = await anonymous.call('POST', '/api/v1/auth/setup', { password: initialPassword }, '');
+    const withoutCsrf = await anonymous.call('POST', '/api/v1/auth/setup', { password: initialPassword, setupToken: process.env.ADMIN_SETUP_TOKEN }, '');
     assert.equal(withoutCsrf.status, 403);
     assert.equal(withoutCsrf.body.error.code, 'CSRF_TOKEN_INVALID');
 
     const setupBrowsers = [new Browser(), new Browser()];
     await Promise.all(setupBrowsers.map((browser) => browser.token()));
     const beforeSetup = setupBrowsers.map((browser) => ({ cookie: browser.cookie, csrf: browser.csrf }));
-    const setupResponses = await Promise.all(setupBrowsers.map((browser) => browser.call('POST', '/api/v1/auth/setup', { password: initialPassword })));
+    const setupResponses = await Promise.all(setupBrowsers.map((browser) => browser.call('POST', '/api/v1/auth/setup', { password: initialPassword, setupToken: process.env.ADMIN_SETUP_TOKEN })));
     assert.deepEqual(setupResponses.map((response) => response.status).sort(), [201, 409]);
     assert.equal(await prisma.user.count(), 1);
     const winnerIndex = setupResponses.findIndex((response) => response.status === 201);

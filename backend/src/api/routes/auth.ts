@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcrypt';
+import { timingSafeEqual } from 'crypto';
 import rateLimit from 'express-rate-limit';
 import prisma from '../../services/database';
 import { requireAuth, rejectSession } from '../middleware/auth';
@@ -282,7 +283,8 @@ router.get('/setup-status', async (_req: Request, res: Response) => {
 
 // POST /api/v1/auth/setup — public; creates the first admin account on a
 // fresh install. Returns 409 once any user exists so this endpoint cannot be
-// abused to overwrite or add admins after bootstrap.
+// abused to overwrite or add admins after bootstrap. The token is consumed
+// logically by the locked first-user insert, across all backend processes.
 const setupLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
@@ -300,6 +302,19 @@ router.post('/setup', setupLimiter, async (req: Request, res: Response) => {
         error: { code: 'ALREADY_INITIALIZED', message: 'Setup has already been completed' },
       };
       res.status(409).json(response);
+      return;
+    }
+
+    // The operator obtains this capability from the installer's private .env.
+    // Fail closed when provisioning has not explicitly enabled browser setup.
+    const expected = process.env.ADMIN_SETUP_TOKEN;
+    const supplied = req.body?.setupToken;
+    if (!expected || !/^[a-f0-9]{64}$/.test(expected) ||
+        typeof supplied !== 'string' || !/^[a-f0-9]{64}$/.test(supplied) ||
+        !timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(supplied, 'hex'))) {
+      res.status(403).json({ success: false, error: {
+        code: 'SETUP_UNAUTHORIZED', message: 'A valid installer setup token is required',
+      } });
       return;
     }
 
@@ -370,7 +385,7 @@ export async function initializeDefaultUser(): Promise<void> {
   if (!seedPassword || seedPassword.length < 8) {
     if (isProd) {
       logger.info(
-        'No users in database and DEFAULT_ADMIN_PASSWORD is unset; first-run setup will be required at /setup'
+        'No users in database and DEFAULT_ADMIN_PASSWORD is unset; first-run setup requires ADMIN_SETUP_TOKEN from the local installer'
       );
     }
     return;

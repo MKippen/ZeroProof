@@ -141,6 +141,7 @@ if [ "${GENERATE_ENV:-false}" = true ]; then
     POSTGRES_PASSWORD=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 32)
     MQTT_PASSWORD=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 32)
     SESSION_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 48)
+    ADMIN_SETUP_TOKEN=$(openssl rand -hex 32)
     ENCRYPTION_KEY=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 32)
     UPDATER_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 48)
 
@@ -172,6 +173,7 @@ ENCRYPTION_KEY=$ENCRYPTION_KEY
 UPDATER_SECRET=$UPDATER_SECRET
 
 # Admin bootstrap
+ADMIN_SETUP_TOKEN=$ADMIN_SETUP_TOKEN
 # By default ZeroProof has no shipped admin account. On first visit the
 # /setup page prompts you to create one. To seed an admin non-interactively
 # (CI/IaC) uncomment and set DEFAULT_ADMIN_PASSWORD; the seeded user will
@@ -288,7 +290,8 @@ if [ -n "${DEFAULT_ADMIN_PASSWORD:-}" ]; then
     echo -e "${YELLOW}You will be prompted to change this on first login.${NC}"
 else
     echo -e "${GREEN}First-run setup:${NC} open the dashboard and choose your"
-    echo "administrator password on the /setup page."
+    echo "administrator password on the /setup page. Retrieve ADMIN_SETUP_TOKEN
+from the private .env file on this host and enter it on that page."
 fi
 echo ""
 echo "Useful commands:"
