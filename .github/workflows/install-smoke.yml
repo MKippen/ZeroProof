@@ -78,7 +78,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Pre-flight — verify install prerequisites are documented
         run: |
@@ -446,7 +446,7 @@ jobs:
 
     steps:
       - name: Checkout PR head with full tag history
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0  # Need tags + history for upgrade.sh's plan
 
@@ -750,7 +750,7 @@ jobs:
     # tag's copy) in --check mode so we never reach docker compose.
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -863,7 +863,7 @@ jobs:
     # orphan seeding.
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -1094,7 +1094,7 @@ jobs:
     timeout-minutes: 4
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
