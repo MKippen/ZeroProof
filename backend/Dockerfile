@@ -9,6 +9,7 @@ RUN apk add --no-cache openssl
 COPY pnpm-workspace.yaml ./
 COPY pnpm-lock.yaml ./
 COPY package.json ./
+COPY scripts/patch-braces.cjs scripts/braces-patch.json scripts/
 # Match CI and the lockfile; never bootstrap an unpinned package manager.
 RUN npm install --global "$(node -p "require('./package.json').packageManager")"
 COPY backend/package.json backend/

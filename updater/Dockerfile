@@ -9,6 +9,7 @@
 
 FROM node:24-alpine AS build
 
+COPY scripts/patch-braces.cjs scripts/braces-patch.json /scripts/
 WORKDIR /build
 COPY updater/package.json updater/package-lock.json updater/tsconfig.json ./
 COPY updater/src ./src

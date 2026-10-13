@@ -66,9 +66,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify dependency audit policy
+        working-directory: .
+        run: node --test scripts/tests/security-audit.test.cjs
+
       - name: Audit workspace dependencies
         working-directory: .
-        run: pnpm audit --audit-level high
+        run: pnpm run audit:workspace
 
       - name: Build workspace packages (backend depends on @uguard/unifi-client)
         working-directory: .
@@ -181,7 +185,7 @@ jobs:
         run: npm ci
 
       - name: Audit updater dependencies
-        run: npm audit --audit-level=high
+        run: npm run audit:deps
 
       - name: Run tests
         run: npm test -- --runInBand
