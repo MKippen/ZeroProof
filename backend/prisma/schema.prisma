@@ -183,6 +183,15 @@ model Setting {
   updatedAt DateTime @updatedAt
 }
 
+// Expiring ownership for work shared by API and scheduler processes. Status
+// labels are presentation, not locks; publication verifies this owner in SQL.
+model JobLease {
+  key        String   @id
+  ownerToken String
+  expiresAt  DateTime
+  updatedAt  DateTime @default(now())
+}
+
 // UniFi Controller Connection
 model UniFiConnection {
   id          String @id @default(cuid())

@@ -51,6 +51,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/useToast';
 import api from '@/api/client';
+import { refreshUniFiBeforeAnalysis, uniFiSyncFeedback } from '@/api/unifiSync';
 import type {
   NetworkIntentProfile,
   IntentAnalysisResult,
@@ -865,27 +866,25 @@ export function IntentDashboardPage() {
   // Refresh mutation - syncs from UniFi (if configured) and re-analyzes
   const refreshMutation = useMutation({
     mutationFn: async () => {
-      // First try to sync from UniFi if configured
-      try {
-        await api.post('/unifi/sync');
-      } catch {
-        // Sync may fail if UniFi isn't configured, that's okay
-      }
+      await refreshUniFiBeforeAnalysis();
       // Then fetch fresh analysis
       const response = await api.get<IntentAnalysisResult | null>('/intent/analysis');
-      if (!response.success) {
+      if (!response.success || response.data === undefined) {
         throw new Error(response.error?.message || 'Failed to refresh analysis');
       }
       return response.data;
     },
-    onSuccess: () => {
+    retry: false,
+    onSuccess: async (data) => {
+      // A read started before the sync must not overwrite the fresh result.
+      await queryClient.cancelQueries({ queryKey: ['intent-analysis'] });
+      queryClient.setQueryData(['intent-analysis'], data);
       toast({ title: 'Analysis refreshed' });
-      queryClient.invalidateQueries({ queryKey: ['intent-analysis'] });
       queryClient.invalidateQueries({ queryKey: ['intent-networks'] });
       queryClient.invalidateQueries({ queryKey: ['intent-devices'] });
     },
     onError: (error: Error) => {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
+      toast(uniFiSyncFeedback(error, 'Refresh failed'));
     },
   });
 

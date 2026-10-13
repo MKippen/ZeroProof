@@ -45,6 +45,7 @@ import {
 } from '@/config/security';
 import { useToast } from '@/hooks/useToast';
 import api from '@/api/client';
+import { refreshUniFiBeforeAnalysis, uniFiSyncFeedback } from '@/api/unifiSync';
 import type {
   SecurityAnalysisResult,
   RuleEvaluationResult,
@@ -136,12 +137,7 @@ async function fetchRuleSources(): Promise<RuleSource[]> {
 }
 
 async function syncAndAnalyze(): Promise<SecurityAnalysisResult> {
-  try {
-    const syncResponse = await api.post<{ synced: boolean; message?: string }>('/unifi/sync', {});
-    void syncResponse;
-  } catch (syncError) {
-    console.warn('UniFi sync failed, analyzing existing config:', syncError);
-  }
+  await refreshUniFiBeforeAnalysis();
 
   const response = await api.post<SecurityAnalysisResult>('/security/analyze', {
     saveFindings: false,
@@ -796,11 +792,15 @@ export function SecurityAnalysisPage() {
 
   const analyzeMutation = useMutation({
     mutationFn: syncAndAnalyze,
+    retry: false,
     onSuccess: (data) => {
       queryClient.setQueryData(['security-analysis'], data);
       queryClient.invalidateQueries({ queryKey: ['vlan-coverage'] });
       queryClient.invalidateQueries({ queryKey: ['config'] });
       queryClient.invalidateQueries({ queryKey: ['vulnerabilities'] });
+    },
+    onError: (error: Error) => {
+      toast(uniFiSyncFeedback(error, 'Analysis failed'));
     },
   });
 

@@ -18,7 +18,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { DataLoadError } from '@/components/DataLoadError';
 import api from '@/api/client';
+import { requestUniFiSync, uniFiSyncFeedback } from '@/api/unifiSync';
 import { useToast } from '@/hooks/useToast';
 import { formatDate, cn } from '@/lib/utils';
 
@@ -72,18 +74,19 @@ export function UniFiPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: connectionsData, isLoading } = useQuery({
+  const connectionsQuery = useQuery({
     queryKey: ['unifi-connections'],
     queryFn: async () => {
       const response = await api.get<{ connections: UniFiConnection[] }>('/unifi/connections');
       if (response.success && response.data) {
         return response.data.connections;
       }
-      return [];
+      throw new Error(response.error?.message || 'Could not load UniFi connections.');
     },
+    refetchInterval: (query) => query.state.data?.some((connection) => connection.lastSyncStatus === 'IN_PROGRESS') ? 5000 : false,
   });
 
-  const { data: historyData } = useQuery({
+  const historyQuery = useQuery({
     queryKey: ['unifi-history', selectedConnection],
     queryFn: async () => {
       if (!selectedConnection) return [];
@@ -93,30 +96,29 @@ export function UniFiPage() {
       if (response.success && response.data) {
         return response.data.history;
       }
-      return [];
+      throw new Error(response.error?.message || 'Could not load sync history.');
     },
     enabled: !!selectedConnection,
   });
 
-  const connections = connectionsData || [];
-  const history = historyData || [];
+  const connections = connectionsQuery.data || [];
+  const history = historyQuery.data || [];
+  const failedQueries = [connectionsQuery, ...(selectedConnection ? [historyQuery] : [])].filter((query) => query.isError);
 
   const syncMutation = useMutation({
-    mutationFn: async (connectionId: string) => {
-      const response = await api.post<SyncResult>(`/unifi/connections/${connectionId}/sync`);
-      if (!response.success) {
-        throw new Error(response.error?.message || 'Sync failed');
-      }
-      return response.data;
-    },
+    mutationFn: (connectionId: string) => requestUniFiSync<SyncResult>(`/unifi/connections/${connectionId}/sync`),
+    retry: false,
     onSuccess: (data) => {
-      toast({ title: 'Sync completed', description: `Found ${data?.stats?.vulnerabilitiesFound ?? 0} vulnerabilities` });
+      toast({ title: 'Sync completed', description: typeof data.stats?.vulnerabilitiesFound === 'number'
+        ? `Found ${data.stats.vulnerabilitiesFound} vulnerabilities` : 'Configuration synced.' });
       queryClient.invalidateQueries({ queryKey: ['unifi-connections'] });
       queryClient.invalidateQueries({ queryKey: ['unifi-history'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
     onError: (error: Error) => {
-      toast({ variant: 'destructive', title: 'Sync failed', description: error.message });
+      toast(uniFiSyncFeedback(error));
+      queryClient.invalidateQueries({ queryKey: ['unifi-connections'] });
+      queryClient.invalidateQueries({ queryKey: ['unifi-history'] });
     },
   });
 
@@ -156,11 +158,12 @@ export function UniFiPage() {
     },
   });
 
-  if (isLoading) {
+  if (connectionsQuery.isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
+
     );
   }
 
@@ -176,6 +179,16 @@ export function UniFiPage() {
           Add Connection
         </Button>
       </div>
+
+      {failedQueries.length > 0 && (
+        <DataLoadError
+          title="Unable to load UniFi status"
+          message={failedQueries.map((query) => query.error?.message).filter(Boolean).join(' ')}
+          hasPreviousData={failedQueries.some((query) => query.data !== undefined)}
+          onRetry={() => { failedQueries.forEach((query) => { void query.refetch(); }); }}
+          isRetrying={failedQueries.some((query) => query.isFetching)}
+        />
+      )}
 
       {/* Add/Edit Form */}
       {(showAddForm || editingConnection) && (
@@ -194,7 +207,7 @@ export function UniFiPage() {
       )}
 
       {/* Connections List */}
-      {connections.length === 0 ? (
+      {connections.length === 0 && !connectionsQuery.isError ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Server className="h-12 w-12 text-muted-foreground mb-4" />
@@ -278,9 +291,9 @@ export function UniFiPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => syncMutation.mutate(conn.id)}
-                      disabled={syncMutation.isPending || conn.lastSyncStatus === 'IN_PROGRESS'}
+                      disabled={syncMutation.isPending}
                     >
-                      {syncMutation.isPending || conn.lastSyncStatus === 'IN_PROGRESS' ? (
+                      {syncMutation.isPending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <RefreshCw className="h-4 w-4 mr-1" />

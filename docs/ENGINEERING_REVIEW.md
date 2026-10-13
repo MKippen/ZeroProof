@@ -4,8 +4,10 @@ Started 2026-09-06 against `80aab6e` on `main`. The first batch merged through
 [PR #75](https://github.com/MKippen/ZeroProof/pull/75) as `2bac74f` after all 15
 checks passed. The account-state follow-up merged through
 [PR #87](https://github.com/MKippen/ZeroProof/pull/87) as `fff1956`, also after all
-15 checks passed. Both batches passed post-merge CI, install smoke, and CodeQL.
-The next batch addresses detector provenance and event-time correlation.
+15 checks passed. Detector provenance and event-time correlation merged through
+[PR #88](https://github.com/MKippen/ZeroProof/pull/88) as `4358031`, with all 15
+checks and post-merge CI, install smoke, and CodeQL passing. The current batch
+addresses interrupted UniFi syncs and scheduler lifecycle reliability.
 
 ## Objective and approach
 
@@ -230,6 +232,49 @@ Issue [#50](https://github.com/MKippen/ZeroProof/issues/50) is closed after the
 merged MQTT ownership fix and repeated green fresh/upgrade broker checks. Upgrade
 recovery issue #49 remains open for its unimplemented stateful rollback work.
 
+### Recoverable sync and scheduler follow-up
+
+Manual and scheduled UniFi configuration syncs now share one lifecycle and a
+renewable PostgreSQL lease. Claiming an expired lease permits recovery of old
+`IN_PROGRESS` histories. Publication checks ownership under a database row lock
+and commits configuration, findings, timeline, inventory, and completion status
+together. A stale worker cannot publish or delete its successor's lease. Connection
+settings are rechecked under a row lock before publication. Controller requests
+and analysis run outside publication transactions. Existing configurations,
+operator finding dispositions, and sync histories are retained.
+
+Credential decryption participates in failure finalization; logout and notification
+failures cannot turn a committed success into failure. Both manual routes preserve
+their response shapes and expose explicit busy/interrupted responses. Website
+refresh and analysis actions stop on sync failure, retain existing findings, and
+allow a manual retry even when the saved status is stale. Imported configuration
+analysis remains available when the API confirms no controller is configured.
+Configuration read failures expose retry and preserve previous settings/history.
+Intent refresh caches its fresh analysis directly and cancels older reads before
+they can replace it, avoiding a redundant fetch after a success message.
+
+The scheduler registers timers before admitting initial network work and prevents
+each job from overlapping itself in one process. Shutdown stops admission, drains
+active work for up to 20 seconds, and then allows five seconds for dependency
+cleanup. Both Compose scheduler services provide a 30-second stop grace period.
+Only UniFi configuration sync currently has cross-process lease coordination.
+
+Migration 15 only adds the lease table. A disposable PostgreSQL fixture exercises
+fresh and 14-to-15 migration paths, concurrent claims, expiry, renewal failures,
+publication lasting longer than the lease TTL, interrupted history recovery,
+manual/scheduled contention, and connection retargeting. The required Backend
+Tests job runs this fixture. A late inventory failure also proves real rollback
+of configuration, findings, and timeline writes while retaining the prior active
+snapshot and recording the owned failure. Lease cleanup revokes the local handle
+immediately and has a five-second total deadline, preserving the original result.
+
+Final local `pnpm check` on Node 24 passes **1,115 tests**: backend 758, frontend
+166, UniFi client 157, and updater 34, plus both clean dependency audits, lint,
+builds, and typechecks. All 24 PostgreSQL fixture check groups pass across fresh
+and upgraded databases. Actionlint, ShellCheck, Compose validation, and diff checks
+also pass. See [sync recovery operations](SYNC_RECOVERY.md) for rollout, rollback,
+and scope limitations. Cloud results are recorded in the follow-up PR before merge.
+
 ### Remaining engineering backlog
 
 1. **P1: Finish cross-source attribution and historical navigation.** Add explicit
@@ -246,14 +291,15 @@ recovery issue #49 remains open for its unimplemented stateful rollback work.
    relying on rollback for schema changes. Track existing issues
    [#49](https://github.com/MKippen/ZeroProof/issues/49) and
    [#50](https://github.com/MKippen/ZeroProof/issues/50).
-3. **P2: Guard scheduled work and large data volumes.** Review overlapping async
-   `setInterval` jobs in `scheduler.ts`, atomic detection persistence, bounded
-   telemetry queries, and per-flow IOC lookup cost. Exercise timeouts, disconnects,
-   shutdown and repeated jobs with realistic retained data. A crashed sync can
-   leave `lastSyncStatus=IN_PROGRESS`, which the scheduler skips indefinitely;
-   replace that flag with a recoverable lease. Add timestamp/nonce validation to
-   updater HMAC requests if protecting against replay across process restarts.
-4. **P2: Reconcile schema history without losing data.** All 13 migrations apply,
+3. **P2: Guard remaining scheduled work and large data volumes.** UniFi config
+   sync now has a recoverable database lease and scheduler jobs cannot overlap
+   themselves locally. Extend cross-process coordination to other shared writers,
+   including manual imports/analysis and telemetry polls. Review atomic detection
+   persistence, bounded telemetry queries, and per-flow IOC lookup cost. Exercise
+   realistic retained data and controller latency; a live worker that renews its
+   lease still needs an explicit overall work deadline. Add timestamp/nonce
+   validation to updater HMAC requests if protecting against replay across restarts.
+4. **P2: Reconcile schema history without losing data.** All 15 migrations apply,
    but legacy `CampaignRun`, `CampaignSetting`, `CampaignRunStatus` and
    `CampaignVerdict` objects remain outside the current Prisma schema. Decide
    retention/export before adding a cleanup migration; no data was dropped.

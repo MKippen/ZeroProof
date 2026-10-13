@@ -14,11 +14,13 @@ import {
   History,
 } from 'lucide-react';
 import { ControllerConnectionForm } from '@/components/ControllerConnectionForm';
+import { DataLoadError } from '@/components/DataLoadError';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import api from '@/api/client';
+import { requestUniFiSync, uniFiSyncFeedback } from '@/api/unifiSync';
 import type { Configuration } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/useToast';
@@ -149,46 +151,57 @@ export function ConfigContent() {
   const { toast } = useToast();
 
   // Fetch UniFi settings
-  const { data: unifiData, isLoading: loadingUnifi } = useQuery({
+  const unifiQuery = useQuery({
     queryKey: ['unifi', 'settings'],
     queryFn: async () => {
       const response = await api.get<{
         settings: UniFiSettings | null;
         configured: boolean;
       }>('/unifi/settings');
+      if (!response.success || !response.data) {
+        throw new Error(response.error?.message || 'Could not load UniFi settings.');
+      }
       return response.data;
     },
   });
 
-  const { data: currentConfig } = useQuery({
+  const currentConfigQuery = useQuery({
     queryKey: ['config', 'current'],
     queryFn: async () => {
       const response = await api.get<{ config: Configuration | null }>('/config/current');
-      return response.data?.config;
+      if (!response.success || response.data?.config === undefined) {
+        throw new Error(response.error?.message || 'Could not load the active configuration.');
+      }
+      return response.data.config;
     },
   });
 
-  const { data: configHistory, isLoading } = useQuery({
+  const historyQuery = useQuery({
     queryKey: ['config', 'history'],
     queryFn: async () => {
       const response = await api.get<{ configs: Configuration[] }>('/config/history');
-      return response.data?.configs || [];
+      if (!response.success || !response.data) {
+        throw new Error(response.error?.message || 'Could not load configuration history.');
+      }
+      return response.data.configs;
     },
   });
 
+  const { data: unifiData, isLoading: loadingUnifi } = unifiQuery;
+  const { data: currentConfig } = currentConfigQuery;
+  const { data: configHistory, isLoading } = historyQuery;
+  const failedQueries = [unifiQuery, currentConfigQuery, historyQuery].filter((query) => query.isError);
+
   const syncNowMutation = useMutation({
     mutationFn: async () => {
-      const response = await api.post<{
+      return requestUniFiSync<{
         synced: boolean;
         message?: string;
         config?: { id: string; siteName: string };
         analysis?: { vulnerabilitiesFound: number };
       }>('/unifi/sync', { site: unifiData?.settings?.selectedSite || 'default' });
-      if (!response.success) {
-        throw new Error(response.error?.message || 'Sync failed');
-      }
-      return response.data;
     },
+    retry: false,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['unifi', 'settings'] });
       queryClient.invalidateQueries({ queryKey: ['config'] });
@@ -209,7 +222,7 @@ export function ConfigContent() {
     },
     onError: (error: Error) => {
       queryClient.invalidateQueries({ queryKey: ['unifi', 'settings'] });
-      toast({ variant: 'destructive', title: 'Sync failed', description: error.message });
+      toast(uniFiSyncFeedback(error));
     },
   });
 
@@ -233,6 +246,15 @@ export function ConfigContent() {
 
   return (
     <div className="space-y-6">
+      {failedQueries.length > 0 && (
+        <DataLoadError
+          title="Unable to load configuration data"
+          message={failedQueries.map((query) => query.error?.message).filter(Boolean).join(' ')}
+          hasPreviousData={failedQueries.some((query) => query.data !== undefined)}
+          onRetry={() => { failedQueries.forEach((query) => { void query.refetch(); }); }}
+          isRetrying={failedQueries.some((query) => query.isFetching)}
+        />
+      )}
       {/* UniFi Connection Status & Sync */}
       <Card className="border-border/50">
         <CardHeader>
@@ -305,7 +327,7 @@ export function ConfigContent() {
                 Sync Configuration Now
               </Button>
             </div>
-          ) : (
+          ) : !unifiQuery.isError ? (
             <div className="text-center py-6">
               <Server className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
               <p className="text-muted-foreground mb-2">No UniFi Controller connected</p>
@@ -313,7 +335,7 @@ export function ConfigContent() {
                 Add your controller details below to enable automatic sync.
               </p>
             </div>
-          )}
+          ) : null}
         </CardContent>
       </Card>
 
